@@ -1,0 +1,155 @@
+{
+    "resourceType": "Bundle",
+    "type": "searchset",
+    "entry": [
+        {
+            "fullUrl": "https://api.ayamedica.com/fhir/R4/Organization/c868cb8f-ab55-48e2-9acb-27b40d477829",
+            "search": {
+                "mode": "match"
+            },
+            "resource": {
+                "resourceType": "Organization",
+                "active": true,
+                "type": [
+                    {
+                        "coding": [
+                            {
+                                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                                "code": "edu",
+                                "display": "Educational Institute"
+                            },
+                            {
+                                "code": "Root Org",
+                                "display": "Root Org"
+                            }
+                        ]
+                    }
+                ],
+                "name": "NIS",
+                "telecom": [
+                    {
+                        "system": "phone",
+                        "use": "work",
+                        "value": "+20123456789"
+                    },
+                    {
+                        "system": "email",
+                        "use": "work",
+                        "value": "nis@nis.com"
+                    }
+                ],
+                "address": [
+                    {
+                        "use": "work",
+                        "type": "physical",
+                        "line": [
+                            "cairo"
+                        ]
+                    }
+                ],
+                "id": "c868cb8f-ab55-48e2-9acb-27b40d477829",
+                "meta": {
+                    "versionId": "0e87e493-2b12-4f1d-a542-fa57f5cec23b",
+                    "lastUpdated": "2025-09-23T17:00:19.834Z"
+                }
+            }
+        },
+        {
+            "fullUrl": "https://api.ayamedica.com/fhir/R4/Organization/1b091cd6-e882-4ca8-ade5-e457181f763e",
+            "search": {
+                "mode": "match"
+            },
+            "resource": {
+                "resourceType": "Organization",
+                "active": true,
+                "type": [
+                    {
+                        "coding": [
+                            {
+                                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                                "code": "edu",
+                                "display": "Educational Institute"
+                            },
+                            {
+                                "code": "Root Org",
+                                "display": "Root Org"
+                            }
+                        ]
+                    }
+                ],
+                "name": "School Test",
+                "id": "1b091cd6-e882-4ca8-ade5-e457181f763e",
+                "meta": {
+                    "versionId": "06385e24-dbea-407c-93c6-945e35dcf645",
+                    "lastUpdated": "2025-09-23T17:00:44.453Z"
+                }
+            }
+        },
+        {
+            "fullUrl": "https://api.ayamedica.com/fhir/R4/Organization/2511c14a-8001-415f-a585-c351c5c367fa",
+            "search": {
+                "mode": "match"
+            },
+            "resource": {
+                "resourceType": "Organization",
+                "active": true,
+                "type": [
+                    {
+                        "coding": [
+                            {
+                                "code": "Root Org",
+                                "display": "Root Org"
+                            },
+                            {
+                                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                                "code": "edu",
+                                "display": "Educational Institute"
+                            }
+                        ]
+                    }
+                ],
+                "name": "Online Meeting School",
+                "telecom": [
+                    {
+                        "system": "email",
+                        "use": "work",
+                        "value": "tt@t.com"
+                    },
+                    {
+                        "system": "phone",
+                        "use": "work",
+                        "value": "+212345678"
+                    }
+                ],
+                "address": [
+                    {
+                        "use": "work",
+                        "type": "physical",
+                        "line": [
+                            "1",
+                            "2"
+                        ],
+                        "city": "Nasr",
+                        "state": "Cairo",
+                        "postalCode": "13111"
+                    }
+                ],
+                "id": "2511c14a-8001-415f-a585-c351c5c367fa",
+                "meta": {
+                    "versionId": "2a5dd360-0359-4143-a7a0-06307e439062",
+                    "lastUpdated": "2025-09-23T17:01:58.633Z"
+                }
+            }
+        }
+    ],
+    "link": [
+        {
+            "relation": "self",
+            "url": "https://api.ayamedica.comfhir/R4/Organization?_count=20&type=Root%20Org"
+        },
+        {
+            "relation": "first",
+            "url": "https://api.ayamedica.comfhir/R4/Organization?_count=20&type=Root%20Org"
+        }
+    ]
+}
