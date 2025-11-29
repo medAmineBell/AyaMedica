@@ -21,7 +21,8 @@ class StudentOverviewScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height - 80, // Subtract navbar height
+            minHeight: MediaQuery.of(context).size.height -
+                80, // Subtract navbar height
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,10 +30,10 @@ class StudentOverviewScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Students Overview',
                         style: TextStyle(
                           color: Color(0xFF2D2E2E) /* Text-Text-100 */,
@@ -42,11 +43,10 @@ class StudentOverviewScreen extends StatelessWidget {
                           height: 1.40,
                         ),
                       ),
-                      const BreadcrumbWidget(
+                      BreadcrumbWidget(
                         items: [
                           BreadcrumbItem(label: 'Ayamedica portal'),
-                                                    BreadcrumbItem(label: 'Students'),
-
+                          BreadcrumbItem(label: 'Students'),
                           BreadcrumbItem(label: 'Overview'),
                         ],
                       ),
@@ -67,70 +67,69 @@ class StudentOverviewScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(children: [
-                 Expanded(
-                   child: StudentCountWidget(
-                                   studentCount: 1700,
-                   
-                                 ),
-                 ),
-                 SizedBox(width: 16), // Add space between widgets
-               Expanded(
-                 child: StudentCountWidget(
-                  studentCount: 1700,
-                  
-                               ),
-               ),
-                                SizedBox(width: 16), // Add space between widgets
+              const Row(
+                children: [
+                  Expanded(
+                    child: StudentCountWidget(
+                      studentCount: 1700,
+                    ),
+                  ),
+                  SizedBox(width: 16), // Add space between widgets
+                  Expanded(
+                    child: StudentCountWidget(
+                      studentCount: 1700,
+                    ),
+                  ),
+                  SizedBox(width: 16), // Add space between widgets
 
-               Expanded(
-                 child: StudentCountWidget(
-                  studentCount: 1700,
-                  
-                               ),
-               ),
-                                SizedBox(width: 16), // Add space between widgets
+                  Expanded(
+                    child: StudentCountWidget(
+                      studentCount: 1700,
+                    ),
+                  ),
+                  SizedBox(width: 16), // Add space between widgets
 
-               Expanded(
-                 child: StudentCountWidget(
-                  studentCount: 1700,
-                  
-                               ),
-               ),
-              ],),
-             
+                  Expanded(
+                    child: StudentCountWidget(
+                      studentCount: 1700,
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 16),
               // First row: 1/3 + 2/3
 
-              SizedBox(
+              const SizedBox(
                 height: 350,
                 child: Row(
-                  children: const [
-                    Expanded(
-                      flex: 1,
-                      child: PieChartWidget(),
-                    ),
+                  children: [
                     Expanded(
                       flex: 2,
                       child: LineChartWidget(),
+                    ),
+                    SizedBox(width: 32),
+                    Expanded(
+                      flex: 1,
+                      child: PieChartWidget(),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
               // Second row: 2/3 + 1/3
-              SizedBox(
+              const SizedBox(
                 height: 350, // Fixed height for second row
                 child: Row(
-                  children: const [
+                  children: [
                     Expanded(
                       flex: 2,
                       child: BarChartWidget(),
                     ),
+                    SizedBox(width: 32),
                     Expanded(
                       flex: 1,
-                      child: PieChartSample(
-                      ),
+                      child: PieChartSample(),
                     ),
                   ],
                 ),
@@ -140,8 +139,5 @@ class StudentOverviewScreen extends StatelessWidget {
         ),
       ),
     );
- 
- 
   }
 }
-

@@ -32,7 +32,8 @@ class ActionItem extends StatelessWidget {
                 padding: const EdgeInsets.all(4), // reduced from 6
                 child: Center(
                   child: icon is IconData
-                      ? Icon(icon as IconData, size: 20) // reduced from default size
+                      ? Icon(icon as IconData,
+                          size: 20) // reduced from default size
                       : icon is Widget
                           ? icon
                           : const SizedBox(),
@@ -45,7 +46,8 @@ class ActionItem extends StatelessWidget {
               right: 0,
               top: 16, // adjusted from 12
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1), // reduced padding
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 0), // reduced padding
                 decoration: BoxDecoration(
                   color: const Color(0xFFFC2E53),
                   borderRadius: BorderRadius.circular(8), // reduced from 10

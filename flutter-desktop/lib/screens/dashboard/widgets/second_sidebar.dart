@@ -223,9 +223,9 @@ class SecondSidebar extends GetView<HomeController> {
   Widget _buildCampusInfoText() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
             'Al Riyadh Campus',
             style: TextStyle(

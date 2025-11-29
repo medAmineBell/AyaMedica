@@ -40,7 +40,8 @@ class _ExpandableMenuItemState extends State<ExpandableMenuItem> {
           onExit: (_) => setState(() => isHovered = false),
           child: Container(
             width: double.infinity,
-            margin: EdgeInsets.only(bottom: widget.children != null && widget.isExpanded ? 4 : 0),
+            margin: EdgeInsets.only(
+                bottom: widget.children != null && widget.isExpanded ? 4 : 0),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -49,11 +50,11 @@ class _ExpandableMenuItemState extends State<ExpandableMenuItem> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: widget.isActive 
-                      ? const Color(0xFF1339FF) 
-                      : isHovered 
-                        ? const Color(0xFFEDF1F5)
-                        : Colors.white,
+                    color: widget.isActive
+                        ? const Color(0xFF1339FF)
+                        : isHovered
+                            ? const Color(0xFFEDF1F5)
+                            : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -63,7 +64,9 @@ class _ExpandableMenuItemState extends State<ExpandableMenuItem> {
                         width: 24,
                         height: 24,
                         colorFilter: ColorFilter.mode(
-                          widget.isActive ? const Color(0xFFCDFF1F) : const Color(0xFF595A5B),
+                          widget.isActive
+                              ? const Color(0xFFCDFF1F)
+                              : const Color(0xFF595A5B),
                           BlendMode.srcIn,
                         ),
                       ),
@@ -72,17 +75,22 @@ class _ExpandableMenuItemState extends State<ExpandableMenuItem> {
                         child: Text(
                           widget.title,
                           style: TextStyle(
-                            color: widget.isActive ? Colors.white : const Color(0xFF595A5B),
+                            color: widget.isActive
+                                ? Colors.white
+                                : const Color(0xFF595A5B),
                             fontSize: 12,
                             fontFamily: 'IBM Plex Sans Arabic',
-                            fontWeight:widget.isActive ? FontWeight.w700:FontWeight.w500,
+                            fontWeight: widget.isActive
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             letterSpacing: 0.28,
                           ),
                         ),
                       ),
                       if (widget.badge != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 0),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFC2E53),
                             borderRadius: BorderRadius.circular(10),
@@ -102,8 +110,12 @@ class _ExpandableMenuItemState extends State<ExpandableMenuItem> {
                         GestureDetector(
                           onTap: widget.onExpandTap,
                           child: Icon(
-                            widget.isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                            color: widget.isActive ? Colors.white : const Color(0xFF595A5B),
+                            widget.isExpanded
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            color: widget.isActive
+                                ? Colors.white
+                                : const Color(0xFF595A5B),
                           ),
                         ),
                     ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_getx_app/screens/dashboard/widgets/charts/pie_chart_widget.dart';
+import 'package:flutter_svg/svg.dart';
 
 class PieChartSample extends StatefulWidget {
   const PieChartSample({super.key});
@@ -14,7 +16,7 @@ class _PieChartSampleState extends State<PieChartSample> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 8),
+      // margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -30,13 +32,30 @@ class _PieChartSampleState extends State<PieChartSample> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Appointments Status',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2D2E2E),
-            ),
+          const Row(
+            children: [
+              Text(
+                'Title',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D2E2E),
+                ),
+              ),
+              Spacer(),
+              CustomDateFilterDropdown(
+                options: [
+                  "This Week",
+                  "Last Week",
+                  "This Month",
+                  "Last Month",
+                  "This Year",
+                  "Last Year",
+                  "Custom Date",
+                ],
+                initialValue: "This Week",
+              )
+            ],
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -51,7 +70,8 @@ class _PieChartSampleState extends State<PieChartSample> {
                         touchedIndex = -1;
                         return;
                       }
-                      touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                      touchedIndex =
+                          pieTouchResponse.touchedSection!.touchedSectionIndex;
                     });
                   },
                 ),
@@ -64,29 +84,72 @@ class _PieChartSampleState extends State<PieChartSample> {
             ),
           ),
           const SizedBox(height: 16),
-          Column(
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _Indicator(
                 color: const Color(0xFF1339FF),
-                text: 'Completed',
-                value: '48%',
+                text: 'Product1',
+                value: '25%',
                 isSquare: false,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _Indicator(
-                color: const Color(0xFFD6A100),
-                text: 'Pending',
-                value: '32%',
+                color: const Color(0xFF1397FF),
+                text: 'Product2',
+                value: '25%',
                 isSquare: false,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _Indicator(
-                color: const Color(0xFFEDF1F5),
-                text: 'Cancelled',
-                value: '20%',
+                color: Color(0xFF01C448),
+                text: 'Product3',
+                value: '25%',
+                isSquare: false,
+              ),
+              SizedBox(height: 8),
+              _Indicator(
+                color: Color(0xFFD6A100),
+                text: 'Product4',
+                value: '25%',
                 isSquare: false,
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: Row(
+              children: [
+                const Text(
+                  "\$20 678.89 ",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2D2E2E),
+                  ),
+                ),
+                const SizedBox(
+                  width: 8,
+                ),
+                const Text(
+                  "-1.5%",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF747677),
+                  ),
+                ),
+                const SizedBox(
+                  width: 4,
+                ),
+                SvgPicture.asset(
+                  'assets/svg/trend_arrow.svg',
+                  width: 16,
+                  height: 16,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -95,7 +158,7 @@ class _PieChartSampleState extends State<PieChartSample> {
 
   List<PieChartSectionData> showingSections() {
     return List.generate(
-      3,
+      4,
       (i) {
         final isTouched = i == touchedIndex;
         final opacity = isTouched ? 1.0 : 0.8;
@@ -104,23 +167,30 @@ class _PieChartSampleState extends State<PieChartSample> {
           case 0:
             return PieChartSectionData(
               color: const Color(0xFF1339FF).withOpacity(opacity),
-              value: 48,
+              value: 25,
               title: '',
-              radius: 80,
+              radius: 25,
             );
           case 1:
             return PieChartSectionData(
-              color: const Color(0xFFD6A100).withOpacity(opacity),
-              value: 32,
+              color: const Color(0xFF01C448).withOpacity(opacity),
+              value: 25,
               title: '',
-              radius: 75,
+              radius: 50,
             );
           case 2:
             return PieChartSectionData(
-              color: const Color(0xFFEDF1F5).withOpacity(opacity),
-              value: 20,
+              color: const Color(0xFF1397FF).withOpacity(opacity),
+              value: 25,
               title: '',
-              radius: 70,
+              radius: 60,
+            );
+          case 3:
+            return PieChartSectionData(
+              color: const Color(0xFFD6A100).withOpacity(opacity),
+              value: 25,
+              title: '',
+              radius: 75,
             );
           default:
             return PieChartSectionData();
@@ -142,7 +212,7 @@ class _Indicator extends StatelessWidget {
     required this.text,
     required this.value,
     this.isSquare = false,
-    this.size = 8,
+    this.size = 12,
   });
 
   @override
@@ -166,7 +236,7 @@ class _Indicator extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-        const Spacer(),
+        /*const Spacer(),
         Text(
           value,
           style: const TextStyle(
@@ -174,7 +244,7 @@ class _Indicator extends StatelessWidget {
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
-        ),
+        ),*/
       ],
     );
   }

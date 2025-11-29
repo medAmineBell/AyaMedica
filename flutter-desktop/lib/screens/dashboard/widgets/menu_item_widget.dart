@@ -54,7 +54,9 @@ class _MenuItemWidgetState extends State<MenuItemWidget> {
                     width: 24,
                     height: 24,
                     colorFilter: ColorFilter.mode(
-                      widget.isActive ? const Color(0xFFCDFF1F) : const Color(0xFF595A5B),
+                      widget.isActive
+                          ? const Color(0xFFCDFF1F)
+                          : const Color(0xFF595A5B),
                       BlendMode.srcIn,
                     ),
                   ),
@@ -63,17 +65,21 @@ class _MenuItemWidgetState extends State<MenuItemWidget> {
                     child: Text(
                       widget.title,
                       style: TextStyle(
-                        color: widget.isActive ? Colors.white : const Color(0xFF595A5B),
+                        color: widget.isActive
+                            ? Colors.white
+                            : const Color(0xFF595A5B),
                         fontSize: 12,
                         fontFamily: 'IBM Plex Sans Arabic',
-                        fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight:
+                            widget.isActive ? FontWeight.w700 : FontWeight.w500,
                         letterSpacing: 0.28,
                       ),
                     ),
                   ),
                   if (widget.badge != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 0),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFC2E53),
                         borderRadius: BorderRadius.circular(10),
@@ -84,7 +90,9 @@ class _MenuItemWidgetState extends State<MenuItemWidget> {
                           color: Color(0xFFF9F9F9),
                           fontSize: 12,
                           fontFamily: 'Inter',
-                          fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: widget.isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           height: 1.58,
                         ),
                       ),

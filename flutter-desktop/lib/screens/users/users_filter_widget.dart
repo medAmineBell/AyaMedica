@@ -28,8 +28,8 @@ class UsersFiltersWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              child: TextField(
-                decoration: const InputDecoration(
+              child: const TextField(
+                decoration: InputDecoration(
                   hintText: 'search',
                   hintStyle: TextStyle(
                     color: Color(0xFF9CA3AF),
@@ -47,7 +47,7 @@ class UsersFiltersWidget extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   color: Color(0xFF111827),
                 ),
@@ -86,9 +86,9 @@ class UsersFiltersWidget extends StatelessWidget {
             child: InkWell(
               onTap: _showFiltersModal,
               borderRadius: BorderRadius.circular(12),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(
                     Icons.tune,
                     color: Color(0xFF6B7280),

@@ -13,12 +13,12 @@ import '../../../screens/organisation/widgets/tree_connector_painter.dart';
 
 class SecondSidebar extends GetView<HomeController> {
   SecondSidebar({Key? key}) : super(key: key);
-  
+
   // Observable for child organizations
   final RxList<FhirOrganization> childOrganizations = <FhirOrganization>[].obs;
   final RxBool isLoadingChildOrganizations = false.obs;
   final RxString selectedChildOrganizationId = ''.obs;
-  
+
   // Observable for main organization
   final Rxn<FhirOrganization> mainOrganization = Rxn<FhirOrganization>();
   final RxBool isLoadingMainOrganization = false.obs;
@@ -42,7 +42,7 @@ class SecondSidebar extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Container(
-        width: 250,
+        width: 275,
         height: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -150,10 +150,30 @@ class SecondSidebar extends GetView<HomeController> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildCampusInfoDropdown(context),
-          ),
+          const SizedBox(width: 10),
+          const Expanded(
+              child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Al Riyadh Campus",
+                style: TextStyle(
+                  color: Color(0xFF2D2E2E),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                "School management ",
+                style: TextStyle(
+                  color: Color(0xFF595A5B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ) // _buildCampusInfoDropdown(context),
+              ),
         ],
       ),
     );
@@ -161,14 +181,14 @@ class SecondSidebar extends GetView<HomeController> {
 
   Widget _buildConditionalMenuItems() {
     final selectedBranchData = controller.selectedBranchData.value;
-    final isSchool = selectedBranchData?['isSchool'] ?? false;
+    final isSchool = true; // selectedBranchData?['isSchool'] ?? false;
     final isClinic = selectedBranchData?['isClinic'] ?? false;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Common items for both School and Clinic
-        _buildSectionTitle(title: "Management"),
+        _buildSectionTitle(title: "School dashboard"),
         MenuItemWidget(
           icon: 'assets/svg/chart-square.svg',
           title: 'Dashboard',
@@ -179,8 +199,8 @@ class SecondSidebar extends GetView<HomeController> {
           },
           badge: '1',
         ),
-        
-        _buildSectionTitle(title: "Communication"),
+
+        /*_buildSectionTitle(title: "Communication"),
         MenuItemWidget(
           icon: 'assets/svg/direct-notification.svg',
           title: 'Communication',
@@ -189,23 +209,23 @@ class SecondSidebar extends GetView<HomeController> {
             controller.changeIndex(2);
             controller.changeContent(ContentType.communication);
           },
-        ),
-        
-        _buildSectionTitle(title: "Calendar"),
+        ),*/
+
+        _buildSectionTitle(title: "Appointments management"),
         MenuItemWidget(
           icon: 'assets/svg/calendar.svg',
-          title: 'Schedule',
+          title: 'Appointment scheduling',
           isActive: controller.selectedIndex.value == 5,
           onTap: () {
             controller.changeIndex(5);
             controller.changeContent(ContentType.calendar);
           },
-          badge: '1',
+          // badge: '1',
         ),
-        
+
         // School-specific items
         if (isSchool) ...[
-          _buildSectionTitle(title: "School Management"),
+          /*_buildSectionTitle(title: "School Management"),
           MenuItemWidget(
             icon: 'assets/svg/calendar.svg',
             title: 'Appointment scheduling',
@@ -214,9 +234,8 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeIndex(1);
               controller.changeContent(ContentType.appointmentScheduling);
             },
-          ),
-          
-          _buildSectionTitle(title: "Students Management"),
+          ),*/
+          _buildSectionTitle(title: "School & students details"),
           ExpandableMenuItem(
             icon: 'assets/svg/teacher.svg',
             title: 'Students',
@@ -230,17 +249,19 @@ class SecondSidebar extends GetView<HomeController> {
             badge: '1',
             children: [
               _buildSubMenuItem('Overview',
-                  onTap: () => controller.changeContent(ContentType.studentsOverview),
+                  onTap: () =>
+                      controller.changeContent(ContentType.studentsOverview),
                   isFirst: true),
               _buildSubMenuItem('Students list',
-                  onTap: () => controller.changeContent(ContentType.studentsList)),
-              _buildSubMenuItem('Medical checkups records',
-                  onTap: () => controller.changeContent(ContentType.medicalCheckups),
+                  onTap: () =>
+                      controller.changeContent(ContentType.studentsList)),
+              _buildSubMenuItem('Medical records',
+                  onTap: () =>
+                      controller.changeContent(ContentType.medicalCheckups),
                   isLast: true),
             ],
           ),
-          
-          _buildSectionTitle(title: "School Resources"),
+          _buildSectionTitle(title: "Resources"),
           ExpandableMenuItem(
             icon: 'assets/svg/data.svg',
             title: 'Resources',
@@ -256,15 +277,16 @@ class SecondSidebar extends GetView<HomeController> {
               _buildSubMenuItem('Branches',
                   onTap: () => controller.changeContent(ContentType.branches),
                   isFirst: true),
-              _buildSubMenuItem('Grades setting',
-                  onTap: () => controller.changeContent(ContentType.gradesSettings)),
+              _buildSubMenuItem('Classes setting',
+                  onTap: () =>
+                      controller.changeContent(ContentType.gradesSettings)),
               _buildSubMenuItem('Users',
                   onTap: () => controller.changeContent(ContentType.users),
                   isLast: true),
             ],
           ),
         ],
-        
+
         // Clinic-specific items
         if (isClinic) ...[
           _buildSectionTitle(title: "Medical Management"),
@@ -277,7 +299,6 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.appointmentScheduling);
             },
           ),
-          
           _buildSectionTitle(title: "Patient Management"),
           ExpandableMenuItem(
             icon: 'assets/svg/teacher.svg',
@@ -292,16 +313,18 @@ class SecondSidebar extends GetView<HomeController> {
             badge: '1',
             children: [
               _buildSubMenuItem('Patient Overview',
-                  onTap: () => controller.changeContent(ContentType.studentsOverview),
+                  onTap: () =>
+                      controller.changeContent(ContentType.studentsOverview),
                   isFirst: true),
               _buildSubMenuItem('Patient Records',
-                  onTap: () => controller.changeContent(ContentType.studentsList)),
+                  onTap: () =>
+                      controller.changeContent(ContentType.studentsList)),
               _buildSubMenuItem('Medical Records',
-                  onTap: () => controller.changeContent(ContentType.medicalCheckups),
+                  onTap: () =>
+                      controller.changeContent(ContentType.medicalCheckups),
                   isLast: true),
             ],
           ),
-          
           _buildSectionTitle(title: "Medical Resources"),
           ExpandableMenuItem(
             icon: 'assets/svg/data.svg',
@@ -319,14 +342,15 @@ class SecondSidebar extends GetView<HomeController> {
                   onTap: () => controller.changeContent(ContentType.branches),
                   isFirst: true),
               _buildSubMenuItem('Medical Staff',
-                  onTap: () => controller.changeContent(ContentType.gradesSettings)),
+                  onTap: () =>
+                      controller.changeContent(ContentType.gradesSettings)),
               _buildSubMenuItem('Staff Management',
                   onTap: () => controller.changeContent(ContentType.users),
                   isLast: true),
             ],
           ),
         ],
-        
+
         // Show default items if neither school nor clinic is selected
         if (!isSchool && !isClinic) ...[
           _buildSectionTitle(title: "General Management"),
@@ -339,7 +363,6 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.appointmentScheduling);
             },
           ),
-          
           _buildSectionTitle(title: "Resources"),
           ExpandableMenuItem(
             icon: 'assets/svg/data.svg',
@@ -357,7 +380,8 @@ class SecondSidebar extends GetView<HomeController> {
                   onTap: () => controller.changeContent(ContentType.branches),
                   isFirst: true),
               _buildSubMenuItem('Settings',
-                  onTap: () => controller.changeContent(ContentType.gradesSettings)),
+                  onTap: () =>
+                      controller.changeContent(ContentType.gradesSettings)),
               _buildSubMenuItem('Users',
                   onTap: () => controller.changeContent(ContentType.users),
                   isLast: true),
@@ -372,37 +396,42 @@ class SecondSidebar extends GetView<HomeController> {
     return Obx(() {
       final selectedBranchData = controller.selectedBranchData.value;
       final organizationId = selectedBranchData?['organizationId'] ?? '';
-      
+
       // Load main organization when organization ID is available
-      if (organizationId.isNotEmpty && mainOrganization.value == null && !isLoadingMainOrganization.value) {
+      if (organizationId.isNotEmpty &&
+          mainOrganization.value == null &&
+          !isLoadingMainOrganization.value) {
         _loadMainOrganization(organizationId);
       }
-      
+
       // Load child organizations when organization ID is available
-      if (organizationId.isNotEmpty && childOrganizations.isEmpty && !isLoadingChildOrganizations.value) {
+      if (organizationId.isNotEmpty &&
+          childOrganizations.isEmpty &&
+          !isLoadingChildOrganizations.value) {
         _loadChildOrganizations(organizationId);
       }
-      
+
       // Show loading skeleton if loading main organization
       if (isLoadingMainOrganization.value) {
         return _buildLoadingSkeleton();
       }
 
-      
       // Get organization type flags from stored data
-      final isSchool = selectedBranchData?['isSchool'] ?? false;
+      final isSchool = true; // selectedBranchData?['isSchool'] ?? false;
       final isClinic = selectedBranchData?['isClinic'] ?? false;
 
       // Find the main branch organization (the one with "Main Branch" type)
       final mainBranchOrg = childOrganizations.firstWhereOrNull(
         (org) => _getOrganizationTypeDisplay(org) == 'Main Branch',
       );
-      
+
       // If no main branch found, use the first organization as main branch
-      final defaultMainBranch = mainBranchOrg ?? (childOrganizations.isNotEmpty ? childOrganizations.first : null);
-      
+      final defaultMainBranch = mainBranchOrg ??
+          (childOrganizations.isNotEmpty ? childOrganizations.first : null);
+
       // Set default selection to main branch if nothing is selected
-      if (selectedChildOrganizationId.value.isEmpty && defaultMainBranch != null) {
+      if (selectedChildOrganizationId.value.isEmpty &&
+          defaultMainBranch != null) {
         selectedChildOrganizationId.value = defaultMainBranch.id;
       }
 
@@ -411,12 +440,10 @@ class SecondSidebar extends GetView<HomeController> {
         (org) => org.id == selectedChildOrganizationId.value,
       );
 
-      
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-
           // Organizations popup menu (showing branches)
           if (childOrganizations.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -448,14 +475,14 @@ class SecondSidebar extends GetView<HomeController> {
               ),
             ),
           ],
-          
+
           // Add specific indicators for School and Clinic
-          if (isSchool || isClinic) ...[
+          /*if (isSchool || isClinic) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: isSchool 
-                    ? const Color(0xFFE8F5E8)  // Light green background
+                color: isSchool
+                    ? const Color(0xFFE8F5E8) // Light green background
                     : const Color(0xFFE3F2FD), // Light blue background
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -465,16 +492,16 @@ class SecondSidebar extends GetView<HomeController> {
                   Icon(
                     isSchool ? Icons.school : Icons.local_hospital,
                     size: 12,
-                    color: isSchool 
-                        ? const Color(0xFF4CAF50) 
+                    color: isSchool
+                        ? const Color(0xFF4CAF50)
                         : const Color(0xFF2196F3),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     isSchool ? 'School' : 'Clinic',
                     style: TextStyle(
-                      color: isSchool 
-                          ? const Color(0xFF4CAF50) 
+                      color: isSchool
+                          ? const Color(0xFF4CAF50)
                           : const Color(0xFF2196F3),
                       fontSize: 10,
                       fontFamily: 'Inter',
@@ -484,7 +511,7 @@ class SecondSidebar extends GetView<HomeController> {
                 ],
               ),
             ),
-          ],
+          ],*/
         ],
       );
     });
@@ -493,12 +520,12 @@ class SecondSidebar extends GetView<HomeController> {
   Future<void> _loadMainOrganization(String organizationId) async {
     try {
       isLoadingMainOrganization.value = true;
-      
+
       final medplumService = Get.find<MedplumService>();
       final result = await medplumService.fetchOrganizationById(
         organizationId: organizationId,
       );
-      
+
       if (result['success'] == true) {
         final organization = result['organization'] as FhirOrganization;
         mainOrganization.value = organization;
@@ -516,12 +543,12 @@ class SecondSidebar extends GetView<HomeController> {
   Future<void> _loadChildOrganizations(String parentOrganizationId) async {
     try {
       isLoadingChildOrganizations.value = true;
-      
+
       final medplumService = Get.find<MedplumService>();
       final result = await medplumService.fetchChildOrganizations(
         parentOrganizationId: parentOrganizationId,
       );
-      
+
       if (result['success'] == true) {
         final organizations = result['organizations'] as List<FhirOrganization>;
         childOrganizations.value = organizations;
@@ -590,7 +617,7 @@ class SecondSidebar extends GetView<HomeController> {
     if (org.type == null || org.type!.isEmpty) {
       return 'Branch';
     }
-    
+
     // Look for "Main Branch" first, then "Branch"
     for (final type in org.type!) {
       for (final coding in type.coding) {
@@ -599,7 +626,7 @@ class SecondSidebar extends GetView<HomeController> {
         }
       }
     }
-    
+
     for (final type in org.type!) {
       for (final coding in type.coding) {
         if (coding.code == 'Branch') {
@@ -607,18 +634,18 @@ class SecondSidebar extends GetView<HomeController> {
         }
       }
     }
-    
+
     // Fallback to first available display
     if (org.type!.isNotEmpty && org.type![0].coding.isNotEmpty) {
       return org.type![0].coding[0].display;
     }
-    
+
     return 'Branch';
   }
 
   Color _getOrganizationTypeColor(FhirOrganization org) {
     final typeDisplay = _getOrganizationTypeDisplay(org);
-    
+
     switch (typeDisplay) {
       case 'Main Branch':
         return const Color(0xFF4CAF50); // Green
@@ -653,12 +680,14 @@ class SecondSidebar extends GetView<HomeController> {
 
   void _showBranchPopupMenu(BuildContext context) {
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
       ),
       Offset.zero & overlay.size,
     );
@@ -690,7 +719,8 @@ class SecondSidebar extends GetView<HomeController> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: _getOrganizationTypeColor(org),
                     borderRadius: BorderRadius.circular(8),
@@ -717,7 +747,6 @@ class SecondSidebar extends GetView<HomeController> {
       }
     });
   }
-
 
   Widget _buildLogoutButton() {
     return Container(
@@ -752,7 +781,7 @@ class SecondSidebar extends GetView<HomeController> {
               ],
             ),
           );
-          
+
           if (confirmed == true) {
             await authController.logout();
           }
