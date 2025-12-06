@@ -103,27 +103,25 @@ class CreateAppointmentDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTypeSelector(controller),
-        
         const SizedBox(height: 16),
         _buildCheckupDetails(controller),
-   
         const SizedBox(height: 16),
         _buildDateTimeSelection(controller),
         const SizedBox(height: 16),
-        Obx(() => controller.selectedDateTimeOption.value == 'addDate' 
-            ? _buildDateTimePicker(controller) 
+        Obx(() => controller.selectedDateTimeOption.value == 'addDate'
+            ? _buildDateTimePicker(controller)
             : const SizedBox.shrink()),
-                  const SizedBox(height: 16),
-         Obx(() => controller.selectedType.value == 'Follow-Up' 
-             ? _buildDoctorSelection(controller) 
-             : const SizedBox.shrink()),
-         const SizedBox(height: 16),
-         Obx(() => controller.selectedType.value == 'Vaccination' 
-             ? _buildVaccinationTypeSelection(controller) 
-             : const SizedBox.shrink()),
         const SizedBox(height: 16),
-        Obx(() => controller.selectedOption.value == 'all' 
-            ? const SizedBox.shrink() 
+        Obx(() => controller.selectedType.value == 'Follow-Up'
+            ? _buildDoctorSelection(controller)
+            : const SizedBox.shrink()),
+        const SizedBox(height: 16),
+        Obx(() => controller.selectedType.value == 'Vaccination'
+            ? _buildVaccinationTypeSelection(controller)
+            : const SizedBox.shrink()),
+        const SizedBox(height: 16),
+        Obx(() => controller.selectedOption.value == 'all'
+            ? const SizedBox.shrink()
             : _buildStudentMultiSelect(controller)),
         const SizedBox(height: 16),
         _buildDiseaseDetails(controller),
@@ -454,7 +452,8 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildVaccinationTypeSelection(CreateAppointmentController controller) {
+  Widget _buildVaccinationTypeSelection(
+      CreateAppointmentController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -463,7 +462,8 @@ class CreateAppointmentDialog extends StatelessWidget {
         Obx(() => CustomDropdown<String>(
               hint: 'Select vaccination type',
               value: controller.selectedVaccinationType.value,
-              items: DropdownHelper.createStringItems(controller.vaccinationTypes),
+              items:
+                  DropdownHelper.createStringItems(controller.vaccinationTypes),
               onChanged: controller.updateSelectedVaccinationType,
             )),
       ],
@@ -482,14 +482,16 @@ class CreateAppointmentDialog extends StatelessWidget {
                   value: 'addDate',
                   groupValue: controller.selectedDateTimeOption.value,
                   label: 'Add date',
-                  onChanged: (val) => controller.updateSelectedDateTimeOption(val),
+                  onChanged: (val) =>
+                      controller.updateSelectedDateTimeOption(val),
                 ),
                 const SizedBox(width: 16),
                 CustomRadioOption<String>(
                   value: 'startNow',
                   groupValue: controller.selectedDateTimeOption.value,
                   label: 'Start now',
-                  onChanged: (val) => controller.updateSelectedDateTimeOption(val),
+                  onChanged: (val) =>
+                      controller.updateSelectedDateTimeOption(val),
                 ),
               ],
             )),
@@ -510,7 +512,6 @@ class CreateAppointmentDialog extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        
         _buildSectionTitle('Checkup details'),
         const SizedBox(height: 8),
         Row(
@@ -589,12 +590,12 @@ class CreateAppointmentDialog extends StatelessWidget {
         Obx(() {
           final isAllStudents = controller.selectedOption.value == 'all';
           final selectedStudents = controller.selectedStudents;
-          
+
           return Column(
             children: [
               // Multi-select input field
               _buildStudentMultiSelectField(controller, isAllStudents),
-              
+
               // Selected students display (only if not "All students")
               if (!isAllStudents && selectedStudents.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -607,7 +608,8 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentMultiSelectField(CreateAppointmentController controller, bool isAllStudents) {
+  Widget _buildStudentMultiSelectField(
+      CreateAppointmentController controller, bool isAllStudents) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -628,7 +630,9 @@ class CreateAppointmentDialog extends StatelessWidget {
                 child: Text(
                   isAllStudents ? 'All students' : 'Select Students',
                   style: TextStyle(
-                    color: isAllStudents ? const Color(0xFF374151) : const Color(0xFF9CA3AF),
+                    color: isAllStudents
+                        ? const Color(0xFF374151)
+                        : const Color(0xFF9CA3AF),
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                   ),
@@ -646,10 +650,13 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildSelectedStudentsDisplay(List<Student> selectedStudents, CreateAppointmentController controller) {
+  Widget _buildSelectedStudentsDisplay(
+      List<Student> selectedStudents, CreateAppointmentController controller) {
     const displayLimit = 5;
     final shouldShowMore = selectedStudents.length > displayLimit;
-    final studentsToShow = shouldShowMore ? selectedStudents.take(displayLimit).toList() : selectedStudents;
+    final studentsToShow = shouldShowMore
+        ? selectedStudents.take(displayLimit).toList()
+        : selectedStudents;
     final remainingCount = selectedStudents.length - displayLimit;
 
     return Wrap(
@@ -657,20 +664,20 @@ class CreateAppointmentDialog extends StatelessWidget {
       runSpacing: 8,
       runAlignment: WrapAlignment.start,
       alignment: WrapAlignment.start,
-      
       crossAxisAlignment: WrapCrossAlignment.start,
       children: [
         // Show individual student chips
-        ...studentsToShow.map((student) => _buildStudentChip(student, controller)),
-        
+        ...studentsToShow
+            .map((student) => _buildStudentChip(student, controller)),
+
         // Show "+N" chip if there are more than 5 students
-        if (shouldShowMore)
-          _buildMoreStudentsChip(remainingCount),
+        if (shouldShowMore) _buildMoreStudentsChip(remainingCount),
       ],
     );
   }
 
-  Widget _buildStudentChip(Student student, CreateAppointmentController controller) {
+  Widget _buildStudentChip(
+      Student student, CreateAppointmentController controller) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -860,7 +867,8 @@ class _StudentSelectionDialog extends StatefulWidget {
   });
 
   @override
-  State<_StudentSelectionDialog> createState() => _StudentSelectionDialogState();
+  State<_StudentSelectionDialog> createState() =>
+      _StudentSelectionDialogState();
 }
 
 class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
@@ -888,7 +896,9 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
         _filteredStudents = widget.students;
       } else {
         _filteredStudents = widget.students
-            .where((student) => student.name.toLowerCase().contains(_searchController.text.toLowerCase()))
+            .where((student) => student.name
+                .toLowerCase()
+                .contains(_searchController.text.toLowerCase()))
             .toList();
       }
     });
@@ -990,7 +1000,8 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
                 itemCount: _filteredStudents.length,
                 itemBuilder: (context, index) {
                   final student = _filteredStudents[index];
-                  final isSelected = _selectedStudents.any((s) => s.id == student.id);
+                  final isSelected =
+                      _selectedStudents.any((s) => s.id == student.id);
 
                   return ListTile(
                     leading: CircleAvatar(

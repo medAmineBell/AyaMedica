@@ -10,6 +10,7 @@ import 'package:flutter_getx_app/screens/students/student_overView_screen.dart';
 import 'package:flutter_getx_app/screens/users/user_screen.dart';
 import 'package:flutter_getx_app/screens/feedbackDashboard/feedback_details_screen.dart';
 import 'package:flutter_getx_app/screens/medicalCheckup/medical_checkup_table_screen.dart';
+import 'package:flutter_getx_app/screens/reports/reports_screen.dart';
 
 import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
@@ -71,6 +72,8 @@ class MainContentLayout extends GetView<HomeController> {
         return MedicalRecordsScreen();
       case ContentType.medicalCheckupTable:
         return _buildMedicalCheckupTableContent();
+      case ContentType.reports:
+        return const ReportsScreen();
       case ContentType.branches:
         return BranchManagementScreen();
       case ContentType.gradesSettings:

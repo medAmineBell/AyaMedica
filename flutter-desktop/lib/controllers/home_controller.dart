@@ -12,6 +12,7 @@ enum ContentType {
   studentsList,
   medicalCheckups,
   medicalCheckupTable, // New content type for medical checkup table
+  reports, // New content type for reports
   branches,
   gradesSettings,
   users,

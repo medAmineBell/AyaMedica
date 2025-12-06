@@ -362,13 +362,13 @@ class DayView extends GetView<CalendarController> {
   void _showCreateAppointmentDialog(int hour, int minute) {
     final timeString = _formatTime(hour, minute);
 
-    Get.dialog(
+    /*Get.dialog(
       CreateAppointmentDialog(
         selectedDate: controller.selectedDate.value,
         selectedTime: timeString,
       ),
       barrierDismissible: false,
-    );
+    );*/
   }
 
   String _formatTime(int hour, int minute) {

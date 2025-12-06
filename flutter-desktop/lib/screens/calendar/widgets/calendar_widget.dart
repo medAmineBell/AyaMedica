@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/calendar_controller.dart';
 import 'package:flutter_getx_app/screens/calendar/widgets/calendar_header.dart';
-import 'package:flutter_getx_app/screens/calendar/widgets/day_view.dart';
-import 'package:flutter_getx_app/screens/calendar/widgets/week_view.dart';
-import 'package:flutter_getx_app/screens/calendar/widgets/month_view.dart';
+import 'package:flutter_getx_app/screens/calendar/widgets/appointments_list.dart';
+import 'package:flutter_getx_app/screens/calendar/widgets/appointment_details_widget.dart';
 import 'package:get/get.dart';
 
 class CalendarWidget extends GetView<CalendarController> {
@@ -11,38 +10,40 @@ class CalendarWidget extends GetView<CalendarController> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Calendar Header
-        const CalendarHeader(),
+    return Obx(() {
+      final isShowingDetails = controller.isShowingDetails;
+      
+      return Column(
+        children: [
+          // Calendar Header - only show when not in details view
+          if (!isShowingDetails) const CalendarHeader(),
 
-        // Calendar Content
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: isShowingDetails && controller.selectedAppointmentForDetails.value != null
+                    ? AppointmentDetailsWidget(
+                        appointment: controller.selectedAppointmentForDetails.value!,
+                      )
+                    : const AppointmentsList(),
+              ),
             ),
-            child: Obx(() {
-              switch (controller.currentViewMode.value) {
-                case CalendarViewMode.day:
-                  return const DayView();
-                case CalendarViewMode.week:
-                  return const WeekView();
-                case CalendarViewMode.month:
-                  return const MonthView();
-              }
-            }),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }

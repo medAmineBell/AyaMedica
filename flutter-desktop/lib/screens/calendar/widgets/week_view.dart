@@ -309,12 +309,12 @@ class WeekView extends GetView<CalendarController> {
   }
 
   void _showCreateAppointmentDialog(String doctor, DateTime date) {
-    Get.dialog(
+    /*Get.dialog(
       CreateAppointmentDialog(
         selectedDate: date,
         selectedDoctor: doctor,
       ),
       barrierDismissible: false,
-    );
+    );*/
   }
 }

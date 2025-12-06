@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
@@ -33,6 +34,32 @@ class CalendarController extends GetxController {
     'Dr. Salem Said Al Ali', // Third column
     'Dr. Salem Said Al Ali', // Fourth column
   ].obs;
+
+  // Status filter: 'checkIn', 'checkedOut', 'cancelled'
+  final RxString selectedStatusFilter = 'checkIn'.obs;
+
+  // Search query
+  final RxString searchQuery = ''.obs;
+
+  // Filter options
+  final RxSet<String> selectedAppointmentTypes = <String>{}.obs;
+  final RxSet<String> selectedDiseaseTypes = <String>{}.obs;
+  final RxSet<String> selectedGrades = <String>{}.obs;
+  final RxSet<String> selectedClasses = <String>{}.obs;
+  final RxSet<String> selectedDoctors = <String>{}.obs;
+
+  // View state - track if showing details or list
+  final Rx<Appointment?> selectedAppointmentForDetails = Rx<Appointment?>(null);
+  
+  void showAppointmentDetails(Appointment appointment) {
+    selectedAppointmentForDetails.value = appointment;
+  }
+  
+  void hideAppointmentDetails() {
+    selectedAppointmentForDetails.value = null;
+  }
+  
+  bool get isShowingDetails => selectedAppointmentForDetails.value != null;
 
   @override
   void onInit() {
@@ -263,110 +290,266 @@ class CalendarController extends GetxController {
   }
 
   void _loadSampleAppointments() {
-    // Sample appointments similar to the images
+    // Sample appointments matching the Figma design
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     appointments.addAll([
       Appointment(
         id: '1',
-        type: 'Follow-up',
-        allStudents: false,
-        date: now,
-        time: '09:00 AM',
-        disease: 'General Checkup',
-        diseaseType: 'Routine',
-        grade: 'Grade 1',
+        type: 'Checkup',
+        allStudents: true,
+        date: today.add(const Duration(hours: 8)),
+        time: '08:00 AM - 08:30 AM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
         className: 'Lion Class',
         doctor: 'Dr. Salem Said Al Ali',
         selectedStudents: [],
+        status: AppointmentStatus.received,
       ),
       Appointment(
         id: '2',
-        type: 'Urgent',
-        allStudents: false,
-        date: now,
-        time: '09:00 AM',
-        disease: 'Emergency Check',
-        diseaseType: 'Urgent',
-        grade: 'Grade 2',
-        className: 'Tiger Class',
+        type: 'Follow up',
+        allStudents: true,
+        date: today.add(const Duration(hours: 9)),
+        time: '09:00 AM - 09:30 AM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
+        className: 'Lion Class',
         doctor: 'Dr. Ahmad Samir',
         selectedStudents: [],
+        status: AppointmentStatus.notDone,
       ),
       Appointment(
         id: '3',
-        type: 'Visit Finalized',
+        type: 'Walk in',
         allStudents: false,
-        date: now,
-        time: '09:30 AM',
-        disease: 'Completed Visit',
-        diseaseType: 'Completed',
-        grade: 'Grade 3',
-        className: 'Eagle Class',
+        date: today.add(const Duration(hours: 10)),
+        time: '10:00 AM - 10:30 AM',
+        disease: 'General Checkup',
+        diseaseType: '',
+        grade: 'G4',
+        className: 'Lion Class',
         doctor: 'Dr. Salem Said Al Ali',
-        selectedStudents: [],
+        selectedStudents: [
+          Student(
+            id: 'student_walkin',
+            name: 'Noha Ahed',
+            avatarColor: Colors.blue,
+            grade: 'G4',
+            className: 'Lion Class',
+          ),
+        ],
+        status: AppointmentStatus.notDone,
       ),
       Appointment(
         id: '4',
-        type: 'received',
-        allStudents: false,
-        date: now,
-        time: '10:00 AM',
-        disease: 'Paid Consultation',
-        diseaseType: 'Paid',
-        grade: 'Grade 1',
+        type: 'Follow up',
+        allStudents: true,
+        date: today.add(const Duration(hours: 11)),
+        time: '11:00 AM - 11:30 AM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
         className: 'Lion Class',
-        doctor: 'Dr. Salem Said Al Ali',
+        doctor: 'Dr. Ahmad Samir',
         selectedStudents: [],
+        status: AppointmentStatus.notDone,
       ),
       Appointment(
         id: '5',
-        type: 'Cancelled',
-        allStudents: false,
-        date: now,
-        time: '10:00 AM',
-        disease: 'Cancelled Appointment',
-        diseaseType: 'Cancelled',
-        grade: 'Grade 2',
-        className: 'Tiger Class',
-        doctor: 'Dr. Ahmad Samir',
+        type: 'Follow up',
+        allStudents: true,
+        date: today.add(const Duration(hours: 12)),
+        time: '12:00 PM - 12:30 PM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
+        className: 'Lion Class',
+        doctor: 'Dr. Salem Said Al Ali',
         selectedStudents: [],
+        status: AppointmentStatus.notDone,
       ),
       Appointment(
         id: '6',
-        type: 'Urgent',
-        allStudents: false,
-        date: now,
-        time: '11:00 AM',
-        disease: 'Urgent Care',
-        diseaseType: 'Urgent',
-        grade: 'Grade 3',
-        className: 'Eagle Class',
-        doctor: 'Dr. Salem Said Al Ali',
+        type: 'Follow up',
+        allStudents: true,
+        date: today.add(const Duration(hours: 13)),
+        time: '01:00 PM - 01:30 PM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
+        className: 'Lion Class',
+        doctor: 'Dr. Ahmad Samir',
         selectedStudents: [],
+        status: AppointmentStatus.notDone,
       ),
       Appointment(
         id: '7',
-        type: 'Paid',
-        allStudents: false,
-        date: now,
-        time: '11:30 AM',
-        disease: 'Paid Service',
-        diseaseType: 'Paid',
-        grade: 'Grade 2',
-        className: 'Tiger Class',
+        type: 'Follow up',
+        allStudents: true,
+        date: today.add(const Duration(hours: 14)),
+        time: '02:00 PM - 02:30 PM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
+        className: 'Lion Class',
+        doctor: 'Dr. Salem Said Al Ali',
+        selectedStudents: [],
+        status: AppointmentStatus.done,
+      ),
+      Appointment(
+        id: '8',
+        type: 'Checkup',
+        allStudents: true,
+        date: today.add(const Duration(days: 1)),
+        time: '08:00 AM - 08:30 AM',
+        disease: 'Body Mass index - BMI',
+        diseaseType: 'Disease type',
+        grade: 'G4',
+        className: 'Lion Class',
         doctor: 'Dr. Ahmad Samir',
         selectedStudents: [],
+        status: AppointmentStatus.cancelled,
       ),
     ]);
 
     // Set appointment statuses
     appointmentStatuses['1'] = AppointmentStatus.received;
     appointmentStatuses['2'] = AppointmentStatus.notDone;
-    appointmentStatuses['3'] = AppointmentStatus.done;
-    appointmentStatuses['4'] = AppointmentStatus.done;
-    appointmentStatuses['5'] = AppointmentStatus.cancelled;
+    appointmentStatuses['3'] = AppointmentStatus.notDone;
+    appointmentStatuses['4'] = AppointmentStatus.notDone;
+    appointmentStatuses['5'] = AppointmentStatus.notDone;
     appointmentStatuses['6'] = AppointmentStatus.notDone;
     appointmentStatuses['7'] = AppointmentStatus.done;
+    appointmentStatuses['8'] = AppointmentStatus.cancelled;
+  }
+
+  // Get filtered appointments based on status, search, and filters
+  List<Appointment> get filteredAppointments {
+    var filtered = appointments.toList();
+
+    // Filter by status
+    filtered = filtered.where((appointment) {
+      final status = appointmentStatuses[appointment.id] ?? appointment.status;
+      switch (selectedStatusFilter.value) {
+        case 'checkIn':
+          return status == AppointmentStatus.received || 
+                 status == AppointmentStatus.notDone ||
+                 status == AppointmentStatus.pendingApproval;
+        case 'checkedOut':
+          return status == AppointmentStatus.done;
+        case 'cancelled':
+          return status == AppointmentStatus.cancelled;
+        default:
+          return true;
+      }
+    }).toList();
+
+    // Filter by search query
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      filtered = filtered.where((appointment) {
+        return appointment.className.toLowerCase().contains(query) ||
+               appointment.grade.toLowerCase().contains(query) ||
+               appointment.type.toLowerCase().contains(query) ||
+               appointment.disease.toLowerCase().contains(query) ||
+               appointment.diseaseType.toLowerCase().contains(query) ||
+               appointment.doctor.toLowerCase().contains(query) ||
+               (appointment.allStudents 
+                 ? 'all students'.contains(query)
+                 : appointment.selectedStudents.any((student) => 
+                     student.name.toLowerCase().contains(query)));
+      }).toList();
+    }
+
+    // Filter by appointment types
+    if (selectedAppointmentTypes.isNotEmpty) {
+      filtered = filtered.where((appointment) => 
+        selectedAppointmentTypes.contains(appointment.type)).toList();
+    }
+
+    // Filter by disease types
+    if (selectedDiseaseTypes.isNotEmpty) {
+      filtered = filtered.where((appointment) => 
+        selectedDiseaseTypes.contains(appointment.diseaseType)).toList();
+    }
+
+    // Filter by grades
+    if (selectedGrades.isNotEmpty) {
+      filtered = filtered.where((appointment) => 
+        selectedGrades.contains(appointment.grade)).toList();
+    }
+
+    // Filter by classes
+    if (selectedClasses.isNotEmpty) {
+      filtered = filtered.where((appointment) => 
+        selectedClasses.contains(appointment.className)).toList();
+    }
+
+    // Filter by doctors
+    if (selectedDoctors.isNotEmpty) {
+      filtered = filtered.where((appointment) => 
+        selectedDoctors.contains(appointment.doctor)).toList();
+    }
+
+    return filtered;
+  }
+
+  // Get count for each status tab
+  int get checkInCount {
+    return appointments.where((appointment) {
+      final status = appointmentStatuses[appointment.id] ?? appointment.status;
+      return status == AppointmentStatus.received || 
+             status == AppointmentStatus.notDone ||
+             status == AppointmentStatus.pendingApproval;
+    }).length;
+  }
+
+  int get checkedOutCount {
+    return appointments.where((appointment) {
+      final status = appointmentStatuses[appointment.id] ?? appointment.status;
+      return status == AppointmentStatus.done;
+    }).length;
+  }
+
+  int get cancelledCount {
+    return appointments.where((appointment) {
+      final status = appointmentStatuses[appointment.id] ?? appointment.status;
+      return status == AppointmentStatus.cancelled;
+    }).length;
+  }
+
+  // Get active filter count
+  int get activeFilterCount {
+    int count = 0;
+    if (selectedAppointmentTypes.isNotEmpty) count++;
+    if (selectedDiseaseTypes.isNotEmpty) count++;
+    if (selectedGrades.isNotEmpty) count++;
+    if (selectedClasses.isNotEmpty) count++;
+    if (selectedDoctors.isNotEmpty) count++;
+    return count;
+  }
+
+  // Set status filter
+  void setStatusFilter(String status) {
+    selectedStatusFilter.value = status;
+  }
+
+  // Set search query
+  void setSearchQuery(String query) {
+    searchQuery.value = query;
+  }
+
+  // Clear all filters
+  void clearFilters() {
+    selectedAppointmentTypes.clear();
+    selectedDiseaseTypes.clear();
+    selectedGrades.clear();
+    selectedClasses.clear();
+    selectedDoctors.clear();
   }
 }

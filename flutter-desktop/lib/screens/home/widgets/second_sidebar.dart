@@ -257,7 +257,9 @@ class SecondSidebar extends GetView<HomeController> {
                       controller.changeContent(ContentType.studentsList)),
               _buildSubMenuItem('Medical records',
                   onTap: () =>
-                      controller.changeContent(ContentType.medicalCheckups),
+                      controller.changeContent(ContentType.medicalCheckups)),
+              _buildSubMenuItem('Reports',
+                  onTap: () => controller.changeContent(ContentType.reports),
                   isLast: true),
             ],
           ),
