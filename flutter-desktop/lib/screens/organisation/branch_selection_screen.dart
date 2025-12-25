@@ -37,7 +37,6 @@ class BranchSelectionScreen extends StatelessWidget {
               Expanded(
                 child: _buildBranchSection(controller),
               ),
-      
             ],
           ),
         ),
@@ -102,7 +101,7 @@ class BranchSelectionScreen extends StatelessWidget {
           ),
         );
       }
-      
+
       if (controller.rawOrganizations.isEmpty) {
         return Container(
           width: double.infinity,
@@ -127,20 +126,20 @@ class BranchSelectionScreen extends StatelessWidget {
           ),
         );
       }
-      
+
       return SingleChildScrollView(
         child: Column(
           children: controller.rawOrganizations.asMap().entries.map((orgEntry) {
             final orgIndex = orgEntry.key;
             final organization = orgEntry.value;
             final orgId = organization['id'] as String?;
-            final organizationBranches = orgId != null 
+            final organizationBranches = orgId != null
                 ? controller.getBranchesForOrganization(orgId)
                 : <dynamic>[];
-            
+
             return _buildOrganizationWithBranches(
-              organization, 
-              organizationBranches, 
+              organization,
+              organizationBranches,
               controller,
               orgIndex,
               controller.rawOrganizations.length,
@@ -169,7 +168,7 @@ class BranchSelectionScreen extends StatelessWidget {
             onTap: () => _onOrganizationTap(controller, organization),
           ),
         ),
-        
+
         // Branches for this organization
         if (branches.isNotEmpty) ...[
           Container(
@@ -180,7 +179,7 @@ class BranchSelectionScreen extends StatelessWidget {
                 final branch = branchEntry.value;
                 final isFirst = branchIndex == 0;
                 final isLast = branchIndex == branches.length - 1;
-                
+
                 return BranchItem(
                   branch: branch,
                   onTap: () => controller.selectBranch(branch),
@@ -195,13 +194,9 @@ class BranchSelectionScreen extends StatelessWidget {
     );
   }
 
-
-
-  void _onOrganizationTap(BranchSelectionController controller, Map<String, dynamic> organization) {
+  void _onOrganizationTap(
+      BranchSelectionController controller, Map<String, dynamic> organization) {
     // Select the organization to show its branches
     controller.selectOrganization(organization);
   }
-
-
-
 }
