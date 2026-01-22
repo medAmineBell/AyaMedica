@@ -1,25 +1,52 @@
-// Updated StudentController with updateStudent method
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/students/widgets/student_data_table.dart';
+import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/models/chronic_disease.dart';
+import 'package:flutter_getx_app/models/create_student_request.dart';
+import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:flutter_getx_app/screens/students/widgets/student_details_sheet_widget.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-import '../models/student.dart';
-import '../models/chronic_disease.dart';
-
-// Student Controller with GetX
 class StudentController extends GetxController {
+  // Services
+  final StorageService _storageService = Get.find();
+
   // Reactive variables
   final RxList<Student> _allStudents = <Student>[].obs;
   final RxList<Student> filteredStudents = <Student>[].obs;
   final RxString searchQuery = ''.obs;
   final RxString selectedFilter = 'All'.obs;
   final RxBool isLoading = false.obs;
-  final RxInt currentPage = 0.obs;
-  final RxInt itemsPerPage = 10.obs;
+  final RxBool isSaving = false.obs;
+  final RxInt currentPage = 1.obs;
+  final RxInt itemsPerPage = 20.obs;
+  final RxInt totalStudents = 0.obs;
+  final RxInt totalPages = 0.obs;
   final RxList<Map<String, dynamic>> defectiveRecords =
       <Map<String, dynamic>>[].obs;
   final RxBool hasDefectiveRecords = false.obs;
+
+  // Branch ID from storage
+  final RxString selectedBranchId = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadBranchId();
+    loadStudents();
+  }
+
+  // Load branch ID from storage
+  void _loadBranchId() {
+    final branchData = _storageService.getSelectedBranchData();
+    if (branchData != null) {
+      selectedBranchId.value = branchData['id'] ?? '';
+      print('📍 Loaded branch ID: ${selectedBranchId.value}');
+    } else {
+      print('⚠️ No branch data found in storage');
+    }
+  }
 
   // Method to add defective records
   void addDefectiveRecords(List<Map<String, dynamic>> records) {
@@ -35,7 +62,6 @@ class StudentController extends GetxController {
 
   // Method to download defective records as Excel
   void downloadDefectiveRecords() {
-    // Implementation for downloading defective records
     Get.snackbar(
       'Download Started',
       'Defective records file is being downloaded...',
@@ -47,275 +73,408 @@ class StudentController extends GetxController {
 
   // Getters
   List<Student> get students => filteredStudents;
-  int get totalStudents => _allStudents.length;
-  int get totalPages => (filteredStudents.length / itemsPerPage.value).ceil();
-
   List<Student> get paginatedStudents {
-    final startIndex = currentPage.value * itemsPerPage.value;
-    final endIndex =
-        (startIndex + itemsPerPage.value).clamp(0, filteredStudents.length);
-    return filteredStudents.sublist(startIndex, endIndex);
+    return filteredStudents;
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    loadStudents();
+  // CREATE STUDENT - API Integration
+  Future<bool> createStudent(CreateStudentRequest request) async {
+    isSaving.value = true;
+    try {
+      print('📤 Creating student...');
+      print('📤 Request body: ${jsonEncode(request.toJson())}');
+
+      // Get access token
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
+
+      // Make API request
+      final response = await http.post(
+        Uri.parse(
+            'https://ayamedica-backend.ayamedica.online/api/school-admin/students'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(request.toJson()),
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          print('✅ Student created successfully');
+
+          Get.snackbar(
+            'Success',
+            'Student added successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+
+          // Refresh student list
+          await loadStudents();
+
+          return true;
+        } else {
+          throw Exception(
+              responseData['message'] ?? 'Failed to create student');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error creating student: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to create student: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
   }
 
-  void loadStudents() {
+  // UPDATE STUDENT - API Integration
+  Future<bool> updateStudent(
+      String studentId, Map<String, dynamic> updateData) async {
+    isSaving.value = true;
+    try {
+      print('✏️ Updating student...');
+      print('📤 Student ID: $studentId');
+      print('📤 Update data: ${jsonEncode(updateData)}');
+
+      // Get access token
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
+
+      // Make API request
+      final response = await http.put(
+        Uri.parse(
+            'https://ayamedica-backend.ayamedica.online/api/school-admin/students/$studentId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(updateData),
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          print('✅ Student updated successfully');
+
+          Get.snackbar(
+            'Success',
+            'Student updated successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+
+          // Refresh student list
+          await loadStudents();
+
+          return true;
+        } else {
+          throw Exception(
+              responseData['message'] ?? 'Failed to update student');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error updating student: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update student: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  // DELETE STUDENT - API Integration
+  Future<bool> deleteStudentApi(String studentId) async {
     isLoading.value = true;
+    try {
+      print('🗑️ Deleting student...');
+      print('📤 Student ID: $studentId');
 
-    // Simulate loading delay
-    Future.delayed(Duration(milliseconds: 500), () {
-      _allStudents.value = [
-        Student(
-          id: '8EG390J65A',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2010-10-02'),
-          bloodType: 'O+',
-          weightKg: 39.2,
-          heightCm: 136,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Ronald Taylor',
-          firstGuardianPhone: '(903)105-7844x138',
-          firstGuardianEmail: 'ejohnson@owen-campbell.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Mr. Kevin Ramirez',
-          secondGuardianPhone: '151-548-4860',
-          secondGuardianEmail: 'jacksondennis@rhodes.net',
-          secondGuardianStatus: 'Offline',
-          city: 'North Zachary',
-          street: '365 Mcclure Spring',
-          zipCode: '63039',
-          province: 'Delaware',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL0499418',
-          passportIdNumber: 'Vi36090905',
-          nationality: 'Egyptian',
-          nationalId: '2101013573669393',
-          gender: 'Male',
-          phoneNumber: '+1-743-315-1141x81905',
-          email: 'scott82@mendoza.com',
-          studentId: '29000000000',
-          aid: '4EG2390Q3SE',
-          grade: 'G4',
-          className: 'Lions',
-          lastAppointmentDate: DateTime.parse('2025-07-22 16:25:00'),
-          lastAppointmentType: 'Walk in',
-          emrNumber: 22,
-          chronicDiseases: [
-            ChronicDisease(
-              id: 'cd1',
-              name: 'Type 1 Diabetes',
-              description: 'Autoimmune condition affecting insulin production',
-              category: 'Endocrine',
-              diagnosedDate: DateTime.parse('2018-03-15'),
-              severity: 'moderate',
-              isActive: true,
-              treatmentPlan: 'Insulin therapy and blood glucose monitoring',
-              medications: 'Insulin injections, Metformin',
-              notes: 'Requires regular blood sugar monitoring',
-            ),
-            ChronicDisease(
-              id: 'cd2',
-              name: 'Asthma',
-              description: 'Chronic respiratory condition',
-              category: 'Respiratory',
-              diagnosedDate: DateTime.parse('2019-06-20'),
-              severity: 'mild',
-              isActive: true,
-              treatmentPlan: 'Inhaler therapy and trigger avoidance',
-              medications: 'Albuterol inhaler',
-              notes: 'Triggered by exercise and cold weather',
-            ),
-          ],
-        ),
-        Student(
-          id: '8EG390J66B',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2015-02-26'),
-          bloodType: 'B-',
-          weightKg: 48.1,
-          heightCm: 138,
-          goToHospital: 'Al Salam Hospital',
-          firstGuardianName: 'Laura Kennedy',
-          firstGuardianPhone: '(151)240-2718',
-          firstGuardianEmail: 'ijohnson@lyons-taylor.net',
-          firstGuardianStatus: 'Offline',
-          secondGuardianName: 'Brian Cardenas',
-          secondGuardianPhone: '(492)549-0512x00087',
-          secondGuardianEmail: 'jessica97@hotmail.com',
-          secondGuardianStatus: 'Offline',
-          city: 'East Rose',
-          street: '851 Reese Heights',
-          zipCode: '99340',
-          province: 'Maryland',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL9961387',
-          passportIdNumber: 'ln06876152',
-          nationality: 'Egyptian',
-          nationalId: '2746755682256140',
-          gender: 'Female',
-          phoneNumber: '301.261.2846x390',
-          email: 'andrewmendoza@jones-carroll.info',
-          studentId: '29000000001',
-          aid: '4EG2390Q3SF',
-          grade: 'G2',
-          className: 'Eagles',
-          lastAppointmentDate: DateTime.parse('2025-07-20 14:30:00'),
-          lastAppointmentType: 'Scheduled',
-          emrNumber: 25,
-          chronicDiseases: [
-            ChronicDisease(
-              id: 'cd3',
-              name: 'Hypertension',
-              description: 'High blood pressure condition',
-              category: 'Cardiovascular',
-              diagnosedDate: DateTime.parse('2020-01-10'),
-              severity: 'mild',
-              isActive: true,
-              treatmentPlan: 'Lifestyle modifications and medication',
-              medications: 'Lisinopril',
-              notes: 'Monitor blood pressure regularly',
-            ),
-          ],
-        ),
-        Student(
-          id: '8EG390J67C',
-          name: 'Omar Ahmed Farid',
-          avatarColor: Color(4293870660),
-          dateOfBirth: DateTime.parse('2014-08-18'),
-          bloodType: 'A-',
-          weightKg: 39.8,
-          heightCm: 147,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Bruce Smith',
-          firstGuardianPhone: '+1-383-541-1239',
-          firstGuardianEmail: 'courtneymatthews@barnes.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Alexander Dixon',
-          secondGuardianPhone: '+1-409-517-0017',
-          secondGuardianEmail: 'ulee@yahoo.com',
-          secondGuardianStatus: 'Online',
-          city: 'South Danielville',
-          street: '9053 Kevin Ridge',
-          zipCode: '02378',
-          province: 'New Hampshire',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL8991389',
-          passportIdNumber: 'ok97972521',
-          nationality: 'Egyptian',
-          nationalId: '2628575843788600',
-          gender: 'Male',
-          phoneNumber: '001-685-915-3428x243',
-          email: 'andreathompson@hotmail.com',
-          studentId: '29000000002',
-          aid: '4EG2390Q3SG',
-          grade: 'G3',
-          className: 'Tigers',
-          lastAppointmentDate: DateTime.parse('2025-07-19 10:15:00'),
-          lastAppointmentType: 'Emergency',
-          emrNumber: 28,
-        ),
-        Student(
-          id: '8EG390J65E',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2014-01-17'),
-          bloodType: 'AB+',
-          weightKg: 35.4,
-          heightCm: 147,
-          goToHospital: 'Al Salam Hospital',
-          firstGuardianName: 'Nicole Marshall',
-          firstGuardianPhone: '331-178-7656',
-          firstGuardianEmail: 'medinagarrett@young.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Lisa Hall',
-          secondGuardianPhone: '001-605-815-5262x89726',
-          secondGuardianEmail: 'taylorjohn@gmail.com',
-          secondGuardianStatus: 'Online',
-          city: 'Whitakerside',
-          street: '70453 Kirk Course Suite 916',
-          zipCode: '62213',
-          province: 'Washington',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL9709109',
-          passportIdNumber: 'qT53122254',
-          nationality: 'Egyptian',
-          nationalId: '2777888206975572',
-          gender: 'Male',
-          phoneNumber: '471.110.3632',
-          email: 'lindsaylane@williams-harris.com',
-          studentId: '29000000003',
-          aid: '4EG2390Q3SH',
-          grade: 'G4',
-          className: 'Bears',
-          lastAppointmentDate: DateTime.parse('2025-07-18 09:45:00'),
-          lastAppointmentType: 'Walk in',
-          emrNumber: 31,
-        ),
-        Student(
-          id: '8EGdvJ66R',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2013-09-08'),
-          bloodType: 'B-',
-          weightKg: 43.8,
-          heightCm: 145,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Diana Ochoa',
-          firstGuardianPhone: '227.571.9987',
-          firstGuardianEmail: 'rubenwashington@hotmail.com',
-          firstGuardianStatus: 'Offline',
-          secondGuardianName: 'Rachel Munoz PhD',
-          secondGuardianPhone: '001-208-871-9718x7376',
-          secondGuardianEmail: 'cgordon@pierce.info',
-          secondGuardianStatus: 'Offline',
-          city: 'Khanside',
-          street: '7120 Brittney Passage',
-          zipCode: '58606',
-          province: 'Hawaii',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL7578448',
-          passportIdNumber: 'OI47501527',
-          nationality: 'Egyptian',
-          nationalId: '2963636324432351',
-          gender: 'Male',
-          phoneNumber: '002.472.8675x12705',
-          email: 'andersonrobert@gmail.com',
-          studentId: '29000000004',
-          aid: '4EG2390Q3SI',
-          grade: 'G1',
-          className: 'Wolves',
-          lastAppointmentDate: DateTime.parse('2025-07-17 15:20:00'),
-          lastAppointmentType: 'Scheduled',
-          emrNumber: 19,
-        ),
-      ];
+      // Get access token
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
 
-      filteredStudents.value = _allStudents;
+      // Make API request
+      final response = await http.delete(
+        Uri.parse(
+            'https://ayamedica-backend.ayamedica.online/api/school-admin/students/$studentId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ Student deleted successfully');
+
+        Get.snackbar(
+          'Success',
+          'Student deleted successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+
+        // Refresh student list
+        await loadStudents();
+
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error deleting student: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to delete student: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
       isLoading.value = false;
-    });
+    }
   }
 
+  // Load students from API
+  Future<void> loadStudents({int page = 1}) async {
+    if (selectedBranchId.value.isEmpty) {
+      print('❌ Cannot load students: No branch ID available');
+      Get.snackbar(
+        'Error',
+        'Please select a branch first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      print('📡 Fetching students for branch: ${selectedBranchId.value}');
+
+      // Get access token from storage
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
+
+      // Build API URL
+      final url = Uri.parse(
+        'https://ayamedica-backend.ayamedica.online/api/school-admin/branches/${selectedBranchId.value}/students?page=$page&limit=${itemsPerPage.value}',
+      );
+
+      // Make API request
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'];
+          final studentsJson = data['students'] as List;
+          final pagination = data['pagination'] as Map<String, dynamic>;
+
+          // Parse students
+          final students =
+              studentsJson.map((json) => _parseStudent(json)).toList();
+
+          // Update observables
+          _allStudents.value = students;
+          filteredStudents.value = students;
+          currentPage.value = pagination['page'];
+          totalStudents.value = pagination['total'];
+          totalPages.value = pagination['totalPages'];
+
+          print('✅ Students loaded successfully:');
+          print('   - Students: ${students.length}');
+          print('   - Total: ${totalStudents.value}');
+          print('   - Page: ${currentPage.value}/${totalPages.value}');
+        } else {
+          throw Exception('API returned success: false');
+        }
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error loading students: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load students: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+
+      // Clear data on error
+      _allStudents.value = [];
+      filteredStudents.value = [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Parse student from API response
+  Student _parseStudent(Map<String, dynamic> json) {
+    try {
+      // Parse name
+      final nameMap = json['name'] as Map<String, dynamic>?;
+      final givenName = nameMap?['given'] ?? '';
+      final familyName = nameMap?['family'] ?? '';
+      final fullName = '$givenName $familyName'.trim();
+
+      // Parse branch
+      final branchMap = json['branch'] as Map<String, dynamic>?;
+      final branchName = branchMap?['name'] ?? '';
+
+      // Parse classes (take first class if available)
+      final classList = json['classes'] as List? ?? [];
+      String? grade;
+      String? className;
+      if (classList.isNotEmpty) {
+        final firstClass = classList.first as Map<String, dynamic>;
+        grade = firstClass['grade'];
+        className = firstClass['name'];
+      }
+
+      // Parse last appointment
+      DateTime? lastAppointmentDate;
+      String? lastAppointmentType;
+      if (json['lastAppointment'] != null) {
+        final lastAppointment = json['lastAppointment'] as Map<String, dynamic>;
+        final dateStr = lastAppointment['date'] as String?;
+        if (dateStr != null) {
+          lastAppointmentDate = DateTime.parse(dateStr);
+        }
+        lastAppointmentType = lastAppointment['type'];
+      }
+
+      // Generate avatar color from ID
+      final id = json['id'] as String;
+      final colorValue = id.hashCode & 0xFFFFFFFF;
+      final avatarColor = Color(colorValue | 0xFF000000);
+
+      return Student(
+        id: id,
+        name: fullName,
+        avatarColor: avatarColor,
+        dateOfBirth: json['dateOfBirth'] != null
+            ? DateTime.parse(json['dateOfBirth'])
+            : null,
+        gender: json['gender'] == 'male' ? 'Male' : 'Female',
+        email: json['email'],
+        phoneNumber: json['phone'],
+        nationalId: json['nationalId'],
+        passportIdNumber: json['passportNumber'],
+        studentId: json['studentId'],
+        aid: json['id'],
+        grade: grade ?? json['grade'],
+        className: className,
+        lastAppointmentDate: lastAppointmentDate,
+        lastAppointmentType: lastAppointmentType,
+        emrNumber: 0,
+        bloodType: null,
+        weightKg: null,
+        heightCm: null,
+        city: null,
+        street: null,
+        zipCode: null,
+        province: null,
+        nationality: null,
+        firstGuardianName: null,
+        firstGuardianPhone: null,
+        firstGuardianEmail: null,
+        firstGuardianStatus: null,
+        secondGuardianName: null,
+        secondGuardianPhone: null,
+        secondGuardianEmail: null,
+        secondGuardianStatus: null,
+        goToHospital: null,
+        insuranceCompany: null,
+        policyNumber: null,
+        chronicDiseases: [],
+      );
+    } catch (e) {
+      print('❌ Error parsing student: $e');
+      rethrow;
+    }
+  }
+
+  // SEARCH with real-time filtering
   void searchStudents(String query) {
+    print('🔍 Searching for: "$query"');
     searchQuery.value = query;
-    currentPage.value = 0;
     applyFilters();
   }
 
+  // Filter by gender
   void filterByGender(String filter) {
+    print('🔍 Filtering by gender: $filter');
     selectedFilter.value = filter;
-    currentPage.value = 0;
     applyFilters();
   }
 
+  // Apply filters
   void applyFilters() {
     filteredStudents.value = _allStudents.where((student) {
-      final matchesSearch = student.name
+      // Search filter
+      final matchesSearch = searchQuery.value.isEmpty ||
+          student.name
               .toLowerCase()
               .contains(searchQuery.value.toLowerCase()) ||
           student.id.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
@@ -323,141 +482,50 @@ class StudentController extends GetxController {
                   ?.toLowerCase()
                   .contains(searchQuery.value.toLowerCase()) ??
               false) ||
-          (student.aid
+          (student.nationalId
+                  ?.toLowerCase()
+                  .contains(searchQuery.value.toLowerCase()) ??
+              false) ||
+          (student.email
                   ?.toLowerCase()
                   .contains(searchQuery.value.toLowerCase()) ??
               false);
 
+      // Gender filter
       final matchesFilter = selectedFilter.value == 'All' ||
           student.gender == selectedFilter.value;
 
       return matchesSearch && matchesFilter;
     }).toList();
+
+    print('✅ Filters applied: ${filteredStudents.length} students found');
   }
 
-  void addStudent(Student student) {
-    _allStudents.add(student);
-    applyFilters();
-    Get.snackbar(
-      'Success',
-      'Student "${student.name}" added successfully',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: Duration(seconds: 3),
-    );
-  }
-
-  // NEW: Update student method
-  void updateStudent(Student updatedStudent) {
-    final index =
-        _allStudents.indexWhere((student) => student.id == updatedStudent.id);
-    if (index != -1) {
-      _allStudents[index] = updatedStudent;
-      applyFilters();
-      Get.snackbar(
-        'Success',
-        'Student "${updatedStudent.name}" updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
-      );
-    } else {
-      Get.snackbar(
-        'Error',
-        'Student not found for update',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
-      );
-    }
-  }
-
-  void removeStudent(String id) {
-    final removedStudent =
-        _allStudents.firstWhereOrNull((student) => student.id == id);
-    _allStudents.removeWhere((student) => student.id == id);
-    applyFilters();
-
-    if (removedStudent != null) {
-      Get.snackbar(
-        'Success',
-        'Student "${removedStudent.name}" removed successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
-      );
-    }
-  }
-
+  // Refresh students
   void refreshStudents() {
-    loadStudents();
+    loadStudents(page: currentPage.value);
   }
 
+  // Pagination
   void goToPage(int page) {
-    if (page >= 0 && page < totalPages) {
-      currentPage.value = page;
+    if (page >= 1 && page <= totalPages.value) {
+      loadStudents(page: page);
     }
   }
 
   void previousPage() {
-    if (currentPage.value > 0) {
-      currentPage.value--;
+    if (currentPage.value > 1) {
+      loadStudents(page: currentPage.value - 1);
     }
   }
 
   void nextPage() {
-    if (currentPage.value < totalPages - 1) {
-      currentPage.value++;
+    if (currentPage.value < totalPages.value) {
+      loadStudents(page: currentPage.value + 1);
     }
   }
 
-  void editStudent(Student student) {
-    // This method is now handled by the HomeController navigation
-    // But keeping for backward compatibility
-    Get.snackbar(
-      'Edit Student',
-      'Edit functionality for ${student.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
-  }
-
-  void deleteStudent(Student student) {
-    Get.dialog(
-      AlertDialog(
-        title: Text('Delete Student'),
-        content: Text('Are you sure you want to delete ${student.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              _allStudents.removeWhere((s) => s.id == student.id);
-              applyFilters();
-              Get.back();
-              Get.snackbar(
-                'Success',
-                'Student "${student.name}" deleted successfully',
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: Colors.red,
-                colorText: Colors.white,
-                duration: Duration(seconds: 3),
-              );
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // View student details
   void viewStudent(Student student) {
     Get.bottomSheet(
       StudentDetailsSheet(student: student),
@@ -466,7 +534,70 @@ class StudentController extends GetxController {
     );
   }
 
-  // Helper method to find student by ID
+  // Show delete confirmation dialog
+  void showDeleteConfirmation(Student student) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 64,
+                color: Colors.red.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Delete Student',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Are you sure you want to delete "${student.name}"? This action cannot be undone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        deleteStudentApi(student.id);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Get student by ID
   Student? getStudentById(String id) {
     try {
       return _allStudents.firstWhere((student) => student.id == id);
@@ -475,7 +606,7 @@ class StudentController extends GetxController {
     }
   }
 
-  // Helper method to get student count by grade
+  // Statistics
   Map<String, int> getStudentCountByGrade() {
     final gradeCount = <String, int>{};
     for (final student in _allStudents) {
@@ -485,7 +616,6 @@ class StudentController extends GetxController {
     return gradeCount;
   }
 
-  // Helper method to get student count by class
   Map<String, int> getStudentCountByClass() {
     final classCount = <String, int>{};
     for (final student in _allStudents) {
@@ -493,44 +623,5 @@ class StudentController extends GetxController {
       classCount[className] = (classCount[className] ?? 0) + 1;
     }
     return classCount;
-  }
-
-  // Method to validate student data before saving
-  String? validateStudent(Student student) {
-    if (student.name.trim().isEmpty) {
-      return 'Student name is required';
-    }
-
-    if (student.dateOfBirth == null) {
-      return 'Date of birth is required';
-    }
-
-    if (student.nationalId?.trim().isEmpty ?? true) {
-      return 'National ID is required';
-    }
-
-    if (student.grade?.trim().isEmpty ?? true) {
-      return 'Grade is required';
-    }
-
-    if (student.className?.trim().isEmpty ?? true) {
-      return 'Class name is required';
-    }
-
-    // Check for duplicate national ID (excluding current student if updating)
-    final existingStudent = _allStudents.firstWhereOrNull(
-        (s) => s.nationalId == student.nationalId && s.id != student.id);
-    if (existingStudent != null) {
-      return 'A student with this National ID already exists';
-    }
-
-    // Check for duplicate student ID (excluding current student if updating)
-    final existingStudentId = _allStudents.firstWhereOrNull(
-        (s) => s.studentId == student.studentId && s.id != student.id);
-    if (existingStudentId != null) {
-      return 'A student with this Student ID already exists';
-    }
-
-    return null; // No validation errors
   }
 }

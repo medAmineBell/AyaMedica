@@ -72,7 +72,7 @@ class DynamicTableWidget<T> extends StatelessWidget {
     for (int i = 0; i < columns.length; i++) {
       columnWidths[i] = columns[i].columnWidth;
     }
-    
+
     // Add actions column if actions are provided
     if (showActions && actions != null && actions!.isNotEmpty) {
       columnWidths[columns.length] = FixedColumnWidth(actionColumnWidth ?? 120);
@@ -107,31 +107,30 @@ class DynamicTableWidget<T> extends StatelessWidget {
   TableRow _buildHeaderRow() {
     List<Widget> headerCells = columns.map((column) {
       return _buildHeaderCell(
-        child: column.headerWidget ?? 
-          Row(
-            children: [
-              SizedBox(
-                width: 100, // Fixed width for header cells
-                child: Text(
-                  column.header,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
-                    overflow: TextOverflow.ellipsis
+        child: column.headerWidget ??
+            Row(
+              children: [
+                SizedBox(
+                  width: 89, // Fixed width for header cells
+                  child: Text(
+                    column.header,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B7280),
+                        overflow: TextOverflow.ellipsis),
                   ),
                 ),
-              ),
-              if (column.tooltip != null) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.help_outline,
-                  size: 14,
-                  color: Colors.grey.shade400,
-                ),
+                if (column.tooltip != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.help_outline,
+                    size: 14,
+                    color: Colors.grey.shade400,
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
       );
     }).toList();
 
@@ -164,20 +163,22 @@ class DynamicTableWidget<T> extends StatelessWidget {
 
   TableRow _buildDataRow(T item, int index) {
     List<Widget> dataCells = columns.map((column) {
-      Widget cellContent = column.cellBuilder?.call(item, index) ?? 
-        const Text('N/A', style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)));
-      
+      Widget cellContent = column.cellBuilder?.call(item, index) ??
+          const Text('N/A',
+              style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)));
+
       return _buildDataCell(
-        child: onRowTap != null 
-          ? InkWell(
-              onTap: () => onRowTap!(item, index),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                child: cellContent,
-              ),
-            )
-          : cellContent,
+        child: onRowTap != null
+            ? InkWell(
+                onTap: () => onRowTap!(item, index),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  child: cellContent,
+                ),
+              )
+            : cellContent,
       );
     }).toList();
 
@@ -243,15 +244,16 @@ class TableCellHelpers {
   static Widget textCell(String text, {TextStyle? style}) {
     return Text(
       text,
-      style: style ?? const TextStyle(
-        fontSize: 14,
-        color: Color(0xFF6B7280),
-        
-      ),
+      style: style ??
+          const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF6B7280),
+          ),
     );
   }
 
-  static Widget badgeCell(String text, {Color? backgroundColor, Color? textColor}) {
+  static Widget badgeCell(String text,
+      {Color? backgroundColor, Color? textColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -289,12 +291,13 @@ class TableCellHelpers {
       onTap: onTap,
       child: Text(
         text,
-        style: style ?? const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF374151),
-          decoration: TextDecoration.underline,
-        ),
+        style: style ??
+            const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF374151),
+              decoration: TextDecoration.underline,
+            ),
       ),
     );
   }

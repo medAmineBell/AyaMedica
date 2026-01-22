@@ -78,9 +78,7 @@ class BranchSelectionScreen extends StatelessWidget {
   }
 
   Widget _buildBranchSection(BranchSelectionController controller) {
-    return Expanded(
-      child: _buildOrganizationsSection(controller),
-    );
+    return _buildOrganizationsSection(controller);
   }
 
   Widget _buildOrganizationsSection(BranchSelectionController controller) {
@@ -130,7 +128,6 @@ class BranchSelectionScreen extends StatelessWidget {
       return SingleChildScrollView(
         child: Column(
           children: controller.rawOrganizations.asMap().entries.map((orgEntry) {
-            final orgIndex = orgEntry.key;
             final organization = orgEntry.value;
             final orgId = organization['id'] as String?;
             final organizationBranches = orgId != null
@@ -141,8 +138,6 @@ class BranchSelectionScreen extends StatelessWidget {
               organization,
               organizationBranches,
               controller,
-              orgIndex,
-              controller.rawOrganizations.length,
             );
           }).toList(),
         ),
@@ -154,49 +149,49 @@ class BranchSelectionScreen extends StatelessWidget {
     Map<String, dynamic> organization,
     List<dynamic> branches,
     BranchSelectionController controller,
-    int orgIndex,
-    int totalOrgs,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Organization card
-        Padding(
-          padding: EdgeInsets.only(bottom: orgIndex < totalOrgs - 1 ? 16 : 0),
-          child: OrganizationCard(
-            organizationData: organization,
-            onTap: () => _onOrganizationTap(controller, organization),
-          ),
-        ),
+    final orgId = organization['id'] as String?;
+    if (orgId == null) return const SizedBox.shrink();
 
-        // Branches for this organization
-        if (branches.isNotEmpty) ...[
-          Container(
-            margin: const EdgeInsets.only(left: 20, bottom: 16),
-            child: Column(
-              children: branches.asMap().entries.map((branchEntry) {
-                final branchIndex = branchEntry.key;
-                final branch = branchEntry.value;
-                final isFirst = branchIndex == 0;
-                final isLast = branchIndex == branches.length - 1;
+    return Obx(() {
+      final isExpanded = controller.isOrganizationExpanded(orgId);
 
-                return BranchItem(
-                  branch: branch,
-                  onTap: () => controller.selectBranch(branch),
-                  isFirst: isFirst,
-                  isLast: isLast,
-                );
-              }).toList(),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Organization card with conditional styling
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: OrganizationCard(
+              organizationData: organization,
+              isExpanded: isExpanded,
+              onTap: () => controller.toggleOrganization(orgId),
             ),
           ),
-        ],
-      ],
-    );
-  }
 
-  void _onOrganizationTap(
-      BranchSelectionController controller, Map<String, dynamic> organization) {
-    // Select the organization to show its branches
-    controller.selectOrganization(organization);
+          // Branches for this organization (only shown when expanded)
+          if (isExpanded && branches.isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(left: 20, bottom: 16),
+              child: Column(
+                children: branches.asMap().entries.map((branchEntry) {
+                  final branchIndex = branchEntry.key;
+                  final branch = branchEntry.value;
+                  final isFirst = branchIndex == 0;
+                  final isLast = branchIndex == branches.length - 1;
+
+                  return BranchItem(
+                    branch: branch,
+                    onTap: () => controller.selectBranch(branch),
+                    isFirst: isFirst,
+                    isLast: isLast,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ],
+      );
+    });
   }
 }

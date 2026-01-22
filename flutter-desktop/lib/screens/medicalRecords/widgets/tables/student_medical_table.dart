@@ -1,83 +1,185 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_getx_app/controllers/medical_records_controller.dart';
-import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/models/medical_student.dart';
 import 'package:flutter_getx_app/shared/widgets/dynamic_table_widget.dart';
+import 'package:get/get.dart';
 
 class StudentMedicalTable extends StatelessWidget {
-    final void Function(Student)? onRowTap;
+  final Function(MedicalStudent)? onRowTap;
 
-  const StudentMedicalTable({super.key, this.onRowTap});
+  const StudentMedicalTable({
+    Key? key,
+    this.onRowTap,
+  }) : super(key: key);
 
-   @override
+  @override
   Widget build(BuildContext context) {
     final controller = Get.find<MedicalRecordsController>();
 
-    return Obx(() {
-      switch (controller.state.value) {
-        case MedicalRecordsState.loading:
-          return const Center(child: CircularProgressIndicator());
-        case MedicalRecordsState.error:
-          return Center(child: Text('Failed to load records.'));
-        case MedicalRecordsState.empty:
-          return Center(child: Text('No medical records found.'));
-        case MedicalRecordsState.success:
-          return DynamicTableWidget<Student>(
-            items: controller.displayedStudents,
-            columns: _buildColumns(),
-            showActions: false,
-            emptyMessage: 'No records found',
-            onRowTap: (student, index) => onRowTap?.call(student),
-          );
-      }
-    });
+    return DynamicTableWidget<MedicalStudent>(
+      items: controller.displayedStudents,
+      columns: _buildColumns(),
+      onRowTap:
+          onRowTap != null ? (student, index) => onRowTap!(student) : null,
+      showActions: false,
+      emptyMessage: 'No students found',
+      headerColor: const Color(0xFFF8FAFC),
+      borderColor: const Color(0xFFE2E8F0),
+    );
   }
 
-
-  List<TableColumnConfig<Student>> _buildColumns() {
+  List<TableColumnConfig<MedicalStudent>> _buildColumns() {
     return [
-      TableColumnConfig<Student>(
-        header: 'Student full name',
+      // Student Info
+      TableColumnConfig<MedicalStudent>(
+        header: 'Student',
         columnWidth: const FlexColumnWidth(3),
         cellBuilder: (student, index) => Row(
           children: [
-            TableCellHelpers.avatarCell(student.initials, backgroundColor: student.avatarColor),
-            const SizedBox(width: 8),
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: _getAvatarColor(student.id),
+              child: Text(
+                student.initials,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(student.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  Text(student.studentId ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(
+                    student.fullName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ID: ${student.studentId}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-      TableColumnConfig<Student>(
+
+      // Grade & Class
+      TableColumnConfig<MedicalStudent>(
         header: 'Grade & Class',
-        cellBuilder: (student, index) => TableCellHelpers.textCell(student.gradeAndClass),
-      ),
-      TableColumnConfig<Student>(
-        header: 'AID',
-        cellBuilder: (student, index) => TableCellHelpers.textCell(student.aid ?? 'N/A'),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Number of records',
-        cellBuilder: (student, index) => TableCellHelpers.badgeCell(
-          (student.emrNumber ?? 0).toString(),
-          backgroundColor: Colors.lightBlue.shade100,
-          textColor: Colors.blue,
+        columnWidth: const FlexColumnWidth(2),
+        cellBuilder: (student, index) => Text(
+          student.gradeAndClass ?? 'N/A',
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF374151),
+          ),
         ),
       ),
-      TableColumnConfig<Student>(
-        header: 'Last visit',
-        tooltip: 'Last medical appointment',
-        cellBuilder: (student, index) =>
-            TableCellHelpers.textCell(student.formattedAppointmentDate),
+
+      // Number of Records
+      TableColumnConfig<MedicalStudent>(
+        header: 'Records',
+        columnWidth: const FlexColumnWidth(1.5),
+        cellBuilder: (student, index) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: student.numberOfRecords > 0
+                ? Colors.blue.shade100
+                : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '${student.numberOfRecords}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: student.numberOfRecords > 0
+                  ? Colors.blue.shade800
+                  : Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+
+      // Last Visit
+      TableColumnConfig<MedicalStudent>(
+        header: 'Last Visit',
+        columnWidth: const FlexColumnWidth(2),
+        cellBuilder: (student, index) => Row(
+          children: [
+            Icon(
+              Icons.calendar_today,
+              size: 14,
+              color: student.lastVisit != null
+                  ? Colors.green.shade600
+                  : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              student.formattedLastVisit,
+              style: TextStyle(
+                fontSize: 12,
+                color: student.lastVisit != null
+                    ? const Color(0xFF374151)
+                    : Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // Status
+      TableColumnConfig<MedicalStudent>(
+        header: 'Status',
+        columnWidth: const FlexColumnWidth(1.5),
+        cellBuilder: (student, index) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: student.hasVisited
+                ? Colors.green.shade100
+                : Colors.orange.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            student.hasVisited ? 'Visited' : 'Not Visited',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: student.hasVisited
+                  ? Colors.green.shade800
+                  : Colors.orange.shade800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     ];
+  }
+
+  Color _getAvatarColor(String id) {
+    final hash = id.hashCode;
+    final colors = [
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF059669), // Green
+      const Color(0xFF7C3AED), // Purple
+      const Color(0xFFDC2626), // Red
+      const Color(0xFFD97706), // Orange
+      const Color(0xFF0891B2), // Cyan
+    ];
+    return colors[hash.abs() % colors.length];
   }
 }

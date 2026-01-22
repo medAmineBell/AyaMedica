@@ -4,7 +4,7 @@ import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:flutter_getx_app/shared/widgets/dynamic_table_widget.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:flutter_getx_app/controllers/home_controller.dart'; // Added import for HomeController
+import 'package:flutter_getx_app/controllers/home_controller.dart';
 
 class BranchTableWidget extends StatelessWidget {
   const BranchTableWidget({Key? key}) : super(key: key);
@@ -12,7 +12,6 @@ class BranchTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<BranchManagementController>();
-    
     return Obx(() {
       // Handle different states
       switch (controller.state.value) {
@@ -86,7 +85,8 @@ class BranchTableWidget extends StatelessWidget {
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -130,7 +130,8 @@ class BranchTableWidget extends StatelessWidget {
               icon: const Icon(Icons.add),
               label: const Text('Add Branch'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -140,23 +141,65 @@ class BranchTableWidget extends StatelessWidget {
   }
 
   Widget _buildSuccessState(BranchManagementController controller) {
-    return DynamicTableWidget<BranchModel>(
-      items: controller.branches,
-      columns: _buildColumnConfigs(),
-      actions: _buildActionConfigs(),
-      onRowTap: (branch, index) => _activateDeactivateBranch(branch),
-      emptyMessage: 'No branches found',
-      headerColor: const Color(0xFFF8FAFC),
-      borderColor: const Color(0xFFE2E8F0),
-    );
+    return Obx(() {
+      final filtered = controller.filteredBranches;
+
+      // Show empty state if filtered list is empty but branches exist
+      if (filtered.isEmpty && controller.branches.isNotEmpty) {
+        return Container(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No branches match your search',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try adjusting your search or filters',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return SingleChildScrollView(
+        child: DynamicTableWidget<BranchModel>(
+          items: filtered,
+          columns: _buildColumnConfigs(),
+          actions: _buildActionConfigs(),
+          onRowTap: (branch, index) => _showBranchDetails(branch),
+          emptyMessage: 'No branches found',
+          headerColor: const Color(0xFFF8FAFC),
+          borderColor: const Color(0xFFE2E8F0),
+        ),
+      );
+    });
   }
 
   List<TableColumnConfig<BranchModel>> _buildColumnConfigs() {
     return [
-      // Branch Icon & Name
+      // Branch name & AID (ID below name) - Like Screenshot
       TableColumnConfig<BranchModel>(
-        header: 'Branch',
-        columnWidth: const FlexColumnWidth(3),
+        header: 'Branch name & AID',
+        columnWidth: const FlexColumnWidth(2.5),
         cellBuilder: (branch, index) => Row(
           children: [
             Container(
@@ -176,21 +219,23 @@ class BranchTableWidget extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     branch.name,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: Color(0xFF1F2937),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    branch.principalName!,
+                    branch.id.substring(0, 12).toUpperCase(), // Short ID
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      fontSize: 11,
+                      color: Color(0xFF9CA3AF),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
@@ -200,157 +245,67 @@ class BranchTableWidget extends StatelessWidget {
         ),
       ),
 
-      // Contact Information
+      // City & Governorate - Like Screenshot
       TableColumnConfig<BranchModel>(
-        header: 'Contact',
-        columnWidth: const FlexColumnWidth(2.5),
+        header: 'City & Governorate',
+        columnWidth: const FlexColumnWidth(2),
         cellBuilder: (branch, index) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.phone_outlined,
-                  size: 14,
-                  color: Colors.grey.shade600,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    branch.phone!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  Icons.email_outlined,
-                  size: 14,
-                  color: Colors.grey.shade600,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    branch.email!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF374151),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-
-      // Address
-      TableColumnConfig<BranchModel>(
-        header: 'Address',
-        columnWidth: const FlexColumnWidth(2),
-        cellBuilder: (branch, index) => Row(
-          children: [
-            Icon(
-              Icons.location_on_outlined,
-              size: 14,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                branch.address!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF374151),
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+            Text(
+              '${branch.city ?? 'N/A'} , ${branch.governorate ?? 'N/A'}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF374151),
               ),
             ),
           ],
         ),
       ),
 
-      // Statistics
+      // Number of users - Like Screenshot
       TableColumnConfig<BranchModel>(
-        header: 'Statistics',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (branch, index) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.school_outlined,
-                  size: 14,
-                  color: Colors.blue.shade600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${branch.studentCount} students',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  size: 14,
-                  color: Colors.green.shade600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${branch.teacherCount} teachers',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.green.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        header: 'Number of users',
+        columnWidth: const FlexColumnWidth(1.2),
+        cellBuilder: (branch, index) => Text(
+          '${branch.teacherCount ?? 0}', // teacherCount = totalUsers
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
 
-      // Status
+      // Number of students - Like Screenshot
+      TableColumnConfig<BranchModel>(
+        header: 'Number of students',
+        columnWidth: const FlexColumnWidth(1.5),
+        cellBuilder: (branch, index) => Text(
+          '${branch.studentCount ?? 0}', // studentCount = totalStudents
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1F2937),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+
+      // Status - Like Screenshot
       TableColumnConfig<BranchModel>(
         header: 'Status',
         columnWidth: const FlexColumnWidth(1),
         cellBuilder: (branch, index) => TableCellHelpers.badgeCell(
-          branch.status!.toLowerCase() == 'active' ? 'Active' : 'Inactive',
-          backgroundColor: branch.status!.toLowerCase() == 'active'
+          branch.status?.toLowerCase() == 'active' ? 'Active' : 'Inactive',
+          backgroundColor: branch.status?.toLowerCase() == 'active'
               ? const Color(0xFFDCFCE7)
               : const Color(0xFFFEE2E2),
-          textColor: branch.status!.toLowerCase() == 'active'
+          textColor: branch.status?.toLowerCase() == 'active'
               ? const Color(0xFF059669)
               : const Color(0xFFDC2626),
-        ),
-      ),
-
-      // Created Date
-      TableColumnConfig<BranchModel>(
-        header: 'Created',
-        columnWidth: const FlexColumnWidth(1),
-        cellBuilder: (branch, index) => TableCellHelpers.textCell(
-          _formatDate(branch.createdAt!),
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF6B7280),
-          ),
         ),
       ),
     ];
@@ -358,24 +313,22 @@ class BranchTableWidget extends StatelessWidget {
 
   List<TableActionConfig<BranchModel>> _buildActionConfigs() {
     return [
-  
-   
       TableActionConfig<BranchModel>(
         icon: Icons.delete_outline,
         color: const Color(0xFFDC2626),
         tooltip: 'Delete branch',
         onPressed: (branch, index) => _showDeleteConfirmation(branch),
       ),
-         TableActionConfig<BranchModel>(
+      TableActionConfig<BranchModel>(
         icon: Icons.edit_outlined,
         color: const Color(0xFF747677),
         tooltip: 'Edit branch',
         onPressed: (branch, index) => _showEditBranchDialog(branch),
       ),
-          TableActionConfig<BranchModel>(
-        icon: Icons.airplanemode_active,
+      TableActionConfig<BranchModel>(
+        icon: Icons.settings_outlined,
         color: const Color(0xFFD6A100),
-        tooltip: 'Activate/Deactivate branch',
+        tooltip: 'Manage branch',
         onPressed: (branch, index) => _activateDeactivateBranch(branch),
       ),
     ];
@@ -407,324 +360,189 @@ class BranchTableWidget extends StatelessWidget {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  void _showBranchDetails(BranchModel branch) {
+    // Optional: Show details on row tap
+    print('Branch tapped: ${branch.name}');
   }
 
-void _activateDeactivateBranch(BranchModel branch) {
-  Get.dialog(
-    Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-      child: SizedBox(
-        width: Get.width * 0.5,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Airplane icon
-              Icon(Icons.flight, size: 48, color: Colors.amber[700]),
-        
-              const SizedBox(height: 24),
-        
-              // Title
-              Text(
-                'Deactivate ${branch.name}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
+  void _activateDeactivateBranch(BranchModel branch) {
+    final controller = Get.find<BranchManagementController>();
+    final isActive = branch.status?.toLowerCase() == 'active';
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: SizedBox(
+          width: Get.width * 0.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isActive
+                      ? Icons.pause_circle_outline
+                      : Icons.check_circle_outline,
+                  size: 48,
+                  color: isActive ? Colors.amber[700] : Colors.green[600],
                 ),
-                textAlign: TextAlign.center,
-              ),
-        
-              const SizedBox(height: 12),
-        
-              // Subtitle
-              const Text(
-                'Please confirm that you want to deactivate this branch.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+                const SizedBox(height: 24),
+                Text(
+                  '${isActive ? 'Deactivate' : 'Activate'} ${branch.name}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-        
-              const SizedBox(height: 32),
-        
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Cancel Button
-                  OutlinedButton(
-                    onPressed: () => Get.back(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      side: const BorderSide(color: Colors.grey),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                Text(
+                  isActive
+                      ? 'Please confirm that you want to deactivate this branch. The branch will be temporarily disabled.'
+                      : 'Please confirm that you want to activate this branch. The branch will be reactivated and accessible.',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.black),
                       ),
                     ),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ),
-        
-                  // Deactivate Button
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.back();
-                      final controller = Get.find<BranchManagementController>();
-                      controller.deactivateBranch(branch.id); // Adjust if you use a different method
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber[100],
-                      foregroundColor: Colors.brown[700],
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        if (isActive) {
+                          controller.deactivateBranch(branch.id);
+                        } else {
+                          controller.activateBranch(branch.id);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            isActive ? Colors.amber[100] : Colors.green[100],
+                        foregroundColor:
+                            isActive ? Colors.brown[700] : Colors.green[800],
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
+                      child: Text(
+                          '${isActive ? 'Deactivate' : 'Activate'} branch'),
                     ),
-                    child: const Text('Deactivate branch'),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    ),
-  );
-}
-
-
-  Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 
   void _showEditBranchDialog(BranchModel branch) {
-    // Navigate to branch form for editing
     final homeController = Get.find<HomeController>();
     homeController.navigateToEditBranch(branch);
   }
 
- void _showDeleteConfirmation(BranchModel branch) {
-  Get.dialog(
-    Dialog(
-      
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-
-      child: SizedBox(
-        width: Get.width *0.5 ,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Trash icon
-        SvgPicture.asset('assets/svg/trash.svg', width: 48, height: 48,),
-              const SizedBox(height: 24),
-        
-              // Bold title with branch name
-              Text(
-                'Delete ${branch.name}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                ),
-                textAlign: TextAlign.center,
-              ),
-        
-              const SizedBox(height: 12),
-        
-              // Subtitle
-              const Text(
-                'Please confirm if you want to delete this record. This action cannot be undone.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-        
-              const SizedBox(height: 32),
-        
-              // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Cancel Button
-                  OutlinedButton(
-                    onPressed: () => Get.back(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      side: const BorderSide(color: Colors.grey),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ),
-        
-                  // Delete Button
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.back();
-                      final controller = Get.find<BranchManagementController>();
-                      controller.deleteBranch(branch.id);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFED1F4F),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Delete branch'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-}
-
-// Compact view for dashboard or smaller screens
-class CompactBranchTableWidget extends StatelessWidget {
-  const CompactBranchTableWidget({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<BranchManagementController>();
-    
-    return Obx(() {
-      if (controller.state.value != BranchState.success) {
-        return const SizedBox.shrink();
-      }
-
-      return DynamicTableWidget<BranchModel>(
-        items: controller.branches,
-        columns: [
-          TableColumnConfig<BranchModel>(
-            header: 'Branch',
-            columnWidth: const FlexColumnWidth(2),
-            cellBuilder: (branch, index) => Row(
+  void _showDeleteConfirmation(BranchModel branch) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: SizedBox(
+          width: Get.width * 0.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _getBranchColor(branch.name),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.business,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                SvgPicture.asset(
+                  'assets/svg/trash.svg',
+                  width: 48,
+                  height: 48,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    branch.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 24),
+                Text(
+                  'Delete ${branch.name}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
                   ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Please confirm if you want to delete this record. This action cannot be undone.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        final controller =
+                            Get.find<BranchManagementController>();
+                        controller.deleteBranch(branch.id);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFED1F4F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Delete branch'),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          TableColumnConfig<BranchModel>(
-            header: 'Students',
-            columnWidth: const FlexColumnWidth(1),
-            cellBuilder: (branch, index) => TableCellHelpers.badgeCell(
-              '${branch.studentCount}',
-              backgroundColor: Colors.blue.shade100,
-              textColor: Colors.blue.shade800,
-            ),
-          ),
-          TableColumnConfig<BranchModel>(
-            header: 'Status',
-            columnWidth: const FlexColumnWidth(1),
-            cellBuilder: (branch, index) => TableCellHelpers.badgeCell(
-              branch.status!.toLowerCase() == 'active' ? 'Active' : 'Inactive',
-              backgroundColor: branch.status!.toLowerCase() == 'active'
-                  ? Colors.green.shade100
-                  : Colors.red.shade100,
-              textColor: branch.status!.toLowerCase() == 'active'
-                  ? Colors.green.shade800
-                  : Colors.red.shade800,
-            ),
-          ),
-        ],
-        actions: [
-          TableActionConfig<BranchModel>(
-            icon: Icons.visibility,
-            onPressed: (branch, index) {
-              // Show branch details
-            },
-          ),
-        ],
-        showActions: true,
-        actionColumnWidth: 60,
-        emptyMessage: 'No branches',
-      );
-    });
-  }
-
-  Color _getBranchColor(String branchName) {
-    final hash = branchName.hashCode;
-    final colors = [
-      const Color(0xFF3B82F6),
-      const Color(0xFF059669),
-      const Color(0xFF7C3AED),
-      const Color(0xFFDC2626),
-      const Color(0xFFD97706),
-      const Color(0xFF0891B2),
-    ];
-    return colors[hash.abs() % colors.length];
+        ),
+      ),
+    );
   }
 }

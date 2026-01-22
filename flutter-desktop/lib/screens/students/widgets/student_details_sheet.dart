@@ -81,7 +81,7 @@ class _StudentDetailsHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'ID: ${student.studentId ?? 'No ID'}',
+                  'ID: ${student.aid ?? 'No ID'}',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,

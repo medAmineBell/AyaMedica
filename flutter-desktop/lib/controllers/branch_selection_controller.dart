@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:flutter_getx_app/controllers/auth_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
 import 'package:flutter_getx_app/utils/medplum_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:flutter_getx_app/models/user_profile.dart';
-import 'package:flutter_getx_app/models/fhir_organization.dart';
+import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../routes/app_pages.dart';
 
@@ -14,7 +15,7 @@ class BranchSelectionController extends GetxController {
   // Services
   final MedplumService _medplumService = Get.find<MedplumService>();
   final StorageService _storageService = Get.find<StorageService>();
-  
+
   // Observable properties
   final selectedLanguage = 'English'.obs;
   final isLoading = false.obs;
@@ -30,21 +31,18 @@ class BranchSelectionController extends GetxController {
 
   // Root organizations (edu type) - will be populated from server
   final rootOrganizations = <BranchModel>[].obs;
-  
-  // Raw organization data from FHIR API
+
+  // Raw organization data from API
   final rawOrganizations = <Map<String, dynamic>>[].obs;
-  
-  // Selected root organization
-  final selectedRootOrganization = Rxn<BranchModel>();
-  
+
+  // Branches grouped by organization ID
+  final branchesByOrg = <String, List<Map<String, dynamic>>>{}.obs;
+
   // Selected organization for branch display
   final selectedOrganization = Rxn<Map<String, dynamic>>();
-  
-  // Branch list (children of root organizations) - will be populated from server
-  final branches = <BranchModel>[].obs;
-  
-  // Filtered branches (children of selected root organization)
-  final filteredBranches = <BranchModel>[].obs;
+
+  // Track which organization is currently expanded
+  final expandedOrganizationId = Rxn<String>(); // Rxn allows null values
 
   @override
   void onInit() {
@@ -57,23 +55,23 @@ class BranchSelectionController extends GetxController {
   Future<void> _loadUserData() async {
     try {
       isLoadingUser.value = true;
-      
+
       // Get user profile from MedplumService
       final userProfile = await _medplumService.getCurrentUserProfile();
-      
+
       if (userProfile != null) {
         // Extract user information from profile
         final userName = _getUserName(userProfile);
         final userEmail = userProfile.user.email;
         final initials = _getInitials(userName);
-        
+
         // Update user model
         user.value = UserModel(
           name: userName,
           aid: userEmail, // Using email as identifier for now
           initials: initials,
         );
-        
+
         print('✅ User data loaded: $userName ($userEmail)');
       } else {
         // Fallback to default values if no profile available
@@ -97,75 +95,111 @@ class BranchSelectionController extends GetxController {
     }
   }
 
-  // Load branches from server
+  // Load organizations and branches from server
   Future<void> _loadBranches() async {
     try {
       isLoadingBranches.value = true;
-      
+
       print('🏢 Loading organizations from server...');
-      
-      // Fetch organizations from MedplumService
-      final result = await _medplumService.fetchOrganizations();
-      
-      if (result['success'] == true) {
-        final organizations = result['organizations'] as List<FhirOrganization>;
-        
-        // Convert all organizations to BranchModel and create branches for each
-        final allOrgs = <BranchModel>[];
-        final allBranches = <BranchModel>[];
-        final rawOrgData = <Map<String, dynamic>>[];
-        
-        for (final org in organizations) {
-          final branchModel = BranchModel.fromFhirOrganization(org);
-          allOrgs.add(branchModel);
-          
-          // Store raw organization data for UserCard
-          rawOrgData.add(org.toJson());
-          
-          // Create branches for each organization (clinic/school)
-          final branchesForOrg = _createBranchesForOrganization(branchModel);
-          allBranches.addAll(branchesForOrg);
+
+      // Get access token from storage
+      final accessToken = await _storageService.getAccessToken();
+
+      // Call the new API
+      final response = await http.get(
+        Uri.parse(
+            'https://ayamedica-backend.ayamedica.online/api/organizations'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData['success'] == true) {
+          final organizations = jsonData['data'] as List<dynamic>;
+
+          // Process organizations and their branches
+          final rawOrgData = <Map<String, dynamic>>[];
+          final branchesMap = <String, List<Map<String, dynamic>>>{};
+          final seenOrgIds = <String>{}; // Track seen organization IDs
+
+          for (final org in organizations) {
+            final orgMap = org as Map<String, dynamic>;
+            final orgId = orgMap['id'] as String;
+
+            // Skip if we've already processed this organization
+            if (seenOrgIds.contains(orgId)) {
+              print('⚠️ Skipping duplicate organization: $orgId');
+              continue;
+            }
+
+            seenOrgIds.add(orgId);
+            rawOrgData.add(orgMap);
+
+            // Extract branches for this organization
+            final branches = orgMap['branches'] as List<dynamic>? ?? [];
+            branchesMap[orgId] =
+                branches.map((b) => b as Map<String, dynamic>).toList();
+          }
+
+          // Update observables
+          rawOrganizations.value = rawOrgData;
+          branchesByOrg.value = branchesMap;
+
+          print('✅ Organizations loaded successfully:');
+          print('   - Organizations: ${rawOrgData.length}');
+          print(
+              '   - Unique organizations after deduplication: ${seenOrgIds.length}');
+          print(
+              '   - Total branches: ${branchesMap.values.expand((b) => b).length}');
+
+          // Show success message
+          Get.snackbar(
+            'Success',
+            'Loaded ${rawOrgData.length} organizations',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+        } else {
+          print('❌ API returned success: false');
+
+          Get.snackbar(
+            'Error',
+            'Failed to load organizations',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 3),
+          );
+
+          rawOrganizations.value = [];
+          branchesByOrg.value = {};
         }
-        
-        // Update observables
-        rootOrganizations.value = allOrgs;
-        rawOrganizations.value = rawOrgData;
-        branches.value = allBranches;
-        
-        print('✅ Organizations loaded successfully:');
-        print('   - Root organizations: ${allOrgs.length}');
-        print('   - Branches: ${allBranches.length}');
-        
-        // Show success message
-        Get.snackbar(
-          'Success',
-          'Loaded ${allOrgs.length} organizations and ${allBranches.length} branches',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
       } else {
-        print('❌ Failed to load organizations: ${result['message']}');
-        
-        // Show error message
+        print('❌ HTTP Error: ${response.statusCode}');
+
         Get.snackbar(
           'Error',
-          'Failed to load organizations: ${result['message']}',
+          'Failed to load organizations: HTTP ${response.statusCode}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
-        
-        // Keep empty lists on error
-        rootOrganizations.value = [];
-        branches.value = [];
+
+        rawOrganizations.value = [];
+        branchesByOrg.value = {};
       }
     } catch (e) {
       print('💥 Exception loading organizations: $e');
-      
-      // Show error message
+
       Get.snackbar(
         'Error',
         'Failed to load organizations: ${e.toString()}',
@@ -174,48 +208,12 @@ class BranchSelectionController extends GetxController {
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
       );
-      
-      // Keep empty lists on error
-      rootOrganizations.value = [];
-      branches.value = [];
+
+      rawOrganizations.value = [];
+      branchesByOrg.value = {};
     } finally {
       isLoadingBranches.value = false;
     }
-  }
-
-  // Create branches for each organization (1 school and 1 clinic)
-  List<BranchModel> _createBranchesForOrganization(BranchModel organization) {
-    final branches = <BranchModel>[];
-    
-    // Always create 1 school and 1 clinic for each organization
-    branches.addAll([
-      // School branch
-      BranchModel(
-        id: '${organization.id}_school',
-        name: '${organization.name} School',
-        role: 'School',
-        icon: 'school',
-        parentId: organization.id,
-        address: organization.address,
-        phone: organization.phone,
-        email: organization.email,
-        status: 'active',
-      ),
-      // Clinic branch
-      BranchModel(
-        id: '${organization.id}_clinic',
-        name: '${organization.name} Clinic',
-        role: 'Clinic',
-        icon: 'clinic',
-        parentId: organization.id,
-        address: organization.address,
-        phone: organization.phone,
-        email: organization.email,
-        status: 'active',
-      ),
-    ]);
-    
-    return branches;
   }
 
   // Extract user name from profile
@@ -232,7 +230,7 @@ class BranchSelectionController extends GetxController {
   // Generate initials from name
   String _getInitials(String name) {
     if (name.isEmpty) return 'U';
-    
+
     final words = name.trim().split(' ');
     if (words.length >= 2) {
       return '${words[0][0]}${words[1][0]}'.toUpperCase();
@@ -242,89 +240,9 @@ class BranchSelectionController extends GetxController {
     return 'U';
   }
 
-  // Select a root organization
-  void selectRootOrganization(BranchModel rootOrg) async {
-    selectedRootOrganization.value = rootOrg;
-    isLoading.value = true;
-    
-    try {
-      print('🏢 Selecting organization: ${rootOrg.name} (${rootOrg.role})');
-      
-      // Prepare organization data
-      final organizationData = {
-        'id': rootOrg.id,
-        'name': rootOrg.name,
-        'role': rootOrg.role,
-        'icon': rootOrg.icon,
-        'address': rootOrg.address,
-        'phone': rootOrg.phone,
-        'email': rootOrg.email,
-        'status': rootOrg.status,
-        'selected_at': DateTime.now().toIso8601String(),
-      };
-      
-      // Save selected organization data
-      await _storageService.saveBranchSelectedStatus(true);
-      await _storageService.saveSelectedBranchData(organizationData);
-      
-      // Update HomeController with selected organization data
-      try {
-        final homeController = Get.find<HomeController>();
-        homeController.updateSelectedBranchData(organizationData);
-        print('✅ Organization data updated in HomeController');
-      } catch (e) {
-        print('⚠️ HomeController not found, organization data will be loaded on home screen: $e');
-      }
-      
-      isLoading.value = false;
-      
-      // Show success message
-      Get.snackbar(
-        'Success',
-        'Organization ${rootOrg.name} selected',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-      
-      print('✅ Organization selected successfully: ${rootOrg.name}');
-      
-      // Navigate to home screen after a short delay
-      await Future.delayed(const Duration(milliseconds: 500));
-      Get.offAllNamed(Routes.HOME);
-      
-    } catch (e) {
-      isLoading.value = false;
-      print('❌ Error selecting organization: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to select organization: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
   // Get branches for a specific organization
-  List<BranchModel> getBranchesForOrganization(String organizationId) {
-    return branches.where((branch) => branch.parentId == organizationId).toList();
-  }
-  
-  // Get branches grouped by root organization
-  Map<String, List<BranchModel>> getBranchesGroupedByRoot() {
-    final Map<String, List<BranchModel>> groupedBranches = {};
-    
-    for (final branch in branches) {
-      final parentId = branch.parentId ?? 'no_parent';
-      if (!groupedBranches.containsKey(parentId)) {
-        groupedBranches[parentId] = [];
-      }
-      groupedBranches[parentId]!.add(branch);
-    }
-    
-    return groupedBranches;
+  List<Map<String, dynamic>> getBranchesForOrganization(String organizationId) {
+    return branchesByOrg[organizationId] ?? [];
   }
 
   // Select an organization to show its branches
@@ -332,7 +250,25 @@ class BranchSelectionController extends GetxController {
     selectedOrganization.value = organization;
     print('🏢 Selected organization: ${organization['name']}');
   }
-  
+
+  /// Toggle organization expansion state
+  void toggleOrganization(String organizationId) {
+    if (expandedOrganizationId.value == organizationId) {
+      // If clicking the same organization, collapse it
+      expandedOrganizationId.value = null;
+      print('🔽 Collapsed organization: $organizationId');
+    } else {
+      // Otherwise, expand the clicked organization
+      expandedOrganizationId.value = organizationId;
+      print('🔼 Expanded organization: $organizationId');
+    }
+  }
+
+  /// Check if an organization is currently expanded
+  bool isOrganizationExpanded(String organizationId) {
+    return expandedOrganizationId.value == organizationId;
+  }
+
   // Methods
   void changeLanguage(String language) {
     selectedLanguage.value = language;
@@ -343,79 +279,81 @@ class BranchSelectionController extends GetxController {
     await _loadBranches();
   }
 
-  void selectBranch(BranchModel branch) async {
+  void selectBranch(Map<String, dynamic> branch) async {
     isLoading.value = true;
-    
+
     try {
-      print('🏢 Selecting branch: ${branch.name} (${branch.role})');
-      
-      // Determine if it's a school or clinic
-      final isSchool = branch.role.toLowerCase() == 'school';
-      final isClinic = branch.role.toLowerCase() == 'clinic';
-      
-      // Get organization ID from parent
-      final organizationId = branch.parentId ?? 'unknown';
-      
+      print(
+          '🏢 Selecting branch: ${branch['name']} (${branch['accountType']})');
+
+      // Determine if it's a school or clinic based on accountType
+      final accountType = branch['accountType'] as String? ?? '';
+      final isSchool = accountType.toLowerCase() == 'school';
+      final isClinic = accountType.toLowerCase() == 'clinic';
+
+      // Get organization ID from the expanded organization
+      final organizationId = expandedOrganizationId.value ?? 'unknown';
+
       // Prepare branch data with organization info
       final branchData = {
-        'id': branch.id,
-        'name': branch.name,
-        'role': branch.role,
-        'icon': branch.icon,
-        'address': branch.address,
-        'phone': branch.phone,
-        'email': branch.email,
-        'status': branch.status,
-        'parentId': branch.parentId,
+        'id': branch['id'],
+        'name': branch['name'],
+        'role': branch['accountType'],
+        'icon': isSchool ? 'school' : 'clinic',
+        'address': branch['address'],
+        'phone': branch['phone'],
+        'email': null, // API doesn't have email
+        'status': branch['status'],
+        'parentId': organizationId,
         'organizationId': organizationId,
         'isSchool': isSchool,
         'isClinic': isClinic,
         'selected_at': DateTime.now().toIso8601String(),
       };
-      
+
       // Save selected branch data
       await _storageService.saveBranchSelectedStatus(true);
       await _storageService.saveSelectedBranchData(branchData);
-      
+
       // Save organization ID separately for easy access
       await _storageService.saveOrganizationId(organizationId);
-      
+
       // Save organization type flags
       await _storageService.saveIsSchool(isSchool);
       await _storageService.saveIsClinic(isClinic);
-      
+
       print('💾 Saved to storage:');
       print('   - Organization ID: $organizationId');
       print('   - Is School: $isSchool');
       print('   - Is Clinic: $isClinic');
-      
+
       // Update HomeController with selected branch data
       try {
         final homeController = Get.find<HomeController>();
         homeController.updateSelectedBranchData(branchData);
         print('✅ Branch data updated in HomeController');
       } catch (e) {
-        print('⚠️ HomeController not found, branch data will be loaded on home screen: $e');
+        print(
+            '⚠️ HomeController not found, branch data will be loaded on home screen: $e');
       }
-      
+
       isLoading.value = false;
-      
+
       // Show success message
       Get.snackbar(
         'Success',
-        'Organization ${branch.name} selected',
+        'Organization ${branch['name']} selected',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
       );
-      
-      print('✅ Branch selected successfully: ${branch.name}');
-      
+
+      print('✅ Branch selected successfully: ${branch['name']}');
+
       // Navigate to home screen after a short delay
       await Future.delayed(const Duration(milliseconds: 500));
       Get.offAllNamed(Routes.HOME);
-      
     } catch (e) {
       isLoading.value = false;
       print('❌ Error selecting branch: $e');
@@ -439,7 +377,7 @@ class BranchSelectionController extends GetxController {
     try {
       // Clear selected branch data
       await _storageService.clearSelectedBranchData();
-      
+
       // Get the auth controller and call logout
       final AuthController authController = Get.find<AuthController>();
       await authController.logout();

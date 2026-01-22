@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/models/branch_model.dart';
-import 'package:get/get.dart';
 
 import 'tree_connector_painter.dart';
 
 class BranchItem extends StatelessWidget {
-  final BranchModel branch;
+  final Map<String, dynamic> branch;
   final VoidCallback onTap;
   final bool isFirst;
   final bool isLast;
@@ -30,7 +28,7 @@ class BranchItem extends StatelessWidget {
             onTap: onTap,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              margin: const EdgeInsets.only( top: 12, bottom: 12),
+              margin: const EdgeInsets.only(top: 12, bottom: 12),
               decoration: ShapeDecoration(
                 color: const Color(0xFFEDF1F5),
                 shape: RoundedRectangleBorder(
@@ -88,7 +86,7 @@ class BranchItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            branch.name,
+            branch['name'] ?? 'Unknown Branch',
             style: const TextStyle(
               color: Color(0xFF2D2E2E),
               fontSize: 14,
@@ -100,7 +98,7 @@ class BranchItem extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            branch.role,
+            branch['accountType'] ?? 'Branch',
             style: const TextStyle(
               color: Color(0xFF6F6F6F),
               fontSize: 12,

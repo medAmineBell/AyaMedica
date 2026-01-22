@@ -1,127 +1,123 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:get/get.dart';
-
-import '../../../controllers/student_controller.dart';
 
 class StudentTablePagination extends StatelessWidget {
   final StudentController controller;
 
-  const StudentTablePagination({Key? key, required this.controller})
-      : super(key: key);
+  const StudentTablePagination({
+    Key? key,
+    required this.controller,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Obx(() => Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _PaginationButton(
-                icon: Icons.arrow_back,
-                label: 'Previous',
-                onPressed: controller.currentPage.value > 0
-                    ? controller.previousPage
-                    : null,
-              ),
-              _PageNumbers(controller: controller),
-              _PaginationButton(
-                icon: Icons.arrow_forward,
-                label: 'Next',
-                onPressed: controller.currentPage.value < controller.totalPages - 1
-                    ? controller.nextPage
-                    : null,
-              ),
-            ],
-          )),
-    );
-  }
-}
-
-class _PaginationButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-
-  const _PaginationButton({
-    required this.icon,
-    required this.label,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      label: Text(label),
-    );
-  }
-}
-
-class _PageNumbers extends StatelessWidget {
-  final StudentController controller;
-
-  const _PageNumbers({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (int i = 0; i < controller.totalPages && i < 10; i++)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: _PageNumberButton(
-              pageNumber: i + 1,
-              isSelected: i == controller.currentPage.value,
-              onTap: () => controller.goToPage(i),
-            ),
-          ),
-        if (controller.totalPages > 10) ...[
-          Text('...', style: TextStyle(color: Colors.grey.shade600)),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: _PageNumberButton(
-              pageNumber: controller.totalPages,
-              isSelected: false,
-              onTap: () => controller.goToPage(controller.totalPages - 1),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _PageNumberButton extends StatelessWidget {
-  final int pageNumber;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PageNumberButton({
-    required this.pageNumber,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
+    return Obx(() {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.grey.shade300),
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
         ),
-        child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Results info
+            Text(
+              'Showing ${controller.students.length} of ${controller.totalStudents.value} results',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+
+            // Pagination controls
+            Row(
+              children: [
+                // Previous button
+                IconButton(
+                  onPressed: controller.currentPage.value > 1
+                      ? controller.previousPage
+                      : null,
+                  icon: const Icon(Icons.chevron_left),
+                  color: controller.currentPage.value > 1
+                      ? Colors.blue.shade600
+                      : Colors.grey.shade400,
+                ),
+
+                // Page numbers
+                ...List.generate(
+                  controller.totalPages.value,
+                  (index) {
+                    final pageNumber = index + 1;
+                    final isCurrentPage =
+                        controller.currentPage.value == pageNumber;
+
+                    // Show max 5 page numbers
+                    if (controller.totalPages.value > 5) {
+                      if (pageNumber == 1 ||
+                          pageNumber == controller.totalPages.value ||
+                          (pageNumber >= controller.currentPage.value - 1 &&
+                              pageNumber <= controller.currentPage.value + 1)) {
+                        return _buildPageButton(pageNumber, isCurrentPage);
+                      } else if (pageNumber ==
+                              controller.currentPage.value - 2 ||
+                          pageNumber == controller.currentPage.value + 2) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text('...',
+                              style: TextStyle(color: Colors.grey.shade600)),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }
+
+                    return _buildPageButton(pageNumber, isCurrentPage);
+                  },
+                ),
+
+                // Next button
+                IconButton(
+                  onPressed:
+                      controller.currentPage.value < controller.totalPages.value
+                          ? controller.nextPage
+                          : null,
+                  icon: const Icon(Icons.chevron_right),
+                  color:
+                      controller.currentPage.value < controller.totalPages.value
+                          ? Colors.blue.shade600
+                          : Colors.grey.shade400,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildPageButton(int pageNumber, bool isCurrentPage) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: () => controller.goToPage(pageNumber),
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isCurrentPage ? Colors.blue.shade600 : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color:
+                  isCurrentPage ? Colors.blue.shade600 : Colors.grey.shade300,
+            ),
+          ),
           child: Text(
-            '$pageNumber',
+            pageNumber.toString(),
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              fontWeight: isCurrentPage ? FontWeight.w600 : FontWeight.w400,
+              color: isCurrentPage ? Colors.white : Colors.grey.shade700,
             ),
           ),
         ),

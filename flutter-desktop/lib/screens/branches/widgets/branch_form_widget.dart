@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_getx_app/models/branch_model.dart';
+//import 'package:flutter_getx_app/models/branch_model.dart';
+import 'package:flutter_getx_app/models/create_branch_request.dart';
 import 'package:get/get.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
+
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/branch_management_controller.dart';
-// Note: Add these packages to pubspec.yaml:
-// image_picker: ^1.0.4
-// path_provider: ^2.1.1
 
 class BranchFormWidget extends StatefulWidget {
   const BranchFormWidget({Key? key}) : super(key: key);
@@ -17,36 +18,26 @@ class BranchFormWidget extends StatefulWidget {
 
 class _BranchFormWidgetState extends State<BranchFormWidget> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
   final _branchNameController = TextEditingController();
-  final _headquartersController = TextEditingController();
   final _streetAddressController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _studentCountController = TextEditingController();
-  final _teacherCountController = TextEditingController();
 
   // Form state
   String _selectedAccountType = 'School';
   String _selectedEducationType = 'British';
-  String _selectedCountry = 'Egypt';
   String _selectedGovernorate = 'Alexandria';
   String _selectedCity = 'Alexandria';
-  String _selectedArea = 'Alexandria';
-  String _selectedUser = 'Ahmed mansour Saied';
-  String _selectedRole = 'Doctor';
-  String _selectedStatus = 'active';
+  bool _isHeadquarters = false;
 
   // Image upload state
   Uint8List? _selectedImageBytes;
-  String? _selectedImagePath;
+  String? _selectedImageName;
   final RxBool _isUploadingImage = false.obs;
 
-  List<String> _selectedGrades = ['Year 1', 'Year 2'];
-  List<Map<String, String>> _assignedUsers = [
-    {'name': 'Dr. Ahmed mansour Saied', 'role': 'Doctor'}
-  ];
+  // Grade selection - Multiple grades
+  List<String> _selectedGrades = [];
+  final List<String> _allGrades = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'];
 
   late HomeController homeController;
   late BranchManagementController branchController;
@@ -54,58 +45,52 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   @override
   void initState() {
     super.initState();
-    homeController = Get.find<HomeController>();
-    branchController = Get.find<BranchManagementController>();
-    
-    // Initialize with default or existing data
+    homeController = Get.find();
+    branchController = Get.find();
     _initializeForm();
   }
 
   void _initializeForm() {
-    if (homeController.isEditingBranch.value && homeController.branchToEdit.value != null) {
+    if (homeController.isEditingBranch.value &&
+        homeController.branchToEdit.value != null) {
       final branch = homeController.branchToEdit.value!;
+
+      // Basic info
       _branchNameController.text = branch.name;
-      _headquartersController.text = branch.address ?? '';
-      _phoneController.text = branch.phone ?? '';
-      _emailController.text = branch.email ?? '';
-      _studentCountController.text = branch.studentCount?.toString() ?? '0';
-      _teacherCountController.text = branch.teacherCount?.toString() ?? '0';
-      _selectedStatus = branch.status ?? 'active';
-      
-      // Load existing image if available
-      // In a real app, you would load the image from the stored path/URL
-      // if (branch.imagePath != null) {
-      //   _loadExistingImage(branch.imagePath!);
-      // }
+      _selectedAccountType = branch.role;
+
+      // Address
+      if (branch.street != null && branch.street!.isNotEmpty) {
+        _streetAddressController.text = branch.street!;
+      }
+      if (branch.governorate != null && branch.governorate!.isNotEmpty) {
+        _selectedGovernorate = branch.governorate!;
+      }
+      if (branch.city != null && branch.city!.isNotEmpty) {
+        _selectedCity = branch.city!;
+      }
+
+      // Education details
+      if (branch.educationType != null && branch.educationType!.isNotEmpty) {
+        _selectedEducationType = branch.educationType!;
+      }
+      if (branch.grades != null && branch.grades!.isNotEmpty) {
+        _selectedGrades = List.from(branch.grades!);
+      }
+      if (branch.isHeadquarters != null) {
+        _isHeadquarters = branch.isHeadquarters!;
+      }
+
+      print('✅ Form initialized with branch data');
+      print('📋 Grades: $_selectedGrades');
+      print('📋 City: $_selectedCity, Governorate: $_selectedGovernorate');
     }
   }
-
-  // Future<void> _loadExistingImage(String imagePath) async {
-  //   try {
-  //     if (kIsWeb) {
-  //       // For web, load from URL
-  //       final response = await http.get(Uri.parse(imagePath));
-  //       _selectedImageBytes = response.bodyBytes;
-  //     } else {
-  //       // For mobile, load from file path
-  //       final file = File(imagePath);
-  //       _selectedImageBytes = await file.readAsBytes();
-  //     }
-  //     setState(() {});
-  //   } catch (e) {
-  //     print('Failed to load existing image: $e');
-  //   }
-  // }
 
   @override
   void dispose() {
     _branchNameController.dispose();
-    _headquartersController.dispose();
     _streetAddressController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _studentCountController.dispose();
-    _teacherCountController.dispose();
     super.dispose();
   }
 
@@ -113,123 +98,144 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          homeController.isEditingBranch.value ? 'Edit Branch' : 'Add New Branch',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
-        leading: IconButton(
-          onPressed: () => homeController.exitBranchForm(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
+      appBar: _buildAppBar(),
       body: Form(
         key: _formKey,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sidebar with photo upload
             _buildSidebar(),
-            // Main form content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildBranchTypeSection(),
-                      const SizedBox(height: 32),
-                      _buildBranchDetailsSection(),
-                      const SizedBox(height: 32),
-                      _buildAddressDetailsSection(),
-                      const SizedBox(height: 32),
-                      _buildRolesSection(),
-                      const SizedBox(height: 48),
-                      _buildActionButtons(),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: _buildMainContent()),
           ],
         ),
       ),
     );
   }
 
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: IconButton(
+        onPressed: () => homeController.exitBranchForm(),
+        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+      ),
+      title: Row(
+        children: [
+          const Text(
+            'Branches',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            homeController.isEditingBranch.value ? 'Edit Branch' : 'Add new',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => homeController.exitBranchForm(),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Obx(() => ElevatedButton(
+              onPressed: branchController.isSaving.value
+                  ? null
+                  : () => _handleSaveBranch(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: branchController.isSaving.value
+                    ? Colors.grey
+                    : const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: branchController.isSaving.value
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Save details',
+                      style: TextStyle(fontSize: 16),
+                    ),
+            )),
+        const SizedBox(width: 16),
+      ],
+    );
+  }
+
   Widget _buildSidebar() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final sidebarWidth = screenWidth < 1200 ? 280.0 : 300.0;
-    
     return Container(
-      width: sidebarWidth,
-      height: MediaQuery.of(context).size.height - 80, // Account for AppBar
+      width: 320,
+      height: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
           right: BorderSide(color: Color(0xFFE5E7EB), width: 1),
         ),
       ),
-      child: Column(
-        children: [
-          // Photo upload section
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const Text(
-                  'Branch Photo',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildImageUploadSection(),
-                const SizedBox(height: 16),
-                Text(
-                  _selectedImageBytes != null ? 'Photo uploaded' : 'No photo selected',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _selectedImageBytes != null 
-                        ? const Color(0xFF059669) 
-                        : const Color(0xFF6B7280),
-                  ),
-                ),
-                if (_selectedImageBytes != null) ...[
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _removeImage,
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Remove Photo'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ],
-              ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            _buildImageUploadSection(),
+            const SizedBox(height: 16),
+            Text(
+              _branchNameController.text.isEmpty
+                  ? 'Branch name'
+                  : _branchNameController.text,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-    ],
+            const SizedBox(height: 8),
+            Text(
+              _selectedAccountType,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            _buildQuickInfo(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildQuickInfoItem(String label, String value) {
+  Widget _buildQuickInfo() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(8),
@@ -238,208 +244,67 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
+          const Text(
+            'Quick Info',
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Color(0xFF374151),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBranchTypeSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+          const SizedBox(height: 12),
+          _buildQuickInfoItem(
+            icon: Icons.school_outlined,
+            label: 'Education Type',
+            value: _selectedEducationType,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Branch type',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
+          const SizedBox(height: 8),
+          _buildQuickInfoItem(
+            icon: Icons.class_outlined,
+            label: 'Grades',
+            value: _selectedGrades.isEmpty
+                ? 'Not selected'
+                : _selectedGrades.join(', '),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Account type',
-                  value: _selectedAccountType,
-                  isRequired: true,
-                  items: ['School', 'Hospital', 'Clinic', 'University'],
-                  onChanged: (value) {
-                    setState(() => _selectedAccountType = value!);
-                    _updateQuickInfo();
-                  },
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildTextField(
-                  controller: _branchNameController,
-                  label: 'Branch name',
-                  hint: 'School',
-                  isRequired: true,
-                  prefixIcon: Icons.business,
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Branch name is required';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
+          const SizedBox(height: 8),
+          _buildQuickInfoItem(
+            icon: Icons.location_on_outlined,
+            label: 'Location',
+            value: '$_selectedCity, $_selectedGovernorate',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBranchDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Branch details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _headquartersController,
-                  label: 'Headquarters',
-                  hint: 'Address goes here',
-                  isRequired: true,
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Headquarters address is required';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Education type',
-                  value: _selectedEducationType,
-                  isRequired: true,
-                  icon: Icons.school,
-                  items: ['British', 'American', 'Arabic', 'French', 'German'],
-                  onChanged: (value) {
-                    setState(() => _selectedEducationType = value!);
-                    _updateQuickInfo();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildGradesSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGradesSection() {
-    return Column(
+  Widget _buildQuickInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
-          children: [
-            Text(
-              'Grades',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
-            ),
-            Text(
-              '*',
-              style: TextStyle(color: Colors.red, fontSize: 14),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-            borderRadius: BorderRadius.circular(8),
-          ),
+        Icon(icon, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.school, size: 20, color: Color(0xFF6B7280)),
-                  const SizedBox(width: 8),
-                  Text(
-                    _selectedEducationType,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-                ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                ),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ..._selectedGrades.map((grade) => _buildGradeChip(grade)),
-                  _buildAddGradeButton(),
-                ],
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF374151),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -448,13 +313,413 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     );
   }
 
+  Widget _buildImageUploadSection() {
+    return Stack(
+      children: [
+        Container(
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 3),
+            image: _selectedImageBytes != null
+                ? DecorationImage(
+                    image: MemoryImage(_selectedImageBytes!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: _selectedImageBytes == null
+              ? const Icon(
+                  Icons.business_outlined,
+                  color: Color(0xFF9CA3AF),
+                  size: 48,
+                )
+              : null,
+        ),
+        Positioned(
+          bottom: 5,
+          right: 5,
+          child: Obx(() => GestureDetector(
+                onTap: _isUploadingImage.value ? null : _pickImage,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: _isUploadingImage.value
+                      ? const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                ),
+              )),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickImage() async {
+    _isUploadingImage.value = true;
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+
+        if (file.size > 5 * 1024 * 1024) {
+          Get.snackbar(
+            'Error',
+            'Image size must be less than 5MB',
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        setState(() {
+          _selectedImageBytes = file.bytes;
+          _selectedImageName = file.name;
+        });
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to pick image: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      _isUploadingImage.value = false;
+    }
+  }
+
+  Widget _buildMainContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildBranchTypeSection(),
+            const SizedBox(height: 24),
+            _buildBranchDetailsSection(),
+            const SizedBox(height: 24),
+            _buildAddressDetailsSection(),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBranchTypeSection() {
+    return FormSection(
+      title: 'Branch type',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CustomDropdownField(
+                label: 'Account type',
+                value: _selectedAccountType,
+                isRequired: true,
+                items: const ['School', 'Hospital', 'Clinic', 'University'],
+                onChanged: (value) {
+                  setState(() => _selectedAccountType = value!);
+                },
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: CustomTextField(
+                controller: _branchNameController,
+                label: 'Branch name',
+                hint: 'School',
+                isRequired: true,
+                prefixIcon: Icons.business_outlined,
+                onChanged: (value) => setState(() {}),
+                validator: (value) {
+                  if (value?.isEmpty ?? true) {
+                    return 'Branch name is required';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Checkbox(
+              value: _isHeadquarters,
+              onChanged: (value) {
+                setState(() => _isHeadquarters = value ?? false);
+              },
+              activeColor: const Color(0xFF3B82F6),
+            ),
+            const Text(
+              'This branch is representing the headquarters',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBranchDetailsSection() {
+    return FormSection(
+      title: 'Branch details',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CustomDropdownField(
+                label: 'Education type',
+                value: _selectedEducationType,
+                isRequired: true,
+                icon: Icons.school_outlined,
+                items: const ['British', 'American', 'National'],
+                onChanged: (value) {
+                  setState(() => _selectedEducationType = value!);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildMultiGradeSelector(),
+      ],
+    );
+  }
+
+  Widget _buildMultiGradeSelector() {
+    // Get grades that haven't been selected yet
+    final availableGrades =
+        _allGrades.where((g) => !_selectedGrades.contains(g)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Grades',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151),
+              ),
+            ),
+            const Text(
+              '*',
+              style: TextStyle(color: Colors.red, fontSize: 14),
+            ),
+            const Spacer(),
+            if (availableGrades.isNotEmpty &&
+                _selectedGrades.length < _allGrades.length)
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedGrades = List.from(_allGrades);
+                  });
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 16),
+                label: const Text('Add All'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF3B82F6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _selectedGrades.isEmpty
+                  ? Colors.red.shade200
+                  : const Color(0xFFE5E7EB),
+            ),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Dropdown to add grades
+              if (availableGrades.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  key: ValueKey('grade_dropdown_${_selectedGrades.length}'),
+                  value: null,
+                  hint: Row(
+                    children: [
+                      Icon(
+                        Icons.school_outlined,
+                        size: 20,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Select grade to add',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  items: availableGrades.map((String grade) {
+                    return DropdownMenuItem(
+                      value: grade,
+                      child: Text(grade),
+                    );
+                  }).toList(),
+                  onChanged: (String? value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedGrades.add(value);
+                      });
+                    }
+                  },
+                ),
+
+              // Show message when all grades are selected
+              if (availableGrades.isEmpty &&
+                  _selectedGrades.length == _allGrades.length)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          size: 20, color: Colors.green.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'All grades selected',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Selected grades chips
+              if (_selectedGrades.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Selected Grades (${_selectedGrades.length})',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (_selectedGrades.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedGrades.clear();
+                          });
+                        },
+                        child: const Text(
+                          'Clear All',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _selectedGrades.map((grade) {
+                    return _buildGradeChip(grade);
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (_selectedGrades.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Please select at least one grade',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red.shade700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildGradeChip(String grade) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: const Color(0xFF3B82F6).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -462,18 +727,23 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           Text(
             grade,
             style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF374151),
+              fontSize: 13,
+              color: Color(0xFF3B82F6),
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           GestureDetector(
-            onTap: () => _removeGrade(grade),
+            onTap: () {
+              setState(() {
+                _selectedGrades.remove(grade);
+              });
+            },
             child: Container(
               width: 16,
               height: 16,
               decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
+                color: Color(0xFF3B82F6),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -488,611 +758,177 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     );
   }
 
-  Widget _buildAddGradeButton() {
-    return GestureDetector(
-      onTap: _showAddGradeDialog,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add, size: 16, color: Color(0xFF6B7280)),
-            SizedBox(width: 4),
-            Text(
-              'Add Grade',
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAddressDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Address details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Country',
-                  value: _selectedCountry,
-                  isRequired: true,
-                  flag: '🇪🇬',
-                  items: ['Egypt', 'Saudi Arabia', 'UAE', 'Kuwait'],
-                  onChanged: (value) {
-                    setState(() => _selectedCountry = value!);
-                    _updateQuickInfo();
-                  },
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Governorate',
-                  value: _selectedGovernorate,
-                  isRequired: true,
-                  items: ['Alexandria', 'Cairo', 'Giza', 'Luxor'],
-                  onChanged: (value) => setState(() => _selectedGovernorate = value!),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _streetAddressController,
-            label: 'Street address',
-            hint: 'Street address',
-            isRequired: true,
-            validator: (value) {
-              if (value?.isEmpty ?? true) {
-                return 'Street address is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'City',
-                  value: _selectedCity,
-                  isRequired: true,
-                  items: ['Alexandria', 'Cairo', 'Giza', 'Luxor'],
-                  onChanged: (value) => setState(() => _selectedCity = value!),
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildTextField(
-                  controller: TextEditingController(text: _selectedArea),
-                  label: 'Area',
-                  hint: 'Alexandria',
-                  isRequired: true,
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Area is required';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRolesSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Roles',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Select user',
-                  value: _selectedUser,
-                  isRequired: true,
-                  items: ['Ahmed mansour Saied', 'Dr. Sarah Ahmed', 'Prof. Mohamed Ali'],
-                  onChanged: (value) => setState(() => _selectedUser = value!),
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildDropdownField(
-                  label: 'Role / Position',
-                  value: _selectedRole,
-                  isRequired: true,
-                  items: ['Doctor', 'Teacher', 'Principal', 'Nurse', 'Administrator'],
-                  onChanged: (value) => setState(() => _selectedRole = value!),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                margin: const EdgeInsets.only(top: 24),
-                child: ElevatedButton(
-                  onPressed: _addUserRole,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.all(12),
-                    minimumSize: const Size(48, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Icon(Icons.add),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (_assignedUsers.isNotEmpty) ...[
-            const Text(
-              'Assigned Users',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
+    return FormSection(
+      title: 'Address details',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CustomDropdownField(
+                label: 'Governorate',
+                value: _selectedGovernorate,
+                isRequired: true,
+                items: const ['Alexandria', 'Cairo', 'Giza', 'Luxor', 'Aswan'],
+                onChanged: (value) {
+                  setState(() => _selectedGovernorate = value!);
+                },
               ),
             ),
-            const SizedBox(height: 12),
-            ..._assignedUsers.map((user) => _buildAssignedUserCard(user)),
+            const SizedBox(width: 24),
+            Expanded(
+              child: CustomDropdownField(
+                label: 'City',
+                value: _selectedCity,
+                isRequired: true,
+                items: const ['Alexandria', 'Cairo', 'Giza', 'Luxor', 'Aswan'],
+                onChanged: (value) {
+                  setState(() => _selectedCity = value!);
+                },
+              ),
+            ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAssignedUserCard(Map<String, String> user) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFF3B82F6),
-            child: Text(
-              user['name']!.split(' ').map((n) => n[0]).take(2).join(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '${user['name']} - ${user['role']}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF374151),
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _removeUserRole(user),
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                size: 14,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: () => homeController.exitBranchForm(),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF6B7280),
-            ),
-          ),
         ),
-        const SizedBox(width: 16),
-        Obx(() => ElevatedButton.icon(
-              onPressed: branchController.isLoading.value
-                  ? null
-                  : () => _handleSaveBranch(),
-              icon: branchController.isLoading.value
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(
-                branchController.isLoading.value 
-                    ? (homeController.isEditingBranch.value ? 'Updating...' : 'Adding...') 
-                    : (homeController.isEditingBranch.value ? 'Update Branch' : 'Save Branch'),
-                style: const TextStyle(fontSize: 16),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            )),
-      ],
-    );
-  }
-
-  Widget _buildImageUploadSection() {
-    return Stack(
-      children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(60),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-            image: _selectedImageBytes != null 
-                ? DecorationImage(
-                    image: MemoryImage(_selectedImageBytes!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-          ),
-          child: _selectedImageBytes == null
-              ? const Icon(
-                  Icons.camera_alt_outlined,
-                  color: Color(0xFF9CA3AF),
-                  size: 48,
-                )
-              : null,
-        ),
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: Obx(() => GestureDetector(
-                onTap: _isUploadingImage.value ? null : _showImagePicker,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  child: _isUploadingImage.value
-                      ? const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                ),
-              )),
+        const SizedBox(height: 24),
+        CustomTextField(
+          controller: _streetAddressController,
+          label: 'Street address',
+          hint: 'Street address',
+          isRequired: true,
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'Street address is required';
+            }
+            return null;
+          },
         ),
       ],
     );
   }
 
-  void _showImagePicker() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  void _handleSaveBranch() {
+    if (_formKey.currentState!.validate()) {
+      // Validate required fields
+      if (_selectedGrades.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Please select at least one grade',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Create request object
+      final request = CreateBranchRequest(
+        name: _branchNameController.text.trim(),
+        accountType: _selectedAccountType,
+        isHeadquarters: _isHeadquarters,
+        educationType: _selectedEducationType,
+        grades: _selectedGrades,
+        address: BranchAddress(
+          governorate: _selectedGovernorate,
+          city: _selectedCity,
+          street: _streetAddressController.text.trim(),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select Branch Photo',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildImageOption(
-                    icon: Icons.photo_library,
-                    title: 'Gallery',
-                    subtitle: 'Choose from gallery',
-                    onTap: () => _pickImage(fromCamera: false),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildImageOption(
-                    icon: Icons.camera_alt,
-                    title: 'Camera',
-                    subtitle: 'Take a photo',
-                    onTap: () => _pickImage(fromCamera: true),
-                  ),
-                ),
-              ],
-            ),
-            if (_selectedImageBytes != null) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: _buildImageOption(
-                  icon: Icons.delete,
-                  title: 'Remove Photo',
-                  subtitle: 'Delete current photo',
-                  onTap: _removeImage,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Cancel'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    final iconColor = color ?? const Color(0xFF3B82F6);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickImage({required bool fromCamera}) async {
-    try {
-      Get.back(); // Close bottom sheet
-      _isUploadingImage.value = true;
-
-      // Simulate image picker - In real app, use image_picker package
-      // final picker = ImagePicker();
-      // final XFile? image = await picker.pickImage(
-      //   source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-      //   maxWidth: 800,
-      //   maxHeight: 800,
-      //   imageQuality: 85,
-      // );
-
-      // For demo purposes, simulate image selection with delay
-      await Future.delayed(const Duration(seconds: 1));
-
-      // In real implementation, you would:
-      // if (image != null) {
-      //   if (kIsWeb) {
-      //     _selectedImageBytes = await image.readAsBytes();
-      //   } else {
-      //     _selectedImagePath = image.path;
-      //     _selectedImageBytes = await File(image.path).readAsBytes();
-      //   }
-      //   setState(() {});
-      // }
-
-      // Demo: Create a placeholder colored image
-      _simulateImageSelection();
-
-      Get.snackbar(
-        'Success',
-        'Image uploaded successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFF4CAF50),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
+        phone: null,
+        website: null,
       );
 
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to upload image: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFFF44336),
-        colorText: Colors.white,
-      );
-    } finally {
-      _isUploadingImage.value = false;
-    }
-  }
-
-  void _simulateImageSelection() {
-    // Create a simple colored square as demo image
-    final width = 100;
-    final height = 100;
-    final bytes = Uint8List(width * height * 4); // RGBA
-    
-    // Fill with a blue gradient
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        final index = (y * width + x) * 4;
-        bytes[index] = (x * 255 ~/ width);     // R
-        bytes[index + 1] = (y * 255 ~/ height); // G
-        bytes[index + 2] = 200;                // B
-        bytes[index + 3] = 255;                // A
+      // Check if editing or creating
+      if (homeController.isEditingBranch.value &&
+          homeController.branchToEdit.value != null) {
+        // UPDATE existing branch
+        final branchId = homeController.branchToEdit.value!.id;
+        branchController.updateBranch(branchId, request).then((success) {
+          if (success) {
+            homeController.exitBranchForm();
+          }
+        });
+      } else {
+        // CREATE new branch
+        branchController.createBranch(request).then((success) {
+          if (success) {
+            homeController.exitBranchForm();
+          }
+        });
       }
     }
-    
-    setState(() {
-      _selectedImageBytes = bytes;
-    });
   }
+}
 
-  void _removeImage() {
-    setState(() {
-      _selectedImageBytes = null;
-      _selectedImagePath = null;
-    });
-    
-    Get.snackbar(
-      'Removed',
-      'Branch photo removed',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color(0xFF6B7280),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
+// CUSTOM WIDGETS
+class FormSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const FormSection({
+    Key? key,
+    required this.title,
+    required this.children,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ...children,
+        ],
+      ),
     );
   }
+}
 
-  // Method to update quick info when form values change
-  void _updateQuickInfo() {
-    setState(() {
-      // This will trigger a rebuild of the sidebar with updated values
-    });
-  }
+class CustomTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool isRequired;
+  final IconData? prefixIcon;
+  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
+  final int maxLines;
+  final Function(String)? onChanged;
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    bool isRequired = false,
-    IconData? prefixIcon,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-  }) {
+  const CustomTextField({
+    Key? key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+    this.isRequired = false,
+    this.prefixIcon,
+    this.validator,
+    this.keyboardType,
+    this.maxLines = 1,
+    this.onChanged,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1119,9 +955,13 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           validator: validator,
           keyboardType: keyboardType,
           maxLines: maxLines,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, size: 20, color: const Color(0xFF6B7280))
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -1134,6 +974,10 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF3B82F6)),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,
@@ -1145,16 +989,28 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       ],
     );
   }
+}
 
-  Widget _buildDropdownField({
-    required String label,
-    required String value,
-    required List<String> items,
-    required Function(String?) onChanged,
-    bool isRequired = false,
-    IconData? icon,
-    String? flag,
-  }) {
+class CustomDropdownField extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<String> items;
+  final Function(String?) onChanged;
+  final bool isRequired;
+  final IconData? icon;
+
+  const CustomDropdownField({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.isRequired = false,
+    this.icon,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1180,14 +1036,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           value: value,
           onChanged: onChanged,
           decoration: InputDecoration(
-            prefixIcon: flag != null 
-                ? Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(flag, style: const TextStyle(fontSize: 18)),
-                  )
-                : icon != null 
-                    ? Icon(icon, size: 20, color: const Color(0xFF6B7280))
-                    : null,
+            prefixIcon: icon != null
+                ? Icon(icon, size: 20, color: const Color(0xFF6B7280))
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -1208,118 +1059,21 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
             fillColor: Colors.white,
           ),
           items: items.map((String item) {
-            return DropdownMenuItem<String>(
+            return DropdownMenuItem(
               value: item,
               child: Text(item),
             );
           }).toList(),
+          validator: isRequired
+              ? (value) {
+                  if (value?.isEmpty ?? true) {
+                    return '$label is required';
+                  }
+                  return null;
+                }
+              : null,
         ),
       ],
     );
-  }
-
-  void _removeGrade(String grade) {
-    setState(() {
-      _selectedGrades.remove(grade);
-    });
-    _updateQuickInfo();
-  }
-
-  void _showAddGradeDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Grade'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'
-          ].where((grade) => !_selectedGrades.contains(grade)).map((grade) => 
-            ListTile(
-              title: Text(grade),
-              onTap: () {
-                setState(() {
-                  _selectedGrades.add(grade);
-                });
-                Navigator.pop(context);
-                _updateQuickInfo();
-              },
-            ),
-          ).toList(),
-        ),
-      ),
-    );
-  }
-
-  void _addUserRole() {
-    if (_selectedUser.isNotEmpty && _selectedRole.isNotEmpty) {
-      final newUser = {'name': _selectedUser, 'role': _selectedRole};
-      if (!_assignedUsers.any((user) => user['name'] == _selectedUser && user['role'] == _selectedRole)) {
-        setState(() {
-          _assignedUsers.add(newUser);
-        });
-        _updateQuickInfo();
-      }
-    }
-  }
-
-  void _removeUserRole(Map<String, String> user) {
-    setState(() {
-      _assignedUsers.remove(user);
-    });
-    _updateQuickInfo();
-  }
-
-  void _handleSaveBranch() {
-    if (_formKey.currentState!.validate()) {
-      final newBranch = BranchModel(
-        id: homeController.isEditingBranch.value && homeController.branchToEdit.value != null
-            ? homeController.branchToEdit.value!.id
-            : DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _branchNameController.text,
-        role: 'Branch Admin',
-        icon: 'clinic',
-        address: '${_streetAddressController.text}, $_selectedArea, $_selectedCity, $_selectedGovernorate, $_selectedCountry',
-        phone: _phoneController.text,
-        email: _emailController.text,
-        principalName: _assignedUsers.isNotEmpty ? _assignedUsers.first['name']! : 'N/A',
-        studentCount: int.tryParse(_studentCountController.text) ?? 0,
-        teacherCount: int.tryParse(_teacherCountController.text) ?? 0,
-        status: _selectedStatus,
-        createdAt: homeController.isEditingBranch.value && homeController.branchToEdit.value != null
-            ? homeController.branchToEdit.value!.createdAt
-            : DateTime.now(),
-        // Note: In a real app, you would save the image to storage and store the URL/path
-        // imagePath: _selectedImagePath,
-        // imageBytes: _selectedImageBytes,
-      );
-
-      // Show success message with image info
-      final imageStatus = _selectedImageBytes != null ? ' with photo' : '';
-      
-      if (homeController.isEditingBranch.value) {
-        branchController.updateBranch(newBranch).then((_) {
-          Get.snackbar(
-            'Success',
-            'Branch updated successfully$imageStatus',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: const Color(0xFF4CAF50),
-            colorText: Colors.white,
-          );
-          homeController.exitBranchForm();
-        });
-      } else {
-        branchController.addBranch(newBranch).then((_) {
-          Get.snackbar(
-            'Success',
-            'Branch created successfully$imageStatus',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: const Color(0xFF4CAF50),
-            colorText: Colors.white,
-          );
-          homeController.exitBranchForm();
-        });
-      }
-    }
   }
 }

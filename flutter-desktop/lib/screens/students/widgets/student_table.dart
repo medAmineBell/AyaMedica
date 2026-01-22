@@ -39,7 +39,7 @@ class StudentTable extends StatelessWidget {
                       return StudentTableRow(
                         student: student,
                         index: index,
-                        controller: controller,
+                        //controller: controller,
                         onTap: () => onStudentTap(student),
                       );
                     },

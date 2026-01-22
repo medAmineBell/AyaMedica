@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/screens/appointmentScheduling/appointment_history_screen.dart';
 import 'package:flutter_getx_app/screens/calendar/calendar_base.dart';
 import 'package:flutter_getx_app/screens/communication/communication_screen.dart';
 import 'package:flutter_getx_app/screens/dashboard/dashboard_screen.dart';
@@ -51,7 +52,7 @@ class MainContentLayout extends GetView<HomeController> {
           );
         }
         // Fallback to appointment scheduling if no student selected
-        return AppointmentSchedulingScreen();
+        return AppointmentHistoryScreen();
       case ContentType.studentsOverview:
         return StudentOverviewScreen();
       case ContentType.studentsList:
@@ -89,7 +90,7 @@ class MainContentLayout extends GetView<HomeController> {
       case ContentType.appointmentScheduling:
         return Container(
           child: Center(
-            child: AppointmentSchedulingScreen(),
+            child: AppointmentHistoryScreen(),
           ),
         );
       default:

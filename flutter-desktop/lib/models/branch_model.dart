@@ -7,12 +7,22 @@ class BranchModel {
   final String? phone;
   final String? email;
   final String? principalName;
-  final int? studentCount;
-  final int? teacherCount;
+  final int? studentCount; // Maps to totalStudents
+  final int? teacherCount; // Maps to totalUsers
   final String? status; // active, inactive, pending
   final String? parentId; // ID of parent organization
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  // NEW FIELDS for editing support
+  final String? educationType;
+  final List<String>? grades;
+  final String? governorate;
+  final String? city;
+  final String? street;
+  final bool? isHeadquarters;
+  final String? website;
+  final String? accountType;
 
   BranchModel({
     required this.name,
@@ -29,6 +39,14 @@ class BranchModel {
     this.parentId,
     this.createdAt,
     this.updatedAt,
+    this.educationType,
+    this.grades,
+    this.governorate,
+    this.city,
+    this.street,
+    this.isHeadquarters,
+    this.website,
+    this.accountType,
   });
 
   factory BranchModel.fromJson(Map<String, dynamic> json) {
@@ -45,12 +63,18 @@ class BranchModel {
       teacherCount: json['teacherCount'],
       status: json['status'] ?? 'active',
       parentId: json['parentId'],
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
-          : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
-          : null,
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      educationType: json['educationType'],
+      grades: json['grades'] != null ? List<String>.from(json['grades']) : null,
+      governorate: json['governorate'],
+      city: json['city'],
+      street: json['street'],
+      isHeadquarters: json['isHeadquarters'],
+      website: json['website'],
+      accountType: json['accountType'],
     );
   }
 
@@ -109,7 +133,8 @@ class BranchModel {
     String icon = 'organization';
     if (role.toLowerCase().contains('branch')) {
       icon = 'clinic';
-    } else if (role.toLowerCase().contains('school') || role.toLowerCase().contains('educational')) {
+    } else if (role.toLowerCase().contains('school') ||
+        role.toLowerCase().contains('educational')) {
       icon = 'school';
     }
 
@@ -123,11 +148,11 @@ class BranchModel {
       email: email,
       status: fhirOrg.active ? 'active' : 'inactive',
       parentId: parentId,
-      createdAt: fhirOrg.meta.lastUpdated != null 
-          ? DateTime.tryParse(fhirOrg.meta.lastUpdated) 
+      createdAt: fhirOrg.meta.lastUpdated != null
+          ? DateTime.tryParse(fhirOrg.meta.lastUpdated)
           : null,
-      updatedAt: fhirOrg.meta.lastUpdated != null 
-          ? DateTime.tryParse(fhirOrg.meta.lastUpdated) 
+      updatedAt: fhirOrg.meta.lastUpdated != null
+          ? DateTime.tryParse(fhirOrg.meta.lastUpdated)
           : null,
     );
   }
@@ -148,6 +173,13 @@ class BranchModel {
       'parentId': parentId,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'educationType': educationType,
+      'grades': grades,
+      'governorate': governorate,
+      'city': city,
+      'street': street,
+      'isHeadquarters': isHeadquarters,
+      'website': website,
     };
   }
 
@@ -166,6 +198,13 @@ class BranchModel {
     String? parentId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? educationType,
+    List<String>? grades,
+    String? governorate,
+    String? city,
+    String? street,
+    bool? isHeadquarters,
+    String? website,
   }) {
     return BranchModel(
       id: id ?? this.id,
@@ -182,7 +221,99 @@ class BranchModel {
       parentId: parentId ?? this.parentId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      educationType: educationType ?? this.educationType,
+      grades: grades ?? this.grades,
+      governorate: governorate ?? this.governorate,
+      city: city ?? this.city,
+      street: street ?? this.street,
+      isHeadquarters: isHeadquarters ?? this.isHeadquarters,
+      website: website ?? this.website,
     );
+  }
+}
+
+// API Response Model
+class BranchApiResponse {
+  final String id;
+  final String name;
+  final String accountType;
+  final bool isHeadquarters;
+  final bool isAdministrative;
+  final String? educationType;
+  final List<String> grades;
+  final String country;
+  final BranchAddress address;
+  final String? phone;
+  final String? website;
+  final String status;
+  final String medplumProject;
+  final int totalStudents;
+  final int totalUsers;
+
+  BranchApiResponse({
+    required this.id,
+    required this.name,
+    required this.accountType,
+    required this.isHeadquarters,
+    required this.isAdministrative,
+    this.educationType,
+    required this.grades,
+    required this.country,
+    required this.address,
+    this.phone,
+    this.website,
+    required this.status,
+    required this.medplumProject,
+    required this.totalStudents,
+    required this.totalUsers,
+  });
+
+  factory BranchApiResponse.fromJson(Map<String, dynamic> json) {
+    return BranchApiResponse(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      accountType: json['accountType'] ?? 'School',
+      isHeadquarters: json['isHeadquarters'] ?? false,
+      isAdministrative: json['isAdministrative'] ?? false,
+      educationType: json['educationType'],
+      grades: json['grades'] != null ? List<String>.from(json['grades']) : [],
+      country: json['country'] ?? '',
+      address: BranchAddress.fromJson(json['address'] ?? {}),
+      phone: json['phone'],
+      website: json['website'],
+      status: json['status'] ?? 'active',
+      medplumProject: json['medplumProject'] ?? '',
+      totalStudents: json['totalStudents'] ?? 0,
+      totalUsers: json['totalUsers'] ?? 0,
+    );
+  }
+}
+
+class BranchAddress {
+  final String governorate;
+  final String city;
+  final String street;
+
+  BranchAddress({
+    required this.governorate,
+    required this.city,
+    required this.street,
+  });
+
+  factory BranchAddress.fromJson(Map<String, dynamic> json) {
+    return BranchAddress(
+      governorate: json['governorate'] ?? '',
+      city: json['city'] ?? '',
+      street: json['street'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'governorate': governorate,
+      'city': city,
+      'street': street,
+    };
   }
 }
 

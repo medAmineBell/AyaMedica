@@ -1,16 +1,15 @@
-// Updated StudentFormScreen with complete save functionality
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/models/create_student_request.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:get/get.dart';
 import 'dart:typed_data';
-import 'dart:math';
-import 'dart:convert';
 
 class StudentFormScreen extends StatefulWidget {
-  final Student? student; // null for add, populated for edit
+  final Student? student;
   final bool isEditing;
   final VoidCallback? onSave;
   final VoidCallback? onCancel;
@@ -30,45 +29,69 @@ class StudentFormScreen extends StatefulWidget {
 class _StudentFormScreenState extends State<StudentFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
-  
+
   // Controllers
   final StudentController _studentController = Get.find<StudentController>();
   final HomeController _homeController = Get.find<HomeController>();
-  
+  final StorageService _storageService = Get.find<StorageService>();
+
   // Image picker state
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
   bool _isImageLoading = false;
-  bool _isSaving = false;
 
   // Controllers for form fields
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _nationalIdController = TextEditingController();
+  final _passportController = TextEditingController();
+
+  // Guardian 1 controllers
   final _guardian1FirstNameController = TextEditingController();
   final _guardian1LastNameController = TextEditingController();
   final _guardian1EmailController = TextEditingController();
   final _guardian1PhoneController = TextEditingController();
-  final _guardian1NationalIdController = TextEditingController();
+
+  // Guardian 2 controllers
   final _guardian2FirstNameController = TextEditingController();
   final _guardian2LastNameController = TextEditingController();
   final _guardian2EmailController = TextEditingController();
   final _guardian2PhoneController = TextEditingController();
-  final _guardian2NationalIdController = TextEditingController();
 
   // Dropdown values
   String? _selectedCountry = 'Egypt';
-  String? _selectedGrade = 'G4';
-  String? _selectedClass = 'Lions';
-  String? _guardian1Gender = 'Female';
-  String? _guardian1Country = 'Egypt';
-  String? _guardian1Relationship = 'Parent';
-  String? _guardian2Gender = 'Female';
-  String? _guardian2Country = 'Egypt';
-  String? _guardian2Relationship = 'Parent';
+  String? _selectedGender = 'male';
+  String? _selectedGrade;
+  String? _selectedClass;
+  String? _guardian1Relationship = 'mother';
+  String? _guardian2Relationship = 'father';
+
   DateTime? _dateOfBirth;
-  DateTime? _guardian1DateOfBirth;
-  DateTime? _guardian2DateOfBirth;
+
+  final List<String> _grades = [
+    'G1',
+    'G2',
+    'G3',
+    'G4',
+    'G5',
+    'G6',
+    'G7',
+    'G8',
+    'G9',
+    'G10',
+    'G11',
+    'G12'
+  ];
+  final List<String> _classes = [
+    'Lions',
+    'Tigers',
+    'Eagles',
+    'Bears',
+    'Wolves',
+    'Panthers'
+  ];
 
   @override
   void initState() {
@@ -80,43 +103,41 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
   void _populateFieldsForEditing() {
     final student = widget.student!;
-    
-    // Split name into first and last name
     final nameParts = student.name.split(' ');
     _firstNameController.text = nameParts.isNotEmpty ? nameParts.first : '';
-    _lastNameController.text = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-    
-    // Basic info
+    _lastNameController.text =
+        nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
+    _emailController.text = student.email ?? '';
+    _phoneController.text = student.phoneNumber ?? '';
     _nationalIdController.text = student.nationalId ?? '';
+    _passportController.text = student.passportIdNumber ?? '';
     _dateOfBirth = student.dateOfBirth;
     _selectedCountry = student.nationality ?? 'Egypt';
-    
-    // Grade and class
-    _selectedGrade = student.grade ?? 'G4';
-    _selectedClass = student.className ?? 'Lions';
-    
-    // Guardian 1 info - parse from existing data
+    _selectedGrade = student.grade;
+    _selectedClass = student.className;
+
     if (student.firstGuardianName != null) {
       final guardian1Parts = student.firstGuardianName!.split(' ');
-      _guardian1FirstNameController.text = guardian1Parts.isNotEmpty ? guardian1Parts.first : '';
-      _guardian1LastNameController.text = guardian1Parts.length > 1 ? guardian1Parts.sublist(1).join(' ') : '';
+      _guardian1FirstNameController.text =
+          guardian1Parts.isNotEmpty ? guardian1Parts.first : '';
+      _guardian1LastNameController.text =
+          guardian1Parts.length > 1 ? guardian1Parts.sublist(1).join(' ') : '';
     }
     _guardian1EmailController.text = student.firstGuardianEmail ?? '';
     _guardian1PhoneController.text = student.firstGuardianPhone ?? '';
-    _guardian1Country = student.nationality ?? 'Egypt';
-    
-    // Guardian 2 info
+
     if (student.secondGuardianName != null) {
       final guardian2Parts = student.secondGuardianName!.split(' ');
-      _guardian2FirstNameController.text = guardian2Parts.isNotEmpty ? guardian2Parts.first : '';
-      _guardian2LastNameController.text = guardian2Parts.length > 1 ? guardian2Parts.sublist(1).join(' ') : '';
+      _guardian2FirstNameController.text =
+          guardian2Parts.isNotEmpty ? guardian2Parts.first : '';
+      _guardian2LastNameController.text =
+          guardian2Parts.length > 1 ? guardian2Parts.sublist(1).join(' ') : '';
     }
     _guardian2EmailController.text = student.secondGuardianEmail ?? '';
     _guardian2PhoneController.text = student.secondGuardianPhone ?? '';
-    _guardian2Country = student.nationality ?? 'Egypt';
   }
 
-  // Image picker methods
   void _showErrorSnackbar(String message) {
     Get.snackbar(
       'Error',
@@ -124,54 +145,23 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.red,
       colorText: Colors.white,
-      duration: Duration(seconds: 3),
+      duration: const Duration(seconds: 3),
     );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: Duration(seconds: 2),
-    );
-  }
-
-  void _removeImage() {
-    setState(() {
-      _selectedImageBytes = null;
-      _selectedImageName = null;
-    });
-    _showSuccessSnackbar('Image removed');
   }
 
   Future<void> _pickImage() async {
     setState(() => _isImageLoading = true);
-
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
         withData: true,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
       );
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
-        
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           _showErrorSnackbar('Image size must be less than 5MB');
-          return;
-        }
-
-        // Validate file type
-        final allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
-        final extension = file.extension?.toLowerCase();
-        if (extension == null || !allowedTypes.contains(extension)) {
-          _showErrorSnackbar('Please select a valid image file (JPG, PNG, GIF, BMP)');
           return;
         }
 
@@ -179,8 +169,6 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           _selectedImageBytes = file.bytes;
           _selectedImageName = file.name;
         });
-
-        _showSuccessSnackbar('Image selected successfully');
       }
     } catch (e) {
       _showErrorSnackbar('Error selecting image: ${e.toString()}');
@@ -189,78 +177,43 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     }
   }
 
-  // Generate unique IDs for new students
-  String _generateStudentId() {
-    final random = Random();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    return '29${timestamp.toString().substring(timestamp.toString().length - 9)}';
-  }
-
-  String _generateUniqueId() {
-    final random = Random();
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return List.generate(10, (index) => chars[random.nextInt(chars.length)]).join();
-  }
-
-  String _generateAid() {
-    final random = Random();
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const numbers = '0123456789';
-    return '4EG${numbers[random.nextInt(numbers.length)]}${numbers[random.nextInt(numbers.length)]}${numbers[random.nextInt(numbers.length)]}${numbers[random.nextInt(numbers.length)]}Q${numbers[random.nextInt(numbers.length)]}S${letters[random.nextInt(letters.length)]}';
-  }
-
-  // Generate random avatar color
-  Color _generateAvatarColor() {
-    final colors = [
-      Color(4279450111), // Blue
-      Color(4279286145), // Purple
-      Color(4293870660), // Orange
-      Color(4285315327), // Green
-      Color(4294924066), // Red
-      Color(4291611852), // Teal
-      Color(4294945263), // Pink
-    ];
-    return colors[Random().nextInt(colors.length)];
-  }
-
-  // Convert image bytes to base64 string for storage
-  String? _convertImageToBase64() {
-    if (_selectedImageBytes != null) {
-      return base64Encode(_selectedImageBytes!);
-    }
-    return null;
+  void _removeImage() {
+    setState(() {
+      _selectedImageBytes = null;
+      _selectedImageName = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: _buildAppBar(),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left Sidebar - Profile Section
-          _buildProfileSidebar(),
-          // Main Content Area
-          Expanded(
-            child: _buildMainContent(),
-          ),
-        ],
-      ),
-    );
+    return Obx(() {
+      final isSaving = _studentController.isSaving.value;
+
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: _buildAppBar(isSaving),
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileSidebar(),
+            Expanded(child: _buildMainContent()),
+          ],
+        ),
+      );
+    });
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(bool isSaving) {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        onPressed: _isSaving ? null : () => _handleCancel(),
-        icon: Icon(Icons.arrow_back, color: Colors.black87),
+        onPressed: isSaving ? null : () => _handleCancel(),
+        icon: const Icon(Icons.arrow_back, color: Colors.black87),
       ),
       title: Row(
         children: [
-          Text(
+          const Text(
             'Back',
             style: TextStyle(
               color: Colors.black87,
@@ -268,9 +221,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
-            widget.isEditing ? 'Edit student profile' : 'Add new student',
+            'View student profile',
             style: TextStyle(
               color: Colors.grey.shade600,
               fontSize: 14,
@@ -281,27 +234,27 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       ),
       actions: [
         TextButton(
-          onPressed: _isSaving ? null : () => _handleCancel(),
+          onPressed: isSaving ? null : () => _handleCancel(),
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: _isSaving ? Colors.grey : Colors.grey.shade600,
+              color: isSaving ? Colors.grey : Colors.grey.shade600,
               fontSize: 16,
             ),
           ),
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         ElevatedButton(
-          onPressed: _isSaving ? null : _saveStudent,
+          onPressed: isSaving ? null : _saveStudent,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isSaving ? Colors.grey : Colors.blue,
+            backgroundColor: isSaving ? Colors.grey : Colors.blue,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-          child: _isSaving
-              ? SizedBox(
+          child: isSaving
+              ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
@@ -309,7 +262,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : Text(
+              : const Text(
                   'Save details',
                   style: TextStyle(
                     color: Colors.white,
@@ -318,7 +271,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                   ),
                 ),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
       ],
     );
   }
@@ -331,124 +284,109 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     }
   }
 
-  // MAIN SAVE STUDENT METHOD
+  // Simplified save method - just validation and calling controller
   Future<void> _saveStudent() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       _showErrorSnackbar('Please fill in all required fields');
       return;
     }
 
-    setState(() => _isSaving = true);
+    // Get branch and organization IDs
+    final branchData = _storageService.getSelectedBranchData();
+    if (branchData == null) {
+      _showErrorSnackbar('No branch selected');
+      return;
+    }
 
-    try {
-      // Collect form data
-      final firstName = _firstNameController.text.trim();
-      final lastName = _lastNameController.text.trim();
-      final fullName = '$firstName $lastName';
-      
-      if (firstName.isEmpty || lastName.isEmpty) {
-        _showErrorSnackbar('First name and last name are required');
-        return;
-      }
+    final branchId = branchData['id'];
+    final organizationId =
+        branchData['organizationId'] ?? branchData['parentId'];
 
-      if (_dateOfBirth == null) {
-        _showErrorSnackbar('Date of birth is required');
-        return;
-      }
+    if (branchId == null || organizationId == null) {
+      _showErrorSnackbar('Branch or organization ID not found');
+      return;
+    }
 
-      // Create guardian names
-      final guardian1Name = '${_guardian1FirstNameController.text.trim()} ${_guardian1LastNameController.text.trim()}';
-      final guardian2Name = '${_guardian2FirstNameController.text.trim()} ${_guardian2LastNameController.text.trim()}';
+    // Validate required fields
+    if (_firstNameController.text.trim().isEmpty ||
+        _lastNameController.text.trim().isEmpty) {
+      _showErrorSnackbar('First name and last name are required');
+      return;
+    }
 
-      // Create Student object
-      final Student newStudent = Student(
-        id: widget.isEditing ? widget.student!.id : _generateUniqueId(),
-        name: fullName,
-        imageUrl: _convertImageToBase64(), // Store image as base64
-        avatarColor: widget.isEditing ? widget.student!.avatarColor : _generateAvatarColor(),
-        
-        // Basic info
-        dateOfBirth: _dateOfBirth,
-        nationality: _selectedCountry,
-        nationalId: _nationalIdController.text.trim(),
-        gender: 'Not specified', // You can add gender field to form if needed
-        
-        // Academic info
-        studentId: widget.isEditing ? widget.student!.studentId : _generateStudentId(),
-        aid: widget.isEditing ? widget.student!.aid : _generateAid(),
-        grade: _selectedGrade,
-        className: _selectedClass,
-        
-        // Guardian 1 info
-        firstGuardianName: guardian1Name.trim().isNotEmpty ? guardian1Name : null,
-        firstGuardianEmail: _guardian1EmailController.text.trim().isNotEmpty ? _guardian1EmailController.text.trim() : null,
-        firstGuardianPhone: _guardian1PhoneController.text.trim().isNotEmpty ? _guardian1PhoneController.text.trim() : null,
-        firstGuardianStatus: 'Offline', // Default status
-        
-        // Guardian 2 info
-        secondGuardianName: guardian2Name.trim().isNotEmpty ? guardian2Name : null,
-        secondGuardianEmail: _guardian2EmailController.text.trim().isNotEmpty ? _guardian2EmailController.text.trim() : null,
-        secondGuardianPhone: _guardian2PhoneController.text.trim().isNotEmpty ? _guardian2PhoneController.text.trim() : null,
-        secondGuardianStatus: 'Offline', // Default status
-        
-        // Default values for fields not in form
-        bloodType: widget.isEditing ? widget.student!.bloodType : null,
-        weightKg: widget.isEditing ? widget.student!.weightKg : null,
-        heightCm: widget.isEditing ? widget.student!.heightCm : null,
-        goToHospital: widget.isEditing ? widget.student!.goToHospital : null,
-        city: widget.isEditing ? widget.student!.city : null,
-        street: widget.isEditing ? widget.student!.street : null,
-        zipCode: widget.isEditing ? widget.student!.zipCode : null,
-        province: widget.isEditing ? widget.student!.province : null,
-        insuranceCompany: widget.isEditing ? widget.student!.insuranceCompany : null,
-        policyNumber: widget.isEditing ? widget.student!.policyNumber : null,
-        passportIdNumber: widget.isEditing ? widget.student!.passportIdNumber : null,
-        phoneNumber: widget.isEditing ? widget.student!.phoneNumber : null,
-        email: widget.isEditing ? widget.student!.email : null,
-        lastAppointmentDate: widget.isEditing ? widget.student!.lastAppointmentDate : null,
-        lastAppointmentType: widget.isEditing ? widget.student!.lastAppointmentType : null,
-        emrNumber: widget.isEditing ? widget.student!.emrNumber : Random().nextInt(100) + 1, // Generate random EMR for new students
-      );
+    if (_dateOfBirth == null) {
+      _showErrorSnackbar('Date of birth is required');
+      return;
+    }
 
-      // Save via controller
-      if (widget.isEditing) {
-        await _updateStudent(newStudent);
-      } else {
-        _studentController.addStudent(newStudent);
-      }
+    if (_selectedGrade == null) {
+      _showErrorSnackbar('Grade is required');
+      return;
+    }
 
-      // Show success message
-      _showSuccessSnackbar(
-        widget.isEditing 
-            ? 'Student updated successfully' 
-            : 'Student added successfully'
-      );
+    // Create request object
+    final request = CreateStudentRequest.fromFormData(
+      branchId: branchId,
+      organizationId: organizationId,
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      dateOfBirth: _dateOfBirth!,
+      gender: _selectedGender ?? 'male',
+      grade: _selectedGrade!,
+      email: _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : null,
+      phone: _phoneController.text.trim().isNotEmpty
+          ? _phoneController.text.trim()
+          : null,
+      nationalId: _nationalIdController.text.trim().isNotEmpty
+          ? _nationalIdController.text.trim()
+          : null,
+      passportNumber: _passportController.text.trim().isNotEmpty
+          ? _passportController.text.trim()
+          : null,
+      country: _selectedCountry,
+      guardian1FirstName: _guardian1FirstNameController.text.trim().isNotEmpty
+          ? _guardian1FirstNameController.text.trim()
+          : null,
+      guardian1LastName: _guardian1LastNameController.text.trim().isNotEmpty
+          ? _guardian1LastNameController.text.trim()
+          : null,
+      guardian1Email: _guardian1EmailController.text.trim().isNotEmpty
+          ? _guardian1EmailController.text.trim()
+          : null,
+      guardian1Phone: _guardian1PhoneController.text.trim().isNotEmpty
+          ? _guardian1PhoneController.text.trim()
+          : null,
+      guardian1Relationship: _guardian1Relationship,
+      guardian2FirstName: _guardian2FirstNameController.text.trim().isNotEmpty
+          ? _guardian2FirstNameController.text.trim()
+          : null,
+      guardian2LastName: _guardian2LastNameController.text.trim().isNotEmpty
+          ? _guardian2LastNameController.text.trim()
+          : null,
+      guardian2Email: _guardian2EmailController.text.trim().isNotEmpty
+          ? _guardian2EmailController.text.trim()
+          : null,
+      guardian2Phone: _guardian2PhoneController.text.trim().isNotEmpty
+          ? _guardian2PhoneController.text.trim()
+          : null,
+      guardian2Relationship: _guardian2Relationship,
+    );
 
-      // Wait a moment for the user to see the success message
-      await Future.delayed(Duration(milliseconds: 500));
+    // Call controller method
+    final success = await _studentController.createStudent(request);
 
+    if (success) {
       // Navigate back
       if (widget.onSave != null) {
         widget.onSave!();
       } else {
         _homeController.exitStudentForm();
       }
-
-    } catch (e) {
-      _showErrorSnackbar('Error saving student: ${e.toString()}');
-    } finally {
-      setState(() => _isSaving = false);
     }
   }
 
-  // Method to update existing student
-  Future<void> _updateStudent(Student updatedStudent) async {
-    // Remove old student and add updated one
-    _studentController.removeStudent(widget.student!.id);
-    _studentController.addStudent(updatedStudent);
-  }
-
-  // Rest of the UI building methods remain the same...
   Widget _buildProfileSidebar() {
     return Container(
       width: 320,
@@ -460,23 +398,12 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         ),
       ),
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Profile Avatar Section
             _buildProfileAvatar(),
-            SizedBox(height: 32),
-            
-            // Profile Quick Info
+            const SizedBox(height: 32),
             _buildProfileQuickInfo(),
-            SizedBox(height: 32),
-            
-            // Profile Actions
-            _buildProfileActions(),
-            SizedBox(height: 32),
-            
-            // Profile Stats (if editing)
-            if (widget.isEditing) _buildProfileStats(),
           ],
         ),
       ),
@@ -492,25 +419,24 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           isLoading: _isImageLoading,
           onPickImage: _pickImage,
           onRemoveImage: _removeImage,
-          student: widget.student,
-          isEditing: widget.isEditing,
+          studentName:
+              '${_firstNameController.text} ${_lastNameController.text}',
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Text(
-          widget.isEditing ? widget.student!.name : 
           '${_firstNameController.text} ${_lastNameController.text}',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          widget.isEditing 
-              ? (widget.student!.studentId ?? 'No ID') 
-              : 'Student ID will be generated',
+          widget.isEditing
+              ? (widget.student!.studentId ?? 'No ID')
+              : 'ID will be generated',
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey.shade600,
@@ -523,7 +449,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
   Widget _buildProfileQuickInfo() {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -532,7 +458,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Quick Info',
             style: TextStyle(
               fontSize: 16,
@@ -540,21 +466,22 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           _buildQuickInfoItem(
             icon: Icons.school_outlined,
             label: 'Grade & Class',
-            value: '${_selectedGrade ?? ''} - ${_selectedClass ?? ''}',
+            value:
+                '${_selectedGrade ?? 'Not set'} ${_selectedClass != null ? '- $_selectedClass' : ''}',
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _buildQuickInfoItem(
             icon: Icons.cake_outlined,
             label: 'Age',
-            value: _dateOfBirth != null 
+            value: _dateOfBirth != null
                 ? '${DateTime.now().year - _dateOfBirth!.year} years'
                 : 'Not set',
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _buildQuickInfoItem(
             icon: Icons.flag_outlined,
             label: 'Country',
@@ -573,7 +500,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.grey.shade600),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,7 +515,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               ),
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
                   fontWeight: FontWeight.w500,
@@ -601,173 +528,29 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     );
   }
 
-  Widget _buildProfileActions() {
-    return Column(
-      children: [
-        _buildActionButton(
-          icon: Icons.qr_code_outlined,
-          label: 'Generate QR Code',
-          onTap: () {
-            _showSuccessSnackbar('QR Code generation coming soon');
-          },
-        ),
-        if (widget.isEditing) ...[
-          SizedBox(height: 12),
-          _buildActionButton(
-            icon: Icons.print_outlined,
-            label: 'Print Profile',
-            onTap: () {
-              _showSuccessSnackbar('Print functionality coming soon');
-            },
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: Colors.grey.shade600),
-            SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileStats() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Medical Records',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue.shade800,
-            ),
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  value: widget.student?.emrNumber?.toString() ?? '0',
-                  label: 'EMR',
-                  color: Colors.cyan,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildStatItem(
-                  value: '5',
-                  label: 'Visits',
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Last visit: ${widget.student?.formattedAppointmentDate ?? 'Never'}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.blue.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required String value,
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color.withOpacity(0.8),
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMainContent() {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildBasicInfoSection(),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             _buildGradeClassSection(),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             _buildFirstGuardianSection(),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             _buildSecondGuardianSection(),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  // Form sections (same as before)
   Widget _buildBasicInfoSection() {
     return FormSection(
       title: 'Basic info',
@@ -779,19 +562,19 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 label: 'First name',
                 controller: _firstNameController,
                 isRequired: true,
-                onChanged: (value) => setState(() {}), // Update UI when name changes
+                onChanged: (value) => setState(() {}),
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomTextField(
                 label: 'Last name',
                 controller: _lastNameController,
                 isRequired: true,
-                onChanged: (value) => setState(() {}), // Update UI when name changes
+                onChanged: (value) => setState(() {}),
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomDateField(
                 label: 'Date of birth',
@@ -802,20 +585,27 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
             ),
           ],
         ),
-        SizedBox(height: 20),
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
               child: CustomDropdownField(
                 label: 'Country of citizenship',
                 value: _selectedCountry,
-                items: ['Egypt', 'Tunisia', 'Morocco', 'Algeria'],
+                items: const [
+                  'Egypt',
+                  'Tunisia',
+                  'Morocco',
+                  'Algeria',
+                  'Saudi Arabia',
+                  'UAE'
+                ],
                 onChanged: (value) => setState(() => _selectedCountry = value),
                 isRequired: true,
                 icon: Icons.flag,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomTextField(
                 label: 'National ID number',
@@ -824,8 +614,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 keyboardType: TextInputType.number,
               ),
             ),
-            SizedBox(width: 16),
-            Expanded(child: SizedBox()),
+            const SizedBox(width: 16),
+            const Expanded(child: SizedBox()),
           ],
         ),
       ],
@@ -842,25 +632,25 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               child: CustomDropdownField(
                 label: 'Grade',
                 value: _selectedGrade,
-                items: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'],
+                items: _grades,
                 onChanged: (value) => setState(() => _selectedGrade = value),
                 isRequired: true,
                 icon: Icons.school,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomDropdownField(
                 label: 'Class',
                 value: _selectedClass,
-                items: ['Lions', 'Tigers', 'Eagles', 'Bears'],
+                items: _classes,
                 onChanged: (value) => setState(() => _selectedClass = value),
-                isRequired: true,
+                isRequired: false,
                 icon: Icons.class_,
               ),
             ),
-            SizedBox(width: 16),
-            Expanded(child: SizedBox()),
+            const SizedBox(width: 16),
+            const Expanded(child: SizedBox()),
           ],
         ),
       ],
@@ -875,65 +665,31 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           children: [
             Expanded(
               child: CustomTextField(
-                label: 'First name',
+                label: 'Full name',
                 controller: _guardian1FirstNameController,
                 isRequired: true,
               ),
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomTextField(
-                label: 'Last name',
-                controller: _guardian1LastNameController,
-                isRequired: true,
-              ),
-            ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomDropdownField(
-                label: 'Gender',
-                value: _guardian1Gender,
-                items: ['Male', 'Female'],
-                onChanged: (value) => setState(() => _guardian1Gender = value),
+                label: 'Relationship with student',
+                value: _guardian1Relationship,
+                items: const [
+                  'mother',
+                  'father',
+                  'guardian',
+                  'relative',
+                  'other'
+                ],
+                onChanged: (value) =>
+                    setState(() => _guardian1Relationship = value),
                 isRequired: true,
               ),
             ),
           ],
         ),
-        SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: CustomDateField(
-                label: 'Date of birth',
-                selectedDate: _guardian1DateOfBirth,
-                onDateSelected: (date) => setState(() => _guardian1DateOfBirth = date),
-                isRequired: true,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Country of citizenship',
-                value: _guardian1Country,
-                items: ['Egypt', 'Tunisia', 'Morocco', 'Algeria'],
-                onChanged: (value) => setState(() => _guardian1Country = value),
-                isRequired: true,
-                icon: Icons.flag,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomTextField(
-                label: 'National ID number',
-                controller: _guardian1NationalIdController,
-                isRequired: true,
-                keyboardType: TextInputType.number,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 20),
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
@@ -945,7 +701,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 prefixIcon: Icons.email_outlined,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomTextField(
                 label: 'Phone number',
@@ -953,16 +709,6 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 isRequired: true,
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Relationship with student',
-                value: _guardian1Relationship,
-                items: ['Parent', 'Guardian', 'Relative', 'Other'],
-                onChanged: (value) => setState(() => _guardian1Relationship = value),
-                isRequired: true,
               ),
             ),
           ],
@@ -979,94 +725,50 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           children: [
             Expanded(
               child: CustomTextField(
-                label: 'First name',
+                label: 'Full name',
                 controller: _guardian2FirstNameController,
-                isRequired: true,
+                isRequired: false,
               ),
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomTextField(
-                label: 'Last name',
-                controller: _guardian2LastNameController,
-                isRequired: true,
-              ),
-            ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomDropdownField(
-                label: 'Gender',
-                value: _guardian2Gender,
-                items: ['Male', 'Female'],
-                onChanged: (value) => setState(() => _guardian2Gender = value),
-                isRequired: true,
+                label: 'Relationship with student',
+                value: _guardian2Relationship,
+                items: const [
+                  'mother',
+                  'father',
+                  'guardian',
+                  'relative',
+                  'other'
+                ],
+                onChanged: (value) =>
+                    setState(() => _guardian2Relationship = value),
+                isRequired: false,
               ),
             ),
           ],
         ),
-        SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: CustomDateField(
-                label: 'Date of birth',
-                selectedDate: _guardian2DateOfBirth,
-                onDateSelected: (date) => setState(() => _guardian2DateOfBirth = date),
-                isRequired: true,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Country of citizenship',
-                value: _guardian2Country,
-                items: ['Egypt', 'Tunisia', 'Morocco', 'Algeria'],
-                onChanged: (value) => setState(() => _guardian2Country = value),
-                isRequired: true,
-                icon: Icons.flag,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomTextField(
-                label: 'National ID number',
-                controller: _guardian2NationalIdController,
-                isRequired: true,
-                keyboardType: TextInputType.number,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 20),
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
               child: CustomTextField(
                 label: 'Email',
                 controller: _guardian2EmailController,
-                isRequired: true,
+                isRequired: false,
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: Icons.email_outlined,
               ),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: CustomTextField(
                 label: 'Phone number',
                 controller: _guardian2PhoneController,
-                isRequired: true,
+                isRequired: false,
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Relationship with student',
-                value: _guardian2Relationship,
-                items: ['Parent', 'Guardian', 'Relative', 'Other'],
-                onChanged: (value) => setState(() => _guardian2Relationship = value),
-                isRequired: true,
               ),
             ),
           ],
@@ -1079,23 +781,69 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     _nationalIdController.dispose();
+    _passportController.dispose();
     _guardian1FirstNameController.dispose();
     _guardian1LastNameController.dispose();
     _guardian1EmailController.dispose();
     _guardian1PhoneController.dispose();
-    _guardian1NationalIdController.dispose();
     _guardian2FirstNameController.dispose();
     _guardian2LastNameController.dispose();
     _guardian2EmailController.dispose();
     _guardian2PhoneController.dispose();
-    _guardian2NationalIdController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 }
 
-// Updated CustomTextField to support onChanged callback
+// CUSTOM WIDGETS
+
+class FormSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const FormSection({
+    Key? key,
+    required this.title,
+    required this.children,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
 class CustomTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -1129,14 +877,14 @@ class CustomTextField extends StatelessWidget {
             ),
             children: [
               if (isRequired)
-                TextSpan(
+                const TextSpan(
                   text: '*',
                   style: TextStyle(color: Colors.red),
                 ),
             ],
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -1155,9 +903,10 @@ class CustomTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.blue),
+              borderSide: const BorderSide(color: Colors.blue),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -1171,51 +920,6 @@ class CustomTextField extends StatelessWidget {
               : null,
         ),
       ],
-    );
-  }
-}
-
-// Other form components remain the same...
-class FormSection extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const FormSection({
-    Key? key,
-    required this.title,
-    required this.children,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade100,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 24),
-          ...children,
-        ],
-      ),
     );
   }
 }
@@ -1253,14 +957,14 @@ class CustomDropdownField extends StatelessWidget {
             ),
             children: [
               if (isRequired)
-                TextSpan(
+                const TextSpan(
                   text: '*',
                   style: TextStyle(color: Colors.red),
                 ),
             ],
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChanged,
@@ -1276,9 +980,10 @@ class CustomDropdownField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.blue),
+              borderSide: const BorderSide(color: Colors.blue),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -1331,14 +1036,14 @@ class CustomDateField extends StatelessWidget {
             ),
             children: [
               if (isRequired)
-                TextSpan(
+                const TextSpan(
                   text: '*',
                   style: TextStyle(color: Colors.red),
                 ),
             ],
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         InkWell(
           onTap: () async {
             final date = await showDatePicker(
@@ -1352,7 +1057,7 @@ class CustomDateField extends StatelessWidget {
             }
           },
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(8),
@@ -1360,15 +1065,18 @@ class CustomDateField extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today, size: 20, color: Colors.grey.shade600),
-                SizedBox(width: 12),
+                Icon(Icons.calendar_today,
+                    size: 20, color: Colors.grey.shade600),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     selectedDate != null
                         ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
                         : label,
                     style: TextStyle(
-                      color: selectedDate != null ? Colors.black87 : Colors.grey.shade400,
+                      color: selectedDate != null
+                          ? Colors.black87
+                          : Colors.grey.shade400,
                       fontSize: 16,
                     ),
                   ),
@@ -1383,15 +1091,13 @@ class CustomDateField extends StatelessWidget {
   }
 }
 
-// ImagePickerWidget remains the same as in your code...
 class ImagePickerWidget extends StatelessWidget {
   final Uint8List? selectedImageBytes;
   final String? selectedImageName;
   final bool isLoading;
   final VoidCallback onPickImage;
   final VoidCallback onRemoveImage;
-  final Student? student;
-  final bool isEditing;
+  final String studentName;
 
   const ImagePickerWidget({
     Key? key,
@@ -1400,22 +1106,15 @@ class ImagePickerWidget extends StatelessWidget {
     required this.isLoading,
     required this.onPickImage,
     required this.onRemoveImage,
-    this.student,
-    this.isEditing = false,
+    required this.studentName,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Main avatar display
         _buildAvatarDisplay(),
-        SizedBox(height: 20),
-        
-        // Action buttons
-        _buildActionButtons(),
-        
-        // Image info (if selected)
+        const SizedBox(height: 20),
         if (selectedImageName != null) _buildImageInfo(),
       ],
     );
@@ -1429,24 +1128,25 @@ class ImagePickerWidget extends StatelessWidget {
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.grey.shade300,
-              width: 3,
-            ),
+            border: Border.all(color: Colors.grey.shade300, width: 3),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
                 blurRadius: 10,
-                offset: Offset(0, 5),
+                offset: const Offset(0, 5),
               ),
             ],
           ),
           child: ClipOval(
-            child: _buildAvatarContent(),
+            child: selectedImageBytes != null
+                ? Image.memory(selectedImageBytes!, fit: BoxFit.cover)
+                : Container(
+                    color: Colors.grey.shade200,
+                    child:
+                        const Icon(Icons.person, size: 60, color: Colors.grey),
+                  ),
           ),
         ),
-        
-        // Loading overlay
         if (isLoading)
           Positioned.fill(
             child: Container(
@@ -1454,15 +1154,13 @@ class ImagePickerWidget extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.black.withOpacity(0.3),
               ),
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               ),
             ),
           ),
-        
-        // Edit button
         Positioned(
           bottom: 5,
           right: 5,
@@ -1475,127 +1173,19 @@ class ImagePickerWidget extends StatelessWidget {
                 color: Colors.blue,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 5,
-                    offset: Offset(0, 2),
-                  ),
-                ],
               ),
-              child: Icon(
-                Icons.camera_alt,
-                size: 18,
-                color: Colors.white,
-              ),
+              child:
+                  const Icon(Icons.camera_alt, size: 18, color: Colors.white),
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildAvatarContent() {
-    if (selectedImageBytes != null) {
-      // Show selected image
-      return Image.memory(
-        selectedImageBytes!,
-        fit: BoxFit.cover,
-        width: 140,
-        height: 140,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildPlaceholderAvatar();
-        },
-      );
-    } else if (isEditing && student != null) {
-      // Show existing student avatar
-      return Container(
-        color: student?.avatarColor ?? Colors.blue.shade200,
-        child: Center(
-          child: Text(
-            student?.initials ?? '?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      );
-    } else {
-      // Show placeholder
-      return _buildPlaceholderAvatar();
-    }
-  }
-
-  Widget _buildPlaceholderAvatar() {
-    return Container(
-      color: Colors.grey.shade100,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline,
-              size: 50,
-              color: Colors.grey.shade400,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'No Photo',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: isLoading ? null : onPickImage,
-            icon: Icon(Icons.upload, size: 18),
-            label: Text('Select Photo'),
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              side: BorderSide(color: Colors.blue),
-              foregroundColor: Colors.blue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-        if (selectedImageBytes != null) ...[
-          SizedBox(width: 8),
-          IconButton(
-            onPressed: onRemoveImage,
-            icon: Icon(Icons.delete_outline),
-            color: Colors.red,
-            tooltip: 'Remove Photo',
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
 
   Widget _buildImageInfo() {
     return Container(
-      margin: EdgeInsets.only(top: 12),
-      padding: EdgeInsets.all(8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(6),
@@ -1603,12 +1193,8 @@ class ImagePickerWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle,
-            size: 16,
-            color: Colors.green.shade600,
-          ),
-          SizedBox(width: 8),
+          Icon(Icons.check_circle, size: 16, color: Colors.green.shade600),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               selectedImageName!,
@@ -1619,6 +1205,12 @@ class ImagePickerWidget extends StatelessWidget {
               ),
               overflow: TextOverflow.ellipsis,
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 16),
+            onPressed: onRemoveImage,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

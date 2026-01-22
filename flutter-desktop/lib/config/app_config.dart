@@ -3,7 +3,7 @@ class AppConfig {
   static const bool isDevelopment = true;
 
   // Development credentials
-  static const String devEmail = "weewrrwtt@gmail.com";
+  static const String devEmail = "fullcontroltest@ayamedica.com";
   static const String devPassword = "Test1234";
 
   // NEW Backend API Configuration

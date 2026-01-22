@@ -72,11 +72,20 @@ class StorageService extends GetxService {
       _box.write('selectedBranchData', branchData);
   Future<void> clearSelectedBranchData() => _box.remove('selectedBranchData');
 
-  // Organization ID
+  // Organization ID (Legacy - keeping for backwards compatibility)
   String? getOrganizationId() => _box.read('organizationId');
   Future<void> saveOrganizationId(String organizationId) =>
       _box.write('organizationId', organizationId);
   Future<void> clearOrganizationId() => _box.remove('organizationId');
+
+  // Selected Organization Data (NEW - Full organization data)
+  Map<String, dynamic>? getSelectedOrganizationData() =>
+      _box.read('selectedOrganizationData');
+  Future<void> saveSelectedOrganizationData(
+          Map<String, dynamic> organizationData) =>
+      _box.write('selectedOrganizationData', organizationData);
+  Future<void> clearSelectedOrganizationData() =>
+      _box.remove('selectedOrganizationData');
 
   // Organization Type Flags
   bool getIsSchool() => _box.read('isSchool') ?? false;
@@ -87,13 +96,23 @@ class StorageService extends GetxService {
   Future<void> saveIsClinic(bool isClinic) => _box.write('isClinic', isClinic);
   Future<void> clearIsClinic() => _box.remove('isClinic');
 
-  // Add these methods to your StorageService class
-
-// Refresh Token
+  // Refresh Token
   String? getRefreshToken() => _box.read('refresh_token');
-
   Future<void> saveRefreshToken(String token) =>
       _box.write('refresh_token', token);
-
   Future<void> clearRefreshToken() => _box.remove('refresh_token');
+
+  // Clear all data
+  Future<void> clearAll() async {
+    await clearUserData();
+    await clearAccessToken();
+    await clearRefreshToken();
+    await clearLoginSession();
+    await clearBranchSelectedStatus();
+    await clearSelectedBranchData();
+    await clearOrganizationId();
+    await clearSelectedOrganizationData();
+    await clearIsSchool();
+    await clearIsClinic();
+  }
 }

@@ -110,7 +110,7 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
               ),
               const SizedBox(height: 2),
               Text(
-                widget.branch != null 
+                widget.branch != null
                     ? 'Update branch information'
                     : 'Create a new school branch',
                 style: TextStyle(
@@ -183,7 +183,9 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
                 hint: 'Enter email address',
                 icon: Icons.email,
                 validator: (value) {
-                  if (value != null && value.isNotEmpty && !GetUtils.isEmail(value)) {
+                  if (value != null &&
+                      value.isNotEmpty &&
+                      !GetUtils.isEmail(value)) {
                     return 'Please enter a valid email';
                   }
                   return null;
@@ -404,16 +406,25 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
 
     try {
       final branchController = Get.find<BranchManagementController>();
-      
+
       final branch = BranchModel(
-        id: widget.branch?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.branch?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         role: _roleController.text.trim(),
         icon: _selectedIcon,
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        principalName: _principalController.text.trim().isEmpty ? null : _principalController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        principalName: _principalController.text.trim().isEmpty
+            ? null
+            : _principalController.text.trim(),
         studentCount: widget.branch?.studentCount,
         teacherCount: widget.branch?.teacherCount,
         status: _selectedStatus,
@@ -422,9 +433,9 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
       );
 
       if (widget.branch != null) {
-        await branchController.updateBranch(branch);
+        //await branchController.updateBranch(branch);
       } else {
-        await branchController.addBranch(branch);
+        //await branchController.addBranch(branch);
       }
 
       if (mounted) {
@@ -446,4 +457,4 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
       }
     }
   }
-} 
+}
