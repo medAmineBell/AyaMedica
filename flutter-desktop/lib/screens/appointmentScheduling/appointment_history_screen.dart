@@ -4,6 +4,7 @@ import '../../controllers/appointment_history_controller.dart';
 import 'widgets/appointment_history_table_widget.dart';
 import 'widgets/create_appointment_dialog.dart';
 import 'widgets/medical_checkup_table_widget.dart';
+import 'widgets/vital_signs_table_widget.dart';
 import 'widgets/student_table_widget.dart';
 
 class AppointmentHistoryScreen extends StatelessWidget {
@@ -57,6 +58,15 @@ class AppointmentHistoryScreen extends StatelessWidget {
                     if (appt.type.toLowerCase().contains('checkup') &&
                         appt.disease.toLowerCase() == 'hygiene') {
                       return MedicalCheckupTableWidget(
+                        appointment: appt,
+                        onBack: controller.backToList,
+                      );
+                    }
+                    // Show vital signs table for Diabetes, Blood pressure, Cardiovascular, BMI
+                    const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
+                    if (appt.type.toLowerCase().contains('checkup') &&
+                        vitalSignsDiseases.contains(appt.disease.toLowerCase())) {
+                      return VitalSignsTableWidget(
                         appointment: appt,
                         onBack: controller.backToList,
                       );

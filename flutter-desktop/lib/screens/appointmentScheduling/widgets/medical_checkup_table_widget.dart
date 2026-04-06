@@ -420,11 +420,16 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
       final key = '${appointment.id}_${student.id}_$category';
       final status = controller.getHealthStatus(key);
 
+      final isDone = appointment.status == AppointmentStatus.done;
+
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: status == null
-            ? _buildSelector(category, student)
-            : _buildStatusChip(status, category, student),
+            ? (isDone
+                ? const Text('--',
+                    style: TextStyle(color: Color(0xFF9CA3AF)))
+                : _buildSelector(category, student))
+            : _buildStatusChip(status, category, student, readOnly: isDone),
       );
     });
   }
@@ -494,7 +499,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
   }
 
   Widget _buildStatusChip(
-      HealthStatusData status, String category, Student student) {
+      HealthStatusData status, String category, Student student,
+      {bool readOnly = false}) {
     final isGood = status.status == HealthStatus.good;
 
     return Row(
@@ -549,15 +555,17 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
             ),
           ),
         ),
-        const SizedBox(width: 6),
-        GestureDetector(
-          onTap: () {
-            final key = '${appointment.id}_${student.id}_$category';
-            controller.clearHealthStatus(key);
-            _syncStudentHygiene(student);
-          },
-          child: const Icon(Icons.undo, color: Color(0xFF6B7280), size: 18),
-        ),
+        if (!readOnly) ...[
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () {
+              final key = '${appointment.id}_${student.id}_$category';
+              controller.clearHealthStatus(key);
+              _syncStudentHygiene(student);
+            },
+            child: const Icon(Icons.undo, color: Color(0xFF6B7280), size: 18),
+          ),
+        ],
       ],
     );
   }
@@ -725,7 +733,11 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
                               backgroundColor: const Color(0xFF10B981),
                               colorText: Colors.white,
                             );
-                            controller.switchToAppointmentView();
+                            if (widget.onBack != null) {
+                              widget.onBack!();
+                            } else {
+                              controller.switchToAppointmentView();
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

@@ -37,13 +37,18 @@ class _PlansViewState extends State<PlansView> {
   ];
   
   final List<String> _administrationFormOptions = [
-    'Oral',
-    'Injection',
-    'Topical',
-    'Inhalation',
     'Sublingual',
-    'Rectal',
-    'Transdermal',
+    'Oral',
+    'Intramuscular injection',
+    'Subcutaneous',
+    'Eye drops',
+    'Intravenous injection',
+    'Inhalation',
+    'For External Treatment',
+    'Nasal administration',
+    'Otic administration',
+    'Vaginal',
+    'Anal',
   ];
 
   // Tags for frequency
@@ -54,7 +59,7 @@ class _PlansViewState extends State<PlansView> {
     super.initState();
     // Set default values
     _relationToFood = 'After dinner';
-    _administrationForm = 'Oral';
+    _administrationForm = 'Sublingual';
     _selectedDate = DateTime.now();
     _numberOfDaysController.text = '8';
     _everyHoursController.text = '4';

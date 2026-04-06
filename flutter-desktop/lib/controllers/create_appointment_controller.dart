@@ -354,8 +354,27 @@ class CreateAppointmentController extends GetxController {
         'enableNotification': true,
       };
 
-      // Use hygienePatients array when reason is Hygiene, otherwise patients
-      if (reason.toLowerCase() == 'hygiene' && apiType == 'checkup') {
+      // Use the appropriate patients array based on reason
+      const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
+      if (vitalSignsDiseases.contains(reason.toLowerCase()) && apiType == 'checkup') {
+        body['vitalSignsPatients'] = selectedStudents.map((s) => {
+          'patientAid': s.aid ?? '',
+          'patientNote': '',
+          'patientStatus': 'pending',
+          'bloodGlucose': '',
+          'bloodPressure': '',
+          'heartRate': '',
+          'medication': '',
+          'administrationForm': '',
+          'doze': '',
+          'unit': '',
+          'presence': '',
+          'height': '',
+          'weight': '',
+          'note': '',
+          'bmiResult': '',
+        }).toList();
+      } else if (reason.toLowerCase() == 'hygiene' && apiType == 'checkup') {
         body['hygienePatients'] = selectedStudents.map((s) => {
           'patientAid': s.aid ?? '',
           'patientNote': '',
@@ -460,6 +479,13 @@ class CreateAppointmentController extends GetxController {
         throw Exception(errorBody['message'] ?? 'Failed to create appointment session');
       }
 
+      // Parse appointmentId from API response
+      final responseData = jsonDecode(response.body);
+      final createdAppointmentId = responseData['data']?['appointmentId'] as String?;
+
+      // Capture startNow flag before dialogs close
+      final isStartNow = selectedDateTimeOption.value == 'startNow';
+
       progressController.updateProgress(1.0);
       await Future.delayed(const Duration(milliseconds: 300));
 
@@ -484,27 +510,41 @@ class CreateAppointmentController extends GetxController {
         duration: const Duration(seconds: 3),
       );
 
-      // Handle parent notification
-      if (selectedType.value == 'Vaccination') {
-        // Show notification dialog for vaccination appointments
-        bool? shouldNotify = await Get.dialog<bool>(
-          ParentsNotificationDialog(
-            onDismiss: () {
-              Get.back(); // Close the dialog
-            },
-          ),
-          barrierDismissible: false,
-        );
-
-        if (shouldNotify ?? false) {
-          await _notifyParents(appointment);
+      if (isStartNow && createdAppointmentId != null) {
+        // "Start Now" flow: navigate directly to the appropriate table view
+        final matchedAppointment = appointmentController.appointments
+            .firstWhereOrNull((a) => a.id == createdAppointmentId);
+        if (matchedAppointment != null) {
+          const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
+          if (matchedAppointment.disease.toLowerCase() == 'hygiene') {
+            appointmentController.showMedicalCheckupView(matchedAppointment);
+          } else if (vitalSignsDiseases.contains(matchedAppointment.disease.toLowerCase())) {
+            appointmentController.showVitalSignsView(matchedAppointment);
+          } else {
+            appointmentController.showStudentsForAppointment(matchedAppointment);
+          }
         }
       } else {
-        final shouldNotify = await showNotifyParentsDialog();
+        // "Add Date" flow: show notification dialog
+        if (selectedType.value == 'Vaccination') {
+          bool? shouldNotify = await Get.dialog<bool>(
+            ParentsNotificationDialog(
+              onDismiss: () {
+                Get.back();
+              },
+            ),
+            barrierDismissible: false,
+          );
 
-        if (shouldNotify ?? false) {
-          // Call your notification function here
-          await _notifyParents(appointment);
+          if (shouldNotify ?? false) {
+            await _notifyParents(appointment);
+          }
+        } else {
+          final shouldNotify = await showNotifyParentsDialog();
+
+          if (shouldNotify ?? false) {
+            await _notifyParents(appointment);
+          }
         }
       }
     } catch (e) {

@@ -6,6 +6,7 @@ import 'appointment_filters_widget.dart';
 import 'appointment_table_data_widget.dart';
 import 'medical_checkup_table_widget.dart';
 import 'student_table_widget.dart';
+import 'vital_signs_table_widget.dart';
 import 'appointment_pagination_appointments_widget.dart';
 
 class AppointmentTableWidget extends StatelessWidget {
@@ -25,7 +26,19 @@ class AppointmentTableWidget extends StatelessWidget {
             appt.disease.toLowerCase() == 'hygiene') {
           return MedicalCheckupTableWidget(appointment: appt);
         }
+        // Show vital signs table for Diabetes, Blood pressure, Cardiovascular, BMI
+        const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
+        if (appt.type.toLowerCase().contains('checkup') &&
+            vitalSignsDiseases.contains(appt.disease.toLowerCase())) {
+          return VitalSignsTableWidget(appointment: appt);
+        }
         return StudentTableWidget(appointment: appt);
+      }
+      // Show vital signs table when in vitalSigns view mode
+      if (controller.currentViewMode.value == TableViewMode.vitalSigns &&
+          controller.selectedAppointmentForStudents.value != null) {
+        return VitalSignsTableWidget(
+            appointment: controller.selectedAppointmentForStudents.value!);
       }
       if (controller.currentViewMode.value == TableViewMode.appointmentStudentsNotify &&
           controller.selectedAppointmentForStudents.value != null) {

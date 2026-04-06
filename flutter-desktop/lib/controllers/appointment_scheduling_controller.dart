@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
 import 'package:flutter_getx_app/models/health_status.dart';
+import 'package:flutter_getx_app/models/vital_signs_data.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +18,7 @@ enum TableViewMode {
   appointmentStudentsNotify, // Show individual appointment-student combinations
   medicalCheckup, // Show medical checkup table
   chronicDiseases, // Show chronic diseases table
+  vitalSigns, // Show vital signs table (Diabetes, Blood Pressure, Cardiovascular, BMI)
 }
 
 class AppointmentSchedulingController extends GetxController {
@@ -303,21 +305,36 @@ class AppointmentSchedulingController extends GetxController {
   void showStudentsForAppointment(Appointment appointment) {
     selectedAppointmentForStudents.value = appointment;
     currentViewMode.value = TableViewMode.appointmentStudents;
-
     clearSelections();
+    // Load patients from API if not already loaded
+    if (appointment.selectedStudents.isEmpty) {
+      loadAppointmentPatients(appointment);
+    }
   }
 
   void showStudentsForAppointmentNotify(Appointment appointment) {
     selectedAppointmentForStudents.value = appointment;
     currentViewMode.value = TableViewMode.appointmentStudentsNotify;
-
     clearSelections();
+    if (appointment.selectedStudents.isEmpty) {
+      loadAppointmentPatients(appointment);
+    }
   }
 
   void showMedicalCheckupView(Appointment appointment) {
     selectedAppointmentForStudents.value = appointment;
     currentViewMode.value = TableViewMode.medicalCheckup;
     clearSelections();
+    // Always load patients to restore hygiene data
+    loadAppointmentPatients(appointment);
+  }
+
+  void showVitalSignsView(Appointment appointment) {
+    selectedAppointmentForStudents.value = appointment;
+    currentViewMode.value = TableViewMode.vitalSigns;
+    clearSelections();
+    // Always load patients to restore vital signs data
+    loadAppointmentPatients(appointment);
   }
 
   void switchToAppointmentView() {
@@ -996,6 +1013,219 @@ class AppointmentSchedulingController extends GetxController {
 
   HealthStatusData? getHealthStatus(String key) {
     return healthStatuses[key];
+  }
+
+  // ─── Vital Signs state management ─────────────────────────────────────
+  // Key format: '{appointmentId}_{studentId}'
+  final RxMap<String, VitalSignsData> vitalSignsData =
+      <String, VitalSignsData>{}.obs;
+
+  VitalSignsData? getVitalSignsData(String key) {
+    return vitalSignsData[key];
+  }
+
+  VitalSignsData getOrCreateVitalSignsData(String key) {
+    if (!vitalSignsData.containsKey(key)) {
+      vitalSignsData[key] = VitalSignsData();
+    }
+    return vitalSignsData[key]!;
+  }
+
+  void setVitalSignsField(String key, String fieldName, String value) {
+    final data = getOrCreateVitalSignsData(key);
+    switch (fieldName) {
+      case 'bloodGlucose':
+        data.bloodGlucose = value;
+        break;
+      case 'bloodPressure':
+        data.bloodPressure = value;
+        break;
+      case 'heartRate':
+        data.heartRate = value;
+        break;
+      case 'medication':
+        data.medication = value;
+        break;
+      case 'administrationForm':
+        data.administrationForm = value;
+        break;
+      case 'doze':
+        data.doze = value;
+        break;
+      case 'unit':
+        data.unit = value;
+        break;
+      case 'presence':
+        data.presence = value;
+        break;
+      case 'height':
+        data.height = value;
+        break;
+      case 'weight':
+        data.weight = value;
+        break;
+      case 'note':
+        data.note = value;
+        break;
+      case 'bmiResult':
+        data.bmiResult = value;
+        break;
+    }
+    // Update BMI result automatically when height or weight changes
+    if (fieldName == 'height' || fieldName == 'weight' || fieldName == 'presence') {
+      data.bmiResult = data.formattedBmiResult;
+    }
+    vitalSignsData.refresh();
+  }
+
+  /// PATCH /api/appointment-sessions/{id}/patients/{patientAid}
+  /// Updates vital signs fields for a patient.
+  Future<void> updatePatientVitalSigns({
+    required String sessionId,
+    required String patientAid,
+    required String studentId,
+    required VitalSignsData data,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+      final url = Uri.parse(
+          '$_baseUrl/api/appointment-sessions/$sessionId/patients/$patientAid');
+
+      final body = <String, dynamic>{
+        'patientStatus': 'checked',
+        'bloodGlucose': data.bloodGlucose,
+        'bloodPressure': data.bloodPressure,
+        'heartRate': data.heartRate,
+        'medication': data.medication,
+        'administrationForm': data.administrationForm,
+        'doze': data.doze,
+        'unit': data.unit,
+        'presence': data.presence,
+        'height': data.height,
+        'weight': data.weight,
+        'note': data.note,
+        'bmiResult': data.bmiResult,
+      };
+
+      final response = await http.patch(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating vital signs: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update vital signs: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    }
+  }
+
+  /// GET /api/appointment-sessions/{id}/patients
+  /// Loads patients from the API, populates the appointment's selectedStudents,
+  /// and restores hygiene/vital signs data and statuses.
+  Future<void> loadAppointmentPatients(Appointment appointment) async {
+    try {
+      final sessionId = appointment.id;
+      if (sessionId == null) return;
+
+      final accessToken = _getAccessTokenOrThrow();
+      final url = Uri.parse(
+          '$_baseUrl/api/appointment-sessions/$sessionId/patients');
+
+      final response = await http.get(
+        url,
+        headers: _getHeaders(accessToken),
+      );
+
+      if (response.statusCode != 200) return;
+
+      final jsonData = jsonDecode(response.body);
+      if (jsonData['success'] != true) return;
+
+      final patients = jsonData['data'] as List;
+
+      // Build Student objects from patient data
+      final students = patients.map((patient) {
+        final given = patient['nameGiven'] as String? ?? '';
+        final family = patient['nameFamily'] as String? ?? '';
+        final fullName = '$given $family'.trim();
+        final aid = patient['patientAid'] as String? ?? '';
+        final photo = patient['photo'] as String?;
+
+        return Student(
+          id: patient['id'] ?? aid,
+          name: fullName.isNotEmpty ? fullName : aid,
+          imageUrl: photo,
+          avatarColor: Color((fullName.hashCode & 0x00FFFFFF) | 0xFF000000),
+          aid: aid,
+          grade: appointment.grade,
+          className: appointment.className,
+        );
+      }).toList();
+
+      // Populate appointment's selectedStudents
+      appointment.selectedStudents
+        ..clear()
+        ..addAll(students);
+
+      // Restore statuses and data from patient records
+      for (final patient in patients) {
+        final studentId = patient['id'] ?? '';
+        final patientStatus = patient['patientStatus'] as String? ?? '';
+        final patientNote = patient['patientNote'] as String? ?? '';
+        final key = '${sessionId}_$studentId';
+
+        // Restore appointment status
+        if (patientStatus == 'checked') {
+          appointmentStatuses[key] = AppointmentStatus.done;
+        } else if (patientStatus == 'absent') {
+          appointmentStatuses[key] = AppointmentStatus.absent;
+        } else if (patientStatus == 'issue') {
+          appointmentStatuses[key] = AppointmentStatus.notDone;
+        }
+        if (patientNote.isNotEmpty) {
+          appointmentNotes[key] = patientNote;
+        }
+
+        // Restore hygiene data
+        const hygieneFields = {
+          'Hair': 'hair',
+          'Ears': 'ears',
+          'Nails': 'nails',
+          'Teeth': 'teeth',
+          'Uniform': 'uniform',
+        };
+        for (final entry in hygieneFields.entries) {
+          final statusVal = patient['${entry.value}Status'] as String?;
+          if (statusVal != null && statusVal.isNotEmpty) {
+            final reasonVal = patient['${entry.value}Reason'] as String? ?? '';
+            final hKey = '${sessionId}_${studentId}_${entry.key}';
+            if (statusVal == 'good') {
+              setHealthStatus(hKey, HealthStatus.good);
+            } else if (statusVal == 'issue') {
+              setHealthStatusWithIssue(hKey, HealthStatus.issue, reasonVal);
+            }
+          }
+        }
+
+        // Restore vital signs data
+        vitalSignsData[key] = VitalSignsData.fromJson(patient);
+      }
+
+      vitalSignsData.refresh();
+      healthStatuses.refresh();
+      appointmentStatuses.refresh();
+    } catch (e) {
+      print('Error loading appointment patients: $e');
+    }
   }
 
   // Track completed appointments with timestamps

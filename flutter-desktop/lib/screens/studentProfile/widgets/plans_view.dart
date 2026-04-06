@@ -39,13 +39,18 @@ class _PlansViewState extends State<PlansView> {
   ];
 
   final List<String> _administrationFormOptions = [
-    'Oral',
-    'Injection',
-    'Topical',
-    'Inhalation',
     'Sublingual',
-    'Rectal',
-    'Transdermal',
+    'Oral',
+    'Intramuscular injection',
+    'Subcutaneous',
+    'Eye drops',
+    'Intravenous injection',
+    'Inhalation',
+    'For External Treatment',
+    'Nasal administration',
+    'Otic administration',
+    'Vaginal',
+    'Anal',
   ];
 
   List<String> _selectedTags = ['After dinner', 'After Lunch'];
@@ -58,7 +63,7 @@ class _PlansViewState extends State<PlansView> {
     super.initState();
     _controller = Get.find<AssessmentController>();
     _relationToFood = 'After dinner';
-    _administrationForm = 'Oral';
+    _administrationForm = 'Sublingual';
     _selectedDate = DateTime.now();
     _sickLeaveDate = DateTime.now();
     _numberOfDaysController.text = '8';

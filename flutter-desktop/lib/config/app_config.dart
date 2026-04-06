@@ -1,7 +1,17 @@
+import 'package:package_info_plus/package_info_plus.dart';
+
 class AppConfig {
+  static PackageInfo? _packageInfo;
+
+  static Future<void> init() async {
+    _packageInfo = await PackageInfo.fromPlatform();
+  }
+
+  static String get appVersion => _packageInfo?.version ?? '0.0.0';
+
   // Velopack update configuration (private release repo)
   static const String updateUrl =
-      'https://github.com/Ayamedica-MP/DesktopApp/releases/latest/';
+      'https://github.com/Ayamedica-MP/DesktopApp/releases/latest/download/';
   // Token injected at build time: --dart-define=UPDATE_TOKEN=ghp_xxx
   static const String updateToken =
       String.fromEnvironment('UPDATE_TOKEN', defaultValue: '');
@@ -13,10 +23,10 @@ class AppConfig {
   static const String devEmail = "ahmed@ayamedica.com";
   static const String devPassword = "22001018888818";
 
-  static const String newBackendUrl = 'http://localhost:3000';
+  //static const String newBackendUrl = 'http://localhost:3000';
   // NEW Backend API Configuration
-  // static const String newBackendUrl =
-  //     'https://ayamedica-backend.ayamedica.online';
+  static const String newBackendUrl =
+      'https://ayamedica-backend.ayamedica.online';
 
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';

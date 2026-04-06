@@ -598,10 +598,14 @@ void _showDeleteConfirmation(Appointment appointment) {
       final homeController = Get.find<HomeController>();
       homeController.showMedicalCheckupTable(appointment, studentsData);
     } else {
-      // If appointment is a Hygiene checkup, show medical checkup (hygiene) table
+      // Route to appropriate table based on disease type
+      const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
       if (appointment.type.toLowerCase().contains('checkup') &&
           appointment.disease.toLowerCase() == 'hygiene') {
         controller.showMedicalCheckupView(appointment);
+      } else if (appointment.type.toLowerCase().contains('checkup') &&
+          vitalSignsDiseases.contains(appointment.disease.toLowerCase())) {
+        controller.showVitalSignsView(appointment);
       } else {
         controller.showStudentsForAppointment(appointment);
       }

@@ -5,6 +5,7 @@ import 'appointment_student_notify_table_widget.dart';
 import 'appointment_table_widget.dart';
 import 'appointment_student_table_widget.dart';
 import 'medical_checkup_table_widget.dart';
+import 'vital_signs_table_widget.dart';
 
 class TableViewSwitcherWidget extends StatelessWidget {
   const TableViewSwitcherWidget({Key? key}) : super(key: key);
@@ -48,6 +49,10 @@ class TableViewSwitcherWidget extends StatelessWidget {
           print('Current view mode: ${controller.currentViewMode.value}');
 
           switch (controller.currentViewMode.value) {
+            case TableViewMode.vitalSigns:
+              return VitalSignsTableWidget(
+                  appointment:
+                      controller.selectedAppointmentForStudents.value!);
             case TableViewMode.medicalCheckup:
               print(
                   'Case 4: Showing medical checkup table for appointment ${controller.selectedAppointmentForStudents.value?.id}');

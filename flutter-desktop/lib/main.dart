@@ -17,6 +17,7 @@ import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:flutter_getx_app/utils/country_service.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
 import 'package:flutter_getx_app/utils/location_service.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:velopack_flutter/velopack_flutter.dart';
 
 void main(List<String> args) async {
@@ -44,6 +45,9 @@ void main(List<String> args) async {
       statusBarBrightness: Brightness.dark,
     ),
   );
+
+  // Initialize app config (reads version from pubspec)
+  await AppConfig.init();
 
   // Initialize services
   await Get.putAsync(() => StorageService().init());

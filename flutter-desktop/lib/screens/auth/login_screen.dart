@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:get/get.dart'; // Import Get package
 import '../../controllers/auth_controller.dart'; // Import the AuthController with relative path
 import 'widgets/language_dropdown_widget.dart'; // Import the new widget
@@ -96,9 +97,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // App Version
                 const SizedBox(height: 16),
-                const Text(
-                  'v1.0.2',
-                  style: TextStyle(
+                Text(
+                  'v${AppConfig.appVersion}',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
                   ),
