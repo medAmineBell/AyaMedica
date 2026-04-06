@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/models/student.dart';
 import 'profile_field.dart';
 
 class ContactDetailsSection extends StatelessWidget {
-  const ContactDetailsSection({Key? key}) : super(key: key);
+  final Student student;
+
+  const ContactDetailsSection({Key? key, required this.student}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,14 +28,14 @@ class ContactDetailsSection extends StatelessWidget {
                 Expanded(
                   child: ProfileField(
                     label: 'First Guardian phone',
-                    value: '+201070000003',
+                    value: student.firstGuardianPhone,
                   ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
                   child: ProfileField(
                     label: 'Second Guardian phone',
-                    value: '+201070000003',
+                    value: student.secondGuardianPhone,
                   ),
                 ),
               ],
@@ -43,14 +46,14 @@ class ContactDetailsSection extends StatelessWidget {
                 Expanded(
                   child: ProfileField(
                     label: 'First Guardian email',
-                    value: 'user@domain.com',
+                    value: student.firstGuardianEmail,
                   ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
                   child: ProfileField(
                     label: 'Second Guardian email',
-                    value: 'user@domain.com',
+                    value: student.secondGuardianEmail,
                   ),
                 ),
               ],

@@ -11,5 +11,8 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+
+    // Start the window maximized (full width and height)
+    self.setFrame(NSScreen.main?.visibleFrame ?? windowFrame, display: true)
   }
 }

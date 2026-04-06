@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
 import 'package:flutter_getx_app/models/health_status.dart';
 import 'package:flutter_getx_app/models/student.dart';
-import 'package:flutter_getx_app/utils/medplum_service.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../utils/storage_service.dart';
 
 enum AppointmentScreenState { loading, error, success, empty }
 
@@ -17,8 +20,31 @@ enum TableViewMode {
 }
 
 class AppointmentSchedulingController extends GetxController {
+  static String get _baseUrl => AppConfig.newBackendUrl;
+
   final Rxn<Appointment> selectedAppointmentForStudents = Rxn<Appointment>();
-  final MedplumService _medplumService = Get.find<MedplumService>();
+  final StorageService _storageService = Get.find();
+
+  // Organization and Branch IDs
+  final RxString organizationId = ''.obs;
+  final RxString branchId = ''.obs;
+
+  /// Get authorization headers for API requests
+  Map<String, String> _getHeaders(String accessToken) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $accessToken',
+    };
+  }
+
+  /// Get a valid access token or throw
+  String _getAccessTokenOrThrow() {
+    final accessToken = _storageService.getAccessToken();
+    if (accessToken == null) {
+      throw Exception('No access token found. Please log in again.');
+    }
+    return accessToken;
+  }
 
   final Rx<AppointmentScreenState> screenState =
       AppointmentScreenState.loading.obs;
@@ -32,6 +58,8 @@ class AppointmentSchedulingController extends GetxController {
 
   final RxMap<String, AppointmentStatus> appointmentStatuses =
       <String, AppointmentStatus>{}.obs;
+  final RxMap<String, String> appointmentNotes = <String, String>{}.obs;
+  final RxString studentSearchQuery = ''.obs;
   final Rx<TableViewMode> currentViewMode = TableViewMode.appointments.obs;
   final RxSet<String> loadingAppointmentStudentKeys = <String>{}.obs;
   final RxBool showChronicDiseases = false.obs;
@@ -80,6 +108,153 @@ class AppointmentSchedulingController extends GetxController {
       loadingAppointmentStudentKeys.add(key);
     } else {
       loadingAppointmentStudentKeys.remove(key);
+    }
+  }
+
+  /// PATCH /api/appointment-sessions/{id}/patients/{patientAid}
+  /// Updates hygiene inspection fields for a patient in a hygiene appointment.
+  Future<void> updatePatientHygieneStatus({
+    required String sessionId,
+    required String patientAid,
+    required String studentId,
+    required Map<String, HealthStatusData?> categoryStatuses,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+      final url = Uri.parse(
+          '$_baseUrl/api/appointment-sessions/$sessionId/patients/$patientAid');
+
+      // Build hygiene body from category statuses
+      final body = <String, dynamic>{
+        'patientStatus': 'checked',
+      };
+
+      const categoryToField = {
+        'Hair': 'hair',
+        'Ears': 'ears',
+        'Nails': 'nails',
+        'Teeth': 'teeth',
+        'Uniform': 'uniform',
+      };
+
+      for (final entry in categoryToField.entries) {
+        final status = categoryStatuses[entry.key];
+        if (status != null) {
+          body['${entry.value}Status'] =
+              status.status == HealthStatus.good ? 'good' : 'issue';
+          body['${entry.value}Reason'] =
+              status.status == HealthStatus.good
+                  ? ''
+                  : (status.issueDescription ?? '');
+        }
+      }
+
+      final response = await http.patch(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating hygiene status: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update hygiene status: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    }
+  }
+
+  /// PATCH /api/appointment-sessions/{id}/patients/{patientAid}
+  Future<void> updatePatientStatus({
+    required String sessionId,
+    required String patientAid,
+    required String patientStatus,
+    String patientNote = '',
+    required String studentId,
+  }) async {
+    final key = '${sessionId}_$studentId';
+    try {
+      setLoadingForStudent(sessionId, studentId, true);
+
+      final accessToken = _getAccessTokenOrThrow();
+      final url = Uri.parse(
+          '$_baseUrl/api/appointment-sessions/$sessionId/patients/$patientAid');
+
+      final response = await http.patch(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode({
+          'patientNote': patientNote,
+          'patientStatus': patientStatus,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        switch (patientStatus) {
+          case 'checked':
+            appointmentStatuses[key] = AppointmentStatus.done;
+            break;
+          case 'absent':
+            appointmentStatuses[key] = AppointmentStatus.absent;
+            break;
+          case 'issue':
+            appointmentStatuses[key] = AppointmentStatus.notDone;
+            break;
+          case 'pending':
+            appointmentStatuses.remove(key);
+            break;
+        }
+        appointmentNotes[key] = patientNote;
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating patient status: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update status: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    } finally {
+      setLoadingForStudent(sessionId, studentId, false);
+    }
+  }
+
+  /// POST /api/appointment-sessions/{id}/checkout
+  Future<bool> checkoutAppointmentSession(String sessionId) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+      final url =
+          Uri.parse('$_baseUrl/api/appointment-sessions/$sessionId/checkout');
+
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+      );
+
+      if (response.statusCode == 200) {
+        markAppointmentAsCompleted(sessionId);
+        return true;
+      }
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+    } catch (e) {
+      print('Error checking out appointment: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to complete appointment: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+      return false;
     }
   }
 
@@ -318,7 +493,23 @@ class AppointmentSchedulingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadIds();
     loadAppointments();
+  }
+
+  /// Load organization and branch IDs from storage
+  void _loadIds() {
+    final branchData = _storageService.getSelectedBranchData();
+    if (branchData != null) {
+      branchId.value = branchData['id'] ?? '';
+      organizationId.value = branchData['organizationId'] ??
+          branchData['parentId'] ??
+          _storageService.getOrganizationId() ??
+          '';
+      print(
+          '📍 AppointmentScheduling - Organization ID: ${organizationId.value}');
+      print('📍 AppointmentScheduling - Branch ID: ${branchId.value}');
+    }
   }
 
   List<AppointmentStudent> get paginatedAppointmentStudents {
@@ -451,55 +642,70 @@ class AppointmentSchedulingController extends GetxController {
       screenState.value = AppointmentScreenState.loading;
       errorMessage.value = '';
 
-      print('🔄 Loading appointments from API...');
-
-      // Step 1: Get organization location
-      final locationResult = await _medplumService.fetchOrganizationLocation();
-      if (!locationResult['success']) {
-        throw Exception(
-            'Failed to get organization location: ${locationResult['message']}');
-      }
-
-      final locationId = locationResult['locationId'] as String;
-      print('📍 Location ID: $locationId');
-
-      // Step 2: Get appointments by location
-      final appointmentsResult =
-          await _medplumService.getAppointmentsByLocation(
-        locationId: locationId,
-        startDate: startDate,
-        endDate: endDate,
-      );
-
-      if (!appointmentsResult['success']) {
-        throw Exception(
-            'Failed to get appointments: ${appointmentsResult['message']}');
-      }
-
-      final fhirAppointments =
-          appointmentsResult['appointments'] as List<dynamic>;
-      print('📅 Found ${fhirAppointments.length} appointments from API');
-
-      // Step 3: Convert FHIR appointments to our Appointment model
-      appointments.clear();
-      for (final fhirAppointment in fhirAppointments) {
-        try {
-          final appointment = _convertFhirToAppointment(fhirAppointment);
-          if (appointment != null) {
-            appointments.add(appointment);
-          }
-        } catch (e) {
-          print('⚠️ Error converting FHIR appointment: $e');
+      if (organizationId.value.isEmpty || branchId.value.isEmpty) {
+        _loadIds();
+        if (organizationId.value.isEmpty || branchId.value.isEmpty) {
+          throw Exception(
+              'No organization or branch selected. Please select a branch first.');
         }
       }
 
-      print('✅ Successfully loaded ${appointments.length} appointments');
+      print('🔄 Loading appointments from API...');
 
-      final bool hasAppointments = appointments.isNotEmpty;
-      if (hasAppointments) {
-        screenState.value = AppointmentScreenState.success;
+      final accessToken = _getAccessTokenOrThrow();
+      final branchData = _storageService.getSelectedBranchData();
+      final country = branchData?['country'] as String? ?? 'EG';
+
+      // Build API URL using appointment-sessions endpoint
+      var urlString = '$_baseUrl/api/appointment-sessions?country=$country&branchId=${branchId.value}';
+      if (startDate != null) urlString += '&startDate=$startDate';
+      if (endDate != null) urlString += '&endDate=$endDate';
+
+      final url = Uri.parse(urlString);
+      print('📡 Request URL: $url');
+
+      // Make API request
+      final response = await http.get(
+        url,
+        headers: _getHeaders(accessToken),
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final apiAppointments = jsonData['data'] as List<dynamic>;
+          print('📅 Found ${apiAppointments.length} appointments from API');
+
+          // Convert API appointments to our Appointment model
+          appointments.clear();
+          for (final apiAppt in apiAppointments) {
+            try {
+              final appointment =
+                  _convertApiToAppointment(apiAppt as Map<String, dynamic>);
+              if (appointment != null) {
+                appointments.add(appointment);
+              }
+            } catch (e) {
+              print('⚠️ Error converting appointment: $e');
+            }
+          }
+
+          print('✅ Successfully loaded ${appointments.length} appointments');
+
+          if (appointments.isNotEmpty) {
+            screenState.value = AppointmentScreenState.success;
+          } else {
+            screenState.value = AppointmentScreenState.empty;
+          }
+        } else {
+          throw Exception('API returned success: false');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
       } else {
-        screenState.value = AppointmentScreenState.empty;
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       print('❌ Error loading appointments: $e');
@@ -508,109 +714,70 @@ class AppointmentSchedulingController extends GetxController {
     }
   }
 
-  // Convert FHIR appointment to our Appointment model
-  Appointment? _convertFhirToAppointment(Map<String, dynamic> fhirAppointment) {
+  /// Convert API appointment-session response to our Appointment model
+  Appointment? _convertApiToAppointment(Map<String, dynamic> apiAppt) {
     try {
-      final id = fhirAppointment['id'] as String?;
-      final status = fhirAppointment['status'] as String?;
-      final start = fhirAppointment['start'] as String?;
-      final participants = fhirAppointment['participant'] as List<dynamic>?;
-
+      final id = apiAppt['id'] as String?;
       if (id == null) return null;
 
-      // Parse start and end times
-      DateTime? startDateTime;
+      // Parse appointmentDate
+      final dateStr = apiAppt['appointmentDate'] as String?;
+      final dateTime = dateStr != null ? DateTime.tryParse(dateStr) : null;
+
+      // Format time from appointmentDate
       String timeString = '';
-
-      if (start != null) {
-        startDateTime = DateTime.tryParse(start);
-        if (startDateTime != null) {
-          timeString =
-              '${startDateTime.hour.toString().padLeft(2, '0')}:${startDateTime.minute.toString().padLeft(2, '0')}';
-        }
+      if (dateTime != null) {
+        timeString =
+            '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
       }
 
-      // Extract appointment type from coding
-      String appointmentType = 'General';
-      final appointmentTypeData = fhirAppointment['appointmentType'];
-      if (appointmentTypeData != null &&
-          appointmentTypeData['coding'] != null) {
-        final coding = appointmentTypeData['coding'] as List<dynamic>;
-        if (coding.isNotEmpty) {
-          final firstCoding = coding[0] as Map<String, dynamic>;
-          appointmentType =
-              firstCoding['display'] ?? firstCoding['code'] ?? 'General';
-        }
-      }
-
-      // Extract participants (patients, practitioners, etc.)
-      final List<Student> selectedStudents = [];
-      String doctorName = 'Unknown Doctor';
-
-      if (participants != null) {
-        for (final participant in participants) {
-          final actor = participant['actor'];
-          if (actor != null) {
-            final reference = actor['reference'] as String?;
-            final display = actor['display'] as String?;
-
-            if (reference != null) {
-              if (reference.startsWith('Patient/')) {
-                // Create a student from patient data
-                final student = Student(
-                  id: reference.replaceFirst('Patient/', ''),
-                  name: display ?? 'Unknown Patient',
-                  avatarColor: Color(0xFF6366F1),
-                  dateOfBirth: DateTime.now()
-                      .subtract(const Duration(days: 365 * 10)), // Default age
-                  bloodType: 'Unknown',
-                  weightKg: 0,
-                  heightCm: 0,
-                  goToHospital: 'Unknown',
-                  firstGuardianName: 'Unknown',
-                  firstGuardianPhone: 'Unknown',
-                  firstGuardianEmail: 'Unknown',
-                  firstGuardianStatus: 'Unknown',
-                  secondGuardianName: 'Unknown',
-                  secondGuardianPhone: 'Unknown',
-                  secondGuardianEmail: 'Unknown',
-                  secondGuardianStatus: 'Unknown',
-                  city: 'Unknown',
-                  street: 'Unknown',
-                  zipCode: 'Unknown',
-                  province: 'Unknown',
-                  insuranceCompany: 'Unknown',
-                  policyNumber: 'Unknown',
-                  passportIdNumber: 'Unknown',
-                  nationality: 'Unknown',
-                  nationalId: 'Unknown',
-                  gender: 'Unknown',
-                  phoneNumber: 'Unknown',
-                  email: 'Unknown',
-                );
-                selectedStudents.add(student);
-              } else if (reference.startsWith('Practitioner/')) {
-                doctorName = display ?? 'Unknown Doctor';
-              }
-            }
-          }
-        }
-      }
-
-      // Convert FHIR status to our AppointmentStatus
-      AppointmentStatus appointmentStatus;
-      switch (status?.toLowerCase()) {
-        case 'confirmed':
-        case 'arrived':
-          appointmentStatus = AppointmentStatus.notDone;
+      // Format appointment type for display
+      final apiType = (apiAppt['appointmentType'] as String?) ?? '';
+      String displayType;
+      switch (apiType.toLowerCase()) {
+        case 'walkin':
+          displayType = 'Walk-In';
           break;
+        case 'checkup':
+          displayType = 'Checkup';
+          break;
+        case 'followup':
+          displayType = 'Follow-Up';
+          break;
+        case 'vaccination':
+          displayType = 'Vaccination';
+          break;
+        default:
+          displayType = apiType;
+      }
+
+      // For walk-in, create a single student from fullName/onePatientAid
+      final List<Student> selectedStudents = [];
+      final isWalkIn = apiType.toLowerCase() == 'walkin';
+      if (isWalkIn) {
+        final fullName = apiAppt['fullName'] as String?;
+        if (fullName != null && fullName.isNotEmpty) {
+          selectedStudents.add(Student(
+            id: apiAppt['onePatientAid'] ?? '',
+            name: fullName,
+            avatarColor: const Color(0xFF6366F1),
+          ));
+        }
+      }
+
+      // Convert API status to AppointmentStatus
+      final statusStr = (apiAppt['appointmentStatus'] as String?)?.toLowerCase() ?? '';
+      AppointmentStatus appointmentStatus;
+      switch (statusStr) {
         case 'fulfilled':
         case 'completed':
+        case 'done':
           appointmentStatus = AppointmentStatus.done;
           break;
         case 'cancelled':
           appointmentStatus = AppointmentStatus.cancelled;
           break;
+        case 'booked':
         case 'pending':
         default:
           appointmentStatus = AppointmentStatus.notDone;
@@ -619,20 +786,20 @@ class AppointmentSchedulingController extends GetxController {
 
       return Appointment(
         id: id,
-        type: appointmentType,
-        allStudents: false,
-        date: startDateTime ?? DateTime.now(),
+        type: displayType,
+        allStudents: !isWalkIn,
+        date: dateTime ?? DateTime.now(),
         time: timeString,
-        disease: appointmentType,
-        grade: 'Unknown Grade',
-        className: 'Unknown Class',
-        doctor: doctorName,
-        selectedStudents: selectedStudents,
+        disease: apiAppt['reason'] ?? '',
         diseaseType: '',
+        grade: apiAppt['gradeName'] ?? '',
+        className: apiAppt['className'] ?? '',
+        doctor: '',
+        selectedStudents: selectedStudents,
         status: appointmentStatus,
       );
     } catch (e) {
-      print('❌ Error converting FHIR appointment: $e');
+      print('❌ Error converting appointment: $e');
       return null;
     }
   }
@@ -728,28 +895,75 @@ class AppointmentSchedulingController extends GetxController {
     return appointment?.type ?? 'Appointment';
   }
 
-  Future<void> createAppointment(Appointment appointment) async {
+  /// POST /api/appointments - Create a new appointment
+  Future<Map<String, dynamic>> createAppointmentApi({
+    required String start,
+    required String end,
+    String? patientId,
+    List<String>? studentIds,
+    String? type,
+    String? practitionerId,
+    String? locationId,
+    String? status,
+    bool? walkin,
+    String? previousAppointmentId,
+    Map<String, dynamic>? preVisit,
+    String? diseaseTypeId,
+    String? diseaseId,
+    Map<String, dynamic>? specialCases,
+  }) async {
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      final accessToken = _getAccessTokenOrThrow();
 
-      // Generate a simple ID
-      appointment.id = (appointments.length + 1).toString();
-      appointments.add(appointment);
+      final body = <String, dynamic>{
+        'start': start,
+        'end': end,
+      };
+      if (patientId != null) body['patientId'] = patientId;
+      if (studentIds != null) body['studentIds'] = studentIds;
+      if (type != null) body['type'] = type;
+      if (practitionerId != null) body['practitionerId'] = practitionerId;
+      if (organizationId.value.isNotEmpty)
+        body['organizationId'] = organizationId.value;
+      if (branchId.value.isNotEmpty) body['branchId'] = branchId.value;
+      if (locationId != null) body['locationId'] = locationId;
+      if (status != null) body['status'] = status;
+      if (walkin != null) body['walkin'] = walkin;
+      if (previousAppointmentId != null)
+        body['previousAppointmentId'] = previousAppointmentId;
+      if (preVisit != null) body['preVisit'] = preVisit;
+      if (diseaseTypeId != null) body['diseaseTypeId'] = diseaseTypeId;
+      if (diseaseId != null) body['diseaseId'] = diseaseId;
+      if (specialCases != null) body['specialCases'] = specialCases;
 
-      // Initialize statuses for new appointment students
-      for (var student in appointment.selectedStudents) {
-        final key = '${appointment.id}_${student.id}';
-        appointmentStatuses[key] = AppointmentStatus.notDone;
+      final url = Uri.parse('$_baseUrl/api/appointments');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Create Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          // Reload appointments to reflect the new one
+          await loadAppointments();
+          return jsonData;
+        } else {
+          throw Exception(
+              jsonData['message'] ?? 'Failed to create appointment');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
-
-      // Reset pagination when new appointments are added
-      resetPagination();
-
-      screenState.value = AppointmentScreenState.success;
     } catch (e) {
+      print('❌ Error creating appointment: $e');
       errorMessage.value = e.toString();
-      screenState.value = AppointmentScreenState.error;
+      rethrow;
     }
   }
 
@@ -903,5 +1117,505 @@ class AppointmentSchedulingController extends GetxController {
     });
 
     return exportData;
+  }
+
+  // ============================================================
+  // Clinic Portal API Methods
+  // ============================================================
+
+  /// GET /api/appointments - List appointments with clinic portal filters
+  Future<Map<String, dynamic>> fetchClinicAppointments({
+    String? patientId,
+    String? practitionerId,
+    String? status,
+    String? type,
+    String? startAfter,
+    String? startBefore,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{};
+      if (organizationId.value.isNotEmpty)
+        queryParams['organizationId'] = organizationId.value;
+      if (branchId.value.isNotEmpty) queryParams['branchId'] = branchId.value;
+      if (patientId != null) queryParams['patientId'] = patientId;
+      if (practitionerId != null)
+        queryParams['practitionerId'] = practitionerId;
+      if (status != null) queryParams['status'] = status;
+      if (type != null) queryParams['type'] = type;
+      if (startAfter != null) queryParams['startAfter'] = startAfter;
+      if (startBefore != null) queryParams['startBefore'] = startBefore;
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments')
+          .replace(queryParameters: queryParams);
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Fetch Clinic Appointments Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error fetching clinic appointments: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/appointments/{id} - Get a single appointment
+  Future<Map<String, dynamic>> getAppointmentById(String id,
+      {String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{};
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Get Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Appointment not found.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error getting appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// PUT /api/appointments/{id} - Update an appointment
+  Future<Map<String, dynamic>> updateAppointmentApi(
+    String id, {
+    String? start,
+    String? end,
+    String? status,
+    String? type,
+    String? description,
+    String? reasonCode,
+    String? locationId,
+    bool? walkin,
+    String? previousAppointmentId,
+    Map<String, dynamic>? preVisit,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (start != null) body['start'] = start;
+      if (end != null) body['end'] = end;
+      if (status != null) body['status'] = status;
+      if (type != null) body['type'] = type;
+      if (description != null) body['description'] = description;
+      if (reasonCode != null) body['reasonCode'] = reasonCode;
+      if (organizationId.value.isNotEmpty)
+        body['organizationId'] = organizationId.value;
+      if (locationId != null) body['locationId'] = locationId;
+      if (walkin != null) body['walkin'] = walkin;
+      if (previousAppointmentId != null)
+        body['previousAppointmentId'] = previousAppointmentId;
+      if (preVisit != null) body['preVisit'] = preVisit;
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id');
+      final response = await http.put(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Update Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error updating appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/cancel - Cancel an appointment
+  Future<Map<String, dynamic>> cancelAppointmentApi(String id,
+      {String? reason, String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (reason != null) body['reason'] = reason;
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/cancel');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Cancel Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error cancelling appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/reschedule - Reschedule an appointment
+  Future<Map<String, dynamic>> rescheduleAppointmentApi(
+    String id, {
+    required String start,
+    required String end,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{
+        'start': start,
+        'end': end,
+      };
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/reschedule');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Reschedule Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error rescheduling appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/appointments/available-slots - Get occupied slots for a practitioner on a date
+  Future<Map<String, dynamic>> getAvailableSlots({
+    required String practitionerId,
+    required String date,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{
+        'practitionerId': practitionerId,
+        'date': date,
+      };
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/available-slots')
+          .replace(queryParameters: queryParams);
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Available Slots Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error fetching available slots: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/approve - Approve an appointment request
+  Future<Map<String, dynamic>> approveAppointment(String id,
+      {String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/approve');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Approve Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error approving appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/reject - Reject an appointment request
+  Future<Map<String, dynamic>> rejectAppointment(String id,
+      {String? reason, String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (reason != null) body['reason'] = reason;
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/reject');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Reject Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error rejecting appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/appointments/{id}/students - List students in a group appointment
+  Future<Map<String, dynamic>> getAppointmentStudentsApi(String id,
+      {String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{};
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/students').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Get Appointment Students Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Appointment not found.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error fetching appointment students: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/students/{studentId}/complete - Mark a student as complete
+  Future<Map<String, dynamic>> completeStudentInAppointment(
+    String appointmentId,
+    String studentId, {
+    String? assessment,
+    String? plan,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (assessment != null) body['assessment'] = assessment;
+      if (plan != null) body['plan'] = plan;
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse(
+          '$_baseUrl/api/appointments/$appointmentId/students/$studentId/complete');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Complete Student Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        // Update local status
+        final key = '${appointmentId}_$studentId';
+        appointmentStatuses[key] = AppointmentStatus.done;
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error completing student in appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/appointments/{id}/print - Get printable appointment summary
+  Future<Map<String, dynamic>> getAppointmentPrintData(String id,
+      {String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{};
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/print').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Print Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Appointment not found.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error getting appointment print data: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/appointments/{id}/check-in - Check-in an appointment
+  Future<Map<String, dynamic>> checkInAppointment(String id,
+      {String? country}) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final body = <String, dynamic>{};
+      if (country != null) body['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/$id/check-in');
+      final response = await http.post(
+        url,
+        headers: _getHeaders(accessToken),
+        body: jsonEncode(body),
+      );
+
+      print('📡 Check-in Appointment Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        await loadAppointments();
+        return jsonData;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Appointment not found.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error checking in appointment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/appointments/export - Export appointments as CSV, Excel, or PDF
+  Future<List<int>> exportAppointments({
+    String format = 'excel',
+    String? patientId,
+    String? practitionerId,
+    String? status,
+    String? type,
+    String? startAfter,
+    String? startBefore,
+    String? country,
+  }) async {
+    try {
+      final accessToken = _getAccessTokenOrThrow();
+
+      final queryParams = <String, String>{
+        'format': format,
+      };
+      if (organizationId.value.isNotEmpty)
+        queryParams['organizationId'] = organizationId.value;
+      if (patientId != null) queryParams['patientId'] = patientId;
+      if (practitionerId != null)
+        queryParams['practitionerId'] = practitionerId;
+      if (status != null) queryParams['status'] = status;
+      if (type != null) queryParams['type'] = type;
+      if (startAfter != null) queryParams['startAfter'] = startAfter;
+      if (startBefore != null) queryParams['startBefore'] = startBefore;
+      if (country != null) queryParams['country'] = country;
+
+      final url = Uri.parse('$_baseUrl/api/appointments/export')
+          .replace(queryParameters: queryParams);
+      final response = await http.get(url, headers: _getHeaders(accessToken));
+
+      print('📡 Export Appointments Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes.toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error exporting appointments: $e');
+      rethrow;
+    }
   }
 }

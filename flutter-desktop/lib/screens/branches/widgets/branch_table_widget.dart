@@ -180,16 +180,14 @@ class BranchTableWidget extends StatelessWidget {
         );
       }
 
-      return SingleChildScrollView(
-        child: DynamicTableWidget<BranchModel>(
-          items: filtered,
-          columns: _buildColumnConfigs(),
-          actions: _buildActionConfigs(),
-          onRowTap: (branch, index) => _showBranchDetails(branch),
-          emptyMessage: 'No branches found',
-          headerColor: const Color(0xFFF8FAFC),
-          borderColor: const Color(0xFFE2E8F0),
-        ),
+      return DynamicTableWidget<BranchModel>(
+        items: filtered,
+        columns: _buildColumnConfigs(),
+        actions: _buildActionConfigs(),
+        onRowTap: (branch, index) => _showBranchDetails(branch),
+        emptyMessage: 'No branches found',
+        headerColor: const Color(0xFFF8FAFC),
+        borderColor: const Color(0xFFE2E8F0),
       );
     });
   }

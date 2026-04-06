@@ -3,7 +3,7 @@ import 'package:flutter_getx_app/controllers/users_controller.dart';
 import 'package:get/get.dart';
 
 class UsersListScreen extends StatelessWidget {
-  final UsersController controller = Get.put(UsersController());
+  final UsersController controller = Get.find<UsersController>();
 
   @override
   Widget build(BuildContext context) {

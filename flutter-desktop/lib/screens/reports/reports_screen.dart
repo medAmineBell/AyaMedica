@@ -13,6 +13,7 @@ class ReportsScreen extends StatelessWidget {
     if (!Get.isRegistered<ReportsController>()) {
       Get.put(ReportsController());
     }
+
     final controller = Get.find<ReportsController>();
 
     return Container(
@@ -21,15 +22,26 @@ class ReportsScreen extends StatelessWidget {
         children: [
           // Header with breadcrumb
           _buildHeader(),
-          
-          // Content - either empty state or list
+          // Content - loading, empty state, or list
           Expanded(
             child: Obx(() {
+              // Show loading indicator while fetching data
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF0066FF),
+                  ),
+                );
+              }
+
+              // Show empty state if no reports
               if (controller.reports.isEmpty) {
                 return Center(
                   child: _buildEmptyState(),
                 );
               }
+
+              // Show reports list
               return const ReportsListWidget();
             }),
           ),
@@ -110,7 +122,6 @@ class ReportsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 32),
-        
         // Title
         const Text(
           'Generate reports',
@@ -121,12 +132,11 @@ class ReportsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        
         // Description
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            'There is no available reports click on the button bellow to generate a new report',
+            'There is no available reports click on the button below to generate a new report',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
@@ -135,7 +145,6 @@ class ReportsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 32),
-        
         // Generate report button
         ElevatedButton.icon(
           onPressed: () {
@@ -167,4 +176,3 @@ class ReportsScreen extends StatelessWidget {
     );
   }
 }
-

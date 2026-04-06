@@ -3,8 +3,9 @@ import 'package:flutter_getx_app/screens/users/assign_role_screen.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import '../../controllers/users_controller.dart';
-import '../../shared/widgets/breadcrumb_widget.dart';
 import 'users_datatable.dart';
+import 'users_filter_widget.dart';
+import 'widgets/add_edit_user_dialog.dart';
 
 class UsersScreen extends GetView<UsersController> {
   const UsersScreen({Key? key}) : super(key: key);
@@ -12,36 +13,31 @@ class UsersScreen extends GetView<UsersController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 248, 247, 247),
+      backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 32,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _Header(),
-                const SizedBox(height: 16),
-                Obx(() {
-                  if (controller.users.isEmpty) {
-                    return const _EmptyUsersPlaceholder();
-                  }
-
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _Header(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Obx(() {
                   final selected = controller.selectedUser.value;
                   return AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     switchInCurve: Curves.easeOut,
                     switchOutCurve: Curves.easeIn,
                     child: selected == null
-                        ? const _UserTableBlock()
-                        : _AssignRoleBlock(user: selected),
+                        ? const _UsersTableCard()
+                        : SingleChildScrollView(
+                            child: _AssignRoleBlock(user: selected),
+                          ),
                   );
                 }),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -54,66 +50,86 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
+    return Row(
+      children: [
+        const Text(
           'Users',
           style: TextStyle(
-            color: Color(0xFF2D2E2E),
-            fontSize: 20,
+            color: Color(0xFF1F2937),
+            fontSize: 24,
             fontFamily: 'IBM Plex Sans Arabic',
             fontWeight: FontWeight.w700,
             height: 1.40,
           ),
         ),
-        BreadcrumbWidget(
-          items: [
-            BreadcrumbItem(label: 'Ayamedica portal'),
-            BreadcrumbItem(label: 'Ressources'),
-            BreadcrumbItem(label: 'Users'),
-          ],
+        const Spacer(),
+        // Add new user button
+        ElevatedButton.icon(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (_) => const AddEditUserDialog(),
+            );
+          },
+          icon: const Icon(Icons.add, size: 18, color: Colors.white),
+          label: const Text(
+            'Add new user',
+            style: TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1339FF),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            elevation: 0,
+          ),
         ),
       ],
     );
   }
 }
 
-class _EmptyUsersPlaceholder extends StatelessWidget {
-  const _EmptyUsersPlaceholder({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE2E4E8)),
-        borderRadius: BorderRadius.circular(6),
-        color: const Color(0xFFF8FAFC),
-      ),
-      child: const Text(
-        'No users found',
-        style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-      ),
-    );
-  }
-}
+class _UsersTableCard extends StatelessWidget {
+  const _UsersTableCard({Key? key}) : super(key: key);
 
-class _UserTableBlock extends StatelessWidget {
-  const _UserTableBlock({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final controller = Get.find<UsersController>();
+    return Container(
       key: const ValueKey('table'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        UsersDatatable(),
-      ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          const UsersFiltersWidget(),
+          Expanded(
+            child: Obx(() {
+              if (controller.state.value == UsersState.loading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (controller.filteredUsers.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No users found',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                  ),
+                );
+              }
+              return const UsersDatatable();
+            }),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _AssignRoleBlock extends StatelessWidget {
-  final dynamic user; // replace dynamic with your UserModel type
+  final dynamic user;
 
   const _AssignRoleBlock({required this.user, Key? key}) : super(key: key);
 
@@ -137,7 +153,7 @@ class _AssignRoleBlock extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -187,7 +203,6 @@ class _MultiCampusSelector extends GetView<UsersController> {
                 .toList(),
             onChanged: (campusId) {
               if (campusId != null) {
-                // Clear existing selections and select new one
                 controller.selectedCampusIds.clear();
                 controller.campusAssignments.clear();
                 controller.toggleCampusSelection(campusId);

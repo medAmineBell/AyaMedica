@@ -12,31 +12,50 @@ class CreateAppointmentDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Get.delete<CreateAppointmentController>(force: true);
     final controller = Get.put(CreateAppointmentController());
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         padding: const EdgeInsets.all(24),
-        height: MediaQuery.of(context).size.height * 0.8,
+        width: MediaQuery.of(context).size.width * 0.4,
+        height: MediaQuery.of(context).size.height * 0.9,
         child: Form(
           key: controller.formKey,
           child: Column(
             children: [
               // Fixed Header
               _buildHeader(controller),
+              const SizedBox(height: 4),
+              // Subtitle for all types
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Add appointments details and students',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
 
               // Scrollable Content
               Expanded(
                 child: SingleChildScrollView(
                   child: Obx(() {
-                    // Show Walk-In interface if Walk-In is selected
-                    if (controller.selectedType.value == 'Walk-In') {
-                      return _buildWalkInContent(controller);
+                    switch (controller.selectedType.value) {
+                      case 'Walk-In':
+                        return _buildWalkInContent(controller);
+                      case 'Follow-Up':
+                        return _buildFollowUpContent(controller);
+                      case 'Vaccination':
+                        return _buildVaccinationContent(controller);
+                      case 'Checkup':
+                      default:
+                        return _buildCheckupContent(controller);
                     }
-                    // Otherwise show regular appointment interface
-                    return _buildRegularAppointmentContent(controller);
                   }),
                 ),
               ),
@@ -51,16 +70,16 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
+  // ─── HEADER ────────────────────────────────────────────────────────────
+
   Widget _buildHeader(CreateAppointmentController controller) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Obx(() => Text(
-              controller.selectedType.value == 'Walk-In'
-                  ? 'New appointment'
-                  : 'Create New Appointment',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            )),
+        const Text(
+          'New appointment',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
         IconButton(
           onPressed: () => Get.back(),
           icon: const Icon(Icons.close),
@@ -69,20 +88,168 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
+  // ─── CHECKUP CONTENT ──────────────────────────────────────────────────
+
+  Widget _buildCheckupContent(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTypeSelector(controller),
+        const SizedBox(height: 16),
+        _buildDateTimeSelection(controller),
+        const SizedBox(height: 16),
+        // Date/Time picker (conditional)
+        Obx(() => controller.selectedDateTimeOption.value == 'addDate'
+            ? Column(
+                children: [
+                  _buildLabeledDateTimePicker(
+                    date: controller.selectedDate.value,
+                    time: controller.selectedTime.value,
+                    onDateChanged: controller.updateSelectedDate,
+                    onTimeChanged: controller.updateSelectedTime,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              )
+            : const SizedBox.shrink()),
+        // Checkup details: Disease (searchable)
+        _buildSectionTitle('Checkup details'),
+        const SizedBox(height: 8),
+        _buildSearchableDisease(controller),
+        const SizedBox(height: 16),
+        // Doctor(s) - full width
+        Obx(() => _buildLabeledDropdown<String>(
+          label: 'Doctor(s)',
+          hint: 'Doctor name goes here',
+          value: controller.selectedDoctor.value,
+          items: DropdownHelper.createStringItems(controller.doctors),
+          onChanged: controller.updateSelectedDoctor,
+        )),
+        const SizedBox(height: 16),
+        // Grades and students
+        _buildGradeClassRow(controller),
+        const SizedBox(height: 16),
+        // Students multi-select (only show when class is selected)
+        Obx(() => controller.selectedClass.value != null
+            ? _buildStudentMultiSelect(controller)
+            : const SizedBox.shrink()),
+      ],
+    );
+  }
+
+  // ─── FOLLOW-UP CONTENT ────────────────────────────────────────────────
+
+  Widget _buildFollowUpContent(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTypeSelector(controller),
+        const SizedBox(height: 16),
+        _buildDateTimeSelection(controller),
+        const SizedBox(height: 16),
+        // Date/Time picker (conditional)
+        Obx(() => controller.selectedDateTimeOption.value == 'addDate'
+            ? Column(
+                children: [
+                  _buildLabeledDateTimePicker(
+                    date: controller.selectedDate.value,
+                    time: controller.selectedTime.value,
+                    onDateChanged: controller.updateSelectedDate,
+                    onTimeChanged: controller.updateSelectedTime,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              )
+            : const SizedBox.shrink()),
+        // Follow up details: Disease (searchable)
+        _buildSectionTitle('Follow up details'),
+        const SizedBox(height: 8),
+        _buildSearchableDisease(controller),
+        const SizedBox(height: 16),
+        // Doctor(s) - full width
+        Obx(() => _buildLabeledDropdown<String>(
+          label: 'Doctor(s)',
+          hint: 'Doctor name goes here',
+          value: controller.selectedDoctor.value,
+          items: DropdownHelper.createStringItems(controller.doctors),
+          onChanged: controller.updateSelectedDoctor,
+        )),
+        const SizedBox(height: 16),
+        // Grades and students
+        _buildGradeClassRow(controller),
+        const SizedBox(height: 16),
+        // Students multi-select (only show when class is selected)
+        Obx(() => controller.selectedClass.value != null
+            ? _buildStudentMultiSelect(controller)
+            : const SizedBox.shrink()),
+      ],
+    );
+  }
+
+  // ─── VACCINATION CONTENT ──────────────────────────────────────────────
+
+  Widget _buildVaccinationContent(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTypeSelector(controller),
+        const SizedBox(height: 16),
+        _buildCheckupDetailsRadio(controller),
+        const SizedBox(height: 16),
+        _buildDateTimeSelection(controller),
+        const SizedBox(height: 16),
+        // Date/Time picker (conditional)
+        Obx(() => controller.selectedDateTimeOption.value == 'addDate'
+            ? Column(
+                children: [
+                  _buildLabeledDateTimePicker(
+                    date: controller.selectedDate.value,
+                    time: controller.selectedTime.value,
+                    onDateChanged: controller.updateSelectedDate,
+                    onTimeChanged: controller.updateSelectedTime,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              )
+            : const SizedBox.shrink()),
+        // Last confirmation date
+        _buildSectionTitle('Last confirmation date'),
+        const SizedBox(height: 8),
+        _buildLabeledDateTimePicker(
+          date: controller.lastConfirmationDate.value,
+          time: controller.lastConfirmationTime.value,
+          onDateChanged: controller.updateLastConfirmationDate,
+          onTimeChanged: controller.updateLastConfirmationTime,
+        ),
+        const SizedBox(height: 16),
+        // Checkup details: Doctor + Vaccination type
+        _buildSectionTitle('Checkup details'),
+        const SizedBox(height: 8),
+        Obx(() => _buildLabeledDropdown<String>(
+          label: 'Doctor',
+          hint: 'Doctor name goes here',
+          value: controller.selectedDoctor.value,
+          items: DropdownHelper.createStringItems(controller.doctors),
+          onChanged: controller.updateSelectedDoctor,
+        )),
+        const SizedBox(height: 16),
+        _buildSearchableVaccination(controller),
+        const SizedBox(height: 16),
+        // Grades and students
+        _buildGradeClassRow(controller),
+        const SizedBox(height: 16),
+        // Students multi-select
+        _buildStudentMultiSelect(controller),
+      ],
+    );
+  }
+
+  // ─── WALK-IN CONTENT ──────────────────────────────────────────────────
+
   Widget _buildWalkInContent(CreateAppointmentController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header subtitle for Walk-In
-        const Text(
-          'Add appointments details and students',
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-        const SizedBox(height: 24),
-
         // Appointment Type Selection
         _buildTypeSelector(controller),
         const SizedBox(height: 24),
@@ -97,39 +264,301 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildRegularAppointmentContent(
-      CreateAppointmentController controller) {
+  // ─── SHARED BUILDERS ──────────────────────────────────────────────────
+
+  Widget _buildTypeSelector(CreateAppointmentController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTypeSelector(controller),
-        const SizedBox(height: 16),
-        _buildCheckupDetails(controller),
-        const SizedBox(height: 16),
-        _buildDateTimeSelection(controller),
-        const SizedBox(height: 16),
-        Obx(() => controller.selectedDateTimeOption.value == 'addDate'
-            ? _buildDateTimePicker(controller)
-            : const SizedBox.shrink()),
-        const SizedBox(height: 16),
-        Obx(() => controller.selectedType.value == 'Follow-Up'
-            ? _buildDoctorSelection(controller)
-            : const SizedBox.shrink()),
-        const SizedBox(height: 16),
-        Obx(() => controller.selectedType.value == 'Vaccination'
-            ? _buildVaccinationTypeSelection(controller)
-            : const SizedBox.shrink()),
-        const SizedBox(height: 16),
-        Obx(() => controller.selectedOption.value == 'all'
-            ? const SizedBox.shrink()
-            : _buildStudentMultiSelect(controller)),
-        const SizedBox(height: 16),
-        _buildDiseaseDetails(controller),
-        const SizedBox(height: 16),
-        _buildGradeClassDropdowns(controller),
+        _buildSectionTitle('Select appointment type'),
+        const SizedBox(height: 8),
+        Obx(() => Wrap(
+              spacing: 8,
+              runSpacing: 12,
+              children: controller.appointmentTypes
+                  .map((type) {
+                    final isDisabled = type['label'] == 'Vaccination';
+                    return Opacity(
+                      opacity: isDisabled ? 0.4 : 1.0,
+                      child: AppointmentTypeCard(
+                        label: type['label'],
+                        icon: type['icon'],
+                        isActive:
+                            controller.selectedType.value == type['label'],
+                        onTap: isDisabled
+                            ? () {}
+                            : () => controller.updateSelectedType(type['label']),
+                      ),
+                    );
+                  })
+                  .toList(),
+            )),
       ],
     );
   }
+
+  Widget _buildCheckupDetailsRadio(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Checkup details'),
+        const SizedBox(height: 8),
+        Obx(() => Row(
+              children: [
+                CustomRadioOption<String>(
+                  value: 'all',
+                  groupValue: controller.selectedOption.value,
+                  label: 'All students',
+                  onChanged: (val) => controller.updateSelectedOption(val),
+                ),
+                const SizedBox(width: 16),
+                CustomRadioOption<String>(
+                  value: 'selected',
+                  groupValue: controller.selectedOption.value,
+                  label: 'Selected Diseases',
+                  onChanged: (val) => controller.updateSelectedOption(val),
+                ),
+              ],
+            )),
+      ],
+    );
+  }
+
+  Widget _buildDateTimeSelection(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Date & time'),
+        const SizedBox(height: 8),
+        Obx(() => Row(
+              children: [
+                CustomRadioOption<String>(
+                  value: 'addDate',
+                  groupValue: controller.selectedDateTimeOption.value,
+                  label: 'Add date',
+                  onChanged: (val) =>
+                      controller.updateSelectedDateTimeOption(val),
+                ),
+                const SizedBox(width: 16),
+                CustomRadioOption<String>(
+                  value: 'startNow',
+                  groupValue: controller.selectedDateTimeOption.value,
+                  label: 'Start now',
+                  onChanged: (val) =>
+                      controller.updateSelectedDateTimeOption(val),
+                ),
+              ],
+            )),
+      ],
+    );
+  }
+
+  Widget _buildGradeClassRow(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Grades and students'),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Obx(() => _buildLabeledDropdown<String>(
+                    label: 'Grade',
+                    hint: 'Grade',
+                    value: controller.selectedGrade.value,
+                    items: DropdownHelper.createStringItems(controller.grades),
+                    onChanged: controller.updateSelectedGrade,
+                  )),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Obx(() => _buildLabeledDropdown<String>(
+                    label: 'Class',
+                    hint: 'Class name',
+                    value: controller.selectedClass.value,
+                    items: DropdownHelper.createStringItems(controller.classes),
+                    onChanged: controller.updateSelectedClass,
+                  )),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStudentMultiSelect(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFieldLabel('Students (Multi selection)'),
+        const SizedBox(height: 8),
+        Obx(() {
+          final isAllStudents = controller.selectedOption.value == 'all';
+          final selectedStudents = controller.selectedStudents;
+
+          return Column(
+            children: [
+              // Multi-select input field
+              _buildStudentMultiSelectField(controller, isAllStudents),
+
+              // Selected students display
+              if (selectedStudents.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildSelectedStudentsDisplay(selectedStudents, controller),
+              ],
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildStudentMultiSelectField(
+      CreateAppointmentController controller, bool isAllStudents) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE9E9E9),
+          width: 1,
+        ),
+        color: const Color(0xFFFBFCFD),
+      ),
+      child: InkWell(
+        onTap: () => _showStudentSelectionDialog(controller),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isAllStudents ? 'All students' : 'Select Students',
+                  style: TextStyle(
+                    color: isAllStudents
+                        ? const Color(0xFF374151)
+                        : const Color(0xFF9CA3AF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down,
+                color: Color(0xFF1339FF),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedStudentsDisplay(
+      List<Student> selectedStudents, CreateAppointmentController controller) {
+    const displayLimit = 3;
+    final shouldShowMore = selectedStudents.length > displayLimit;
+    final studentsToShow = shouldShowMore
+        ? selectedStudents.take(displayLimit).toList()
+        : selectedStudents;
+    final remainingCount = selectedStudents.length - displayLimit;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      runAlignment: WrapAlignment.start,
+      alignment: WrapAlignment.start,
+      crossAxisAlignment: WrapCrossAlignment.start,
+      children: [
+        ...studentsToShow
+            .map((student) => _buildStudentChip(student, controller)),
+        if (shouldShowMore) _buildMoreStudentsChip(remainingCount),
+      ],
+    );
+  }
+
+  Widget _buildStudentChip(
+      Student student, CreateAppointmentController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: student.avatarColor,
+            child: Text(
+              _getInitials(student.name),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            student.name,
+            style: const TextStyle(
+              color: Color(0xFF374151),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _removeStudent(controller, student),
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF43F5E),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoreStudentsChip(int remainingCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        '+$remainingCount',
+        style: const TextStyle(
+          color: Color(0xFF374151),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  // ─── WALK-IN SPECIFIC ─────────────────────────────────────────────────
 
   Widget _buildFindStudentSection(CreateAppointmentController controller) {
     return Column(
@@ -149,27 +578,12 @@ class CreateAppointmentDialog extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RichText(
-              text: const TextSpan(
-                text: 'Student AID',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF374151),
-                ),
-                children: [
-                  TextSpan(
-                    text: '*',
-                    style: TextStyle(color: Color(0xFFDC2626)),
-                  ),
-                ],
-              ),
-            ),
+            _buildFieldLabel('Student name'),
             const SizedBox(height: 8),
             TextFormField(
               controller: controller.aidController,
               decoration: InputDecoration(
-                hintText: 'search',
+                hintText: 'Search by name',
                 hintStyle: const TextStyle(
                   color: Color(0xFF9CA3AF),
                   fontSize: 16,
@@ -189,7 +603,7 @@ class CreateAppointmentDialog extends StatelessWidget {
                 filled: true,
                 fillColor: const Color(0xFFFBFCFD),
               ),
-              onChanged: controller.searchByAID,
+              onChanged: controller.searchByName,
             ),
           ],
         ),
@@ -211,105 +625,40 @@ class CreateAppointmentDialog extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: const TextSpan(
-                      text: 'Grade',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF374151),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: '*',
-                          style: TextStyle(color: Color(0xFFDC2626)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(() => CustomDropdown<String>(
-                        hint: 'Grade',
-                        value: controller.selectedGrade.value,
-                        items:
-                            DropdownHelper.createStringItems(controller.grades),
-                        onChanged: controller.updateSelectedGrade,
-                      )),
-                ],
-              ),
+              child: Obx(() => _buildLabeledDropdown<String>(
+                    label: 'Grade',
+                    hint: 'Grade',
+                    value: controller.selectedGrade.value,
+                    items: DropdownHelper.createStringItems(controller.grades),
+                    onChanged: controller.updateSelectedGrade,
+                  )),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: const TextSpan(
-                      text: 'Class',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF374151),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: '*',
-                          style: TextStyle(color: Color(0xFFDC2626)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(() => CustomDropdown<String>(
-                        hint: 'Class name',
-                        value: controller.selectedClass.value,
-                        items: DropdownHelper.createStringItems(
-                            controller.classes),
-                        onChanged: controller.updateSelectedClass,
-                      )),
-                ],
-              ),
+              child: Obx(() => _buildLabeledDropdown<String>(
+                    label: 'Class',
+                    hint: 'Class name',
+                    value: controller.selectedClass.value,
+                    items: DropdownHelper.createStringItems(controller.classes),
+                    onChanged: controller.updateSelectedClass,
+                  )),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: const TextSpan(
-                      text: 'Student name',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF374151),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: '*',
-                          style: TextStyle(color: Color(0xFFDC2626)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(() => CustomDropdown<Student>(
-                        hint: 'Student name',
-                        value: controller.walkInSelectedStudent.value,
-                        items: controller.filteredStudentsForWalkIn
-                            .map(
-                              (student) => DropdownMenuItem<Student>(
-                                value: student,
-                                child: Text(student.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: controller.updateWalkInSelectedStudent,
-                      )),
-                ],
-              ),
+              child: Obx(() => _buildLabeledDropdown<Student>(
+                    label: 'Student name',
+                    hint: 'Student name',
+                    value: controller.walkInSelectedStudent.value,
+                    items: controller.filteredStudentsForWalkIn
+                        .map(
+                          (student) => DropdownMenuItem<Student>(
+                            value: student,
+                            child: Text(student.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: controller.updateWalkInSelectedStudent,
+                  )),
             ),
           ],
         ),
@@ -385,398 +734,228 @@ class CreateAppointmentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeSelector(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Select appointment type'),
-        const SizedBox(height: 8),
-        Obx(() => Wrap(
-              spacing: 8,
-              runSpacing: 12,
-              children: controller.appointmentTypes
-                  .map((type) => AppointmentTypeCard(
-                        label: type['label'],
-                        icon: type['icon'],
-                        isActive:
-                            controller.selectedType.value == type['label'],
-                        onTap: () =>
-                            controller.updateSelectedType(type['label']),
-                      ))
-                  .toList(),
-            )),
-      ],
-    );
-  }
+  // ─── HELPER WIDGETS ───────────────────────────────────────────────────
 
-  Widget _buildCheckupDetails(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Checkup details'),
-        const SizedBox(height: 8),
-        Obx(() => Row(
-              children: [
-                CustomRadioOption<String>(
-                  value: 'all',
-                  groupValue: controller.selectedOption.value,
-                  label: 'All Students',
-                  onChanged: (val) => controller.updateSelectedOption(val),
-                ),
-                const SizedBox(width: 16),
-                CustomRadioOption<String>(
-                  value: 'selected',
-                  groupValue: controller.selectedOption.value,
-                  label: 'Selected Diseases',
-                  onChanged: (val) => controller.updateSelectedOption(val),
-                ),
-              ],
-            )),
-      ],
-    );
-  }
-
-  Widget _buildDoctorSelection(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Select Doctor'),
-        const SizedBox(height: 8),
-        Obx(() => CustomDropdown<String>(
-              hint: 'Choose a doctor',
-              value: controller.selectedDoctor.value,
-              items: DropdownHelper.createStringItems(controller.doctors),
-              onChanged: controller.updateSelectedDoctor,
-            )),
-      ],
-    );
-  }
-
-  Widget _buildVaccinationTypeSelection(
-      CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Vaccination Type'),
-        const SizedBox(height: 8),
-        Obx(() => CustomDropdown<String>(
-              hint: 'Select vaccination type',
-              value: controller.selectedVaccinationType.value,
-              items:
-                  DropdownHelper.createStringItems(controller.vaccinationTypes),
-              onChanged: controller.updateSelectedVaccinationType,
-            )),
-      ],
-    );
-  }
-
-  Widget _buildDateTimeSelection(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Date & time'),
-        const SizedBox(height: 8),
-        Obx(() => Row(
-              children: [
-                CustomRadioOption<String>(
-                  value: 'addDate',
-                  groupValue: controller.selectedDateTimeOption.value,
-                  label: 'Add date',
-                  onChanged: (val) =>
-                      controller.updateSelectedDateTimeOption(val),
-                ),
-                const SizedBox(width: 16),
-                CustomRadioOption<String>(
-                  value: 'startNow',
-                  groupValue: controller.selectedDateTimeOption.value,
-                  label: 'Start now',
-                  onChanged: (val) =>
-                      controller.updateSelectedDateTimeOption(val),
-                ),
-              ],
-            )),
-      ],
-    );
-  }
-
-  Widget _buildDateTimePicker(CreateAppointmentController controller) {
-    return Obx(() => CustomDateTimePickerRow(
-          initialDate: controller.selectedDate.value,
-          initialTime: controller.selectedTime.value,
-          onDateChanged: controller.updateSelectedDate,
-          onTimeChanged: controller.updateSelectedTime,
-        ));
-  }
-
-  Widget _buildDiseaseDetails(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Checkup details'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Obx(() => CustomDropdown<String>(
-                    hint: 'Disease',
-                    value: controller.selectedDisease.value,
-                    items:
-                        DropdownHelper.createStringItems(controller.diseases),
-                    onChanged: controller.updateSelectedDisease,
-                  )),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Obx(() => CustomDropdown<String>(
-                    hint: 'Disease type',
-                    value: controller.selectedDiseaseType.value,
-                    items: DropdownHelper.createStringItems(
-                        controller.diseaseTypes),
-                    onChanged: controller.updateSelectedDiseaseType,
-                  )),
-            ),
-          ],
+  Widget _buildFieldLabel(String label, {bool required = true}) {
+    return RichText(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF374151),
         ),
-      ],
-    );
-  }
-
-  Widget _buildGradeClassDropdowns(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Grades and students'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Obx(() => CustomDropdown<String>(
-                    hint: 'Grade',
-                    value: controller.selectedGrade.value,
-                    items: DropdownHelper.createStringItems(controller.grades),
-                    onChanged: controller.updateSelectedGrade,
-                  )),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Obx(() => CustomDropdown<String>(
-                    hint: 'Class name',
-                    value: controller.selectedClass.value,
-                    items: DropdownHelper.createStringItems(controller.classes),
-                    onChanged: controller.updateSelectedClass,
-                  )),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Obx(() => CustomDropdown<String>(
-                    hint: 'Doctor name',
-                    value: controller.selectedDoctor.value,
-                    items: DropdownHelper.createStringItems(controller.doctors),
-                    onChanged: controller.updateSelectedDoctor,
-                  )),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStudentMultiSelect(CreateAppointmentController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Students (Multi selection)'),
-        const SizedBox(height: 8),
-        Obx(() {
-          final isAllStudents = controller.selectedOption.value == 'all';
-          final selectedStudents = controller.selectedStudents;
-
-          return Column(
-            children: [
-              // Multi-select input field
-              _buildStudentMultiSelectField(controller, isAllStudents),
-
-              // Selected students display (only if not "All students")
-              if (!isAllStudents && selectedStudents.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildSelectedStudentsDisplay(selectedStudents, controller),
-              ],
-            ],
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildStudentMultiSelectField(
-      CreateAppointmentController controller, bool isAllStudents) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFE9E9E9),
-          width: 1,
-        ),
-        color: const Color(0xFFFBFCFD),
+        children: required
+            ? [
+                const TextSpan(
+                  text: '*',
+                  style: TextStyle(color: Color(0xFFDC2626)),
+                ),
+              ]
+            : [],
       ),
-      child: InkWell(
-        onTap: () => _showStudentSelectionDialog(controller),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  isAllStudents ? 'All students' : 'Select Students',
-                  style: TextStyle(
-                    color: isAllStudents
-                        ? const Color(0xFF374151)
-                        : const Color(0xFF9CA3AF),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
+    );
+  }
+
+  Widget _buildSearchableDisease(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text.rich(
+          TextSpan(children: [
+            TextSpan(
+              text: 'Disease',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+            ),
+            TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+          ]),
+        ),
+        const SizedBox(height: 6),
+        Obx(() => CustomDropdown<String>(
+              hint: 'Select disease',
+              value: CreateAppointmentController.predefinedDiseases
+                      .contains(controller.selectedDisease.value)
+                  ? controller.selectedDisease.value
+                  : null,
+              items: DropdownHelper.createStringItems(
+                  CreateAppointmentController.predefinedDiseases),
+              onChanged: (value) => controller.updateSelectedDisease(value),
+            )),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller.otherDiseaseController,
+          onChanged: (value) => controller.otherDiseaseText.value = value,
+          decoration: InputDecoration(
+            hintText: 'Other...',
+            hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2563EB)),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchableVaccination(CreateAppointmentController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text.rich(
+          TextSpan(children: [
+            TextSpan(
+              text: 'Vaccination type',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+            ),
+            TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+          ]),
+        ),
+        const SizedBox(height: 6),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            controller.fetchVaccinations(textEditingValue.text);
+            if (textEditingValue.text.isEmpty) {
+              return controller.vaccinationTypes;
+            }
+            return controller.vaccinationTypes.where((v) =>
+                v.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+          },
+          onSelected: (String selection) {
+            controller.updateSelectedVaccinationType(selection);
+          },
+          fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+            return TextFormField(
+              controller: textController,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: 'Search vaccination type...',
+                hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF9CA3AF), size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () => onSelected(option),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Text(option, style: const TextStyle(fontSize: 14)),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                color: Color(0xFF1339FF),
-                size: 20,
-              ),
-            ],
-          ),
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildSelectedStudentsDisplay(
-      List<Student> selectedStudents, CreateAppointmentController controller) {
-    const displayLimit = 5;
-    final shouldShowMore = selectedStudents.length > displayLimit;
-    final studentsToShow = shouldShowMore
-        ? selectedStudents.take(displayLimit).toList()
-        : selectedStudents;
-    final remainingCount = selectedStudents.length - displayLimit;
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      runAlignment: WrapAlignment.start,
-      alignment: WrapAlignment.start,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      children: [
-        // Show individual student chips
-        ...studentsToShow
-            .map((student) => _buildStudentChip(student, controller)),
-
-        // Show "+N" chip if there are more than 5 students
-        if (shouldShowMore) _buildMoreStudentsChip(remainingCount),
       ],
     );
   }
 
-  Widget _buildStudentChip(
-      Student student, CreateAppointmentController controller) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB),
-          width: 1,
+  Widget _buildLabeledDropdown<T>({
+    required String label,
+    required String hint,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFieldLabel(label),
+        const SizedBox(height: 8),
+        CustomDropdown<T>(
+          hint: hint,
+          value: value,
+          items: items,
+          onChanged: onChanged,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Student avatar
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: student.avatarColor,
-            child: Text(
-              _getInitials(student.name),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+      ],
+    );
+  }
+
+  Widget _buildLabeledDateTimePicker({
+    required DateTime? date,
+    required TimeOfDay? time,
+    required ValueChanged<DateTime?> onDateChanged,
+    required ValueChanged<TimeOfDay?> onTimeChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFieldLabel('Date'),
+              const SizedBox(height: 8),
+              CustomDateTimePickerRow(
+                initialDate: date,
+                initialTime: time,
+                onDateChanged: onDateChanged,
+                onTimeChanged: onTimeChanged,
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // Student name
-          Text(
-            student.name,
-            style: const TextStyle(
-              color: Color(0xFF374151),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Remove button
-          GestureDetector(
-            onTap: () => _removeStudent(controller, student),
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF43F5E),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 10,
-              ),
-            ),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Color(0xFF747677),
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        height: 1.50,
+        letterSpacing: 0.16,
       ),
     );
   }
 
-  Widget _buildMoreStudentsChip(int remainingCount) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        '+$remainingCount',
-        style: const TextStyle(
-          color: Color(0xFF374151),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  void _showStudentSelectionDialog(CreateAppointmentController controller) {
-    showDialog(
-      context: Get.context!,
-      builder: (context) => _StudentSelectionDialog(
-        students: controller.students,
-        selectedStudents: controller.selectedStudents,
-        onSelectionChanged: (selectedStudents) {
-          controller.updateSelectedStudents(selectedStudents);
-        },
-      ),
-    );
-  }
-
-  void _removeStudent(CreateAppointmentController controller, Student student) {
-    final currentStudents = List<Student>.from(controller.selectedStudents);
-    currentStudents.removeWhere((s) => s.id == student.id);
-    controller.updateSelectedStudents(currentStudents);
-  }
+  // ─── ACTION BUTTONS ───────────────────────────────────────────────────
 
   Widget _buildActionButtons(CreateAppointmentController controller) {
     return Row(
@@ -803,46 +982,64 @@ class CreateAppointmentDialog extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: Obx(() => ElevatedButton(
-                onPressed: controller.selectedType.value == 'Walk-In'
-                    ? controller.handleStartWalkInAppointment
-                    : controller.handleCreateAppointment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
+          child: Obx(() {
+            final isValid = controller.selectedType.value == 'Walk-In'
+                ? true
+                : controller.isFormValid;
+
+            return ElevatedButton(
+              onPressed: isValid
+                  ? (controller.selectedType.value == 'Walk-In'
+                      ? controller.handleStartWalkInAppointment
+                      : controller.handleCreateAppointment)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF2563EB).withAlpha(100),
+                disabledForegroundColor: Colors.white70,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  controller.selectedType.value == 'Walk-In'
-                      ? 'Start appointment'
-                      : 'Create',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+                elevation: 0,
+              ),
+              child: Text(
+                controller.actionButtonText,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-              )),
+              ),
+            );
+          }),
         ),
       ],
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: Color(0xFF747677),
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        height: 1.50,
-        letterSpacing: 0.16,
+  // ─── DIALOGS ──────────────────────────────────────────────────────────
+
+  void _showStudentSelectionDialog(CreateAppointmentController controller) {
+    showDialog(
+      context: Get.context!,
+      builder: (context) => _StudentSelectionDialog(
+        students: controller.students,
+        selectedStudents: controller.selectedStudents,
+        onSelectionChanged: (selectedStudents) {
+          controller.updateSelectedStudents(selectedStudents);
+        },
       ),
     );
   }
+
+  void _removeStudent(CreateAppointmentController controller, Student student) {
+    final currentStudents = List<Student>.from(controller.selectedStudents);
+    currentStudents.removeWhere((s) => s.id == student.id);
+    controller.updateSelectedStudents(currentStudents);
+  }
+
+  // ─── UTILS ────────────────────────────────────────────────────────────
 
   String _getInitials(String name) {
     final words = name.split(' ');
@@ -854,6 +1051,8 @@ class CreateAppointmentDialog extends StatelessWidget {
     return 'U';
   }
 }
+
+// ─── STUDENT SELECTION DIALOG ─────────────────────────────────────────────
 
 class _StudentSelectionDialog extends StatefulWidget {
   final List<Student> students;
@@ -880,7 +1079,7 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
   void initState() {
     super.initState();
     _selectedStudents = List<Student>.from(widget.selectedStudents);
-    _filteredStudents = widget.students;
+    _filteredStudents = List<Student>.from(widget.students);
     _searchController.addListener(_filterStudents);
   }
 
@@ -892,10 +1091,11 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
 
   void _filterStudents() {
     setState(() {
+      final allStudents = List<Student>.from(widget.students);
       if (_searchController.text.isEmpty) {
-        _filteredStudents = widget.students;
+        _filteredStudents = allStudents;
       } else {
-        _filteredStudents = widget.students
+        _filteredStudents = allStudents
             .where((student) => student.name
                 .toLowerCase()
                 .contains(_searchController.text.toLowerCase()))

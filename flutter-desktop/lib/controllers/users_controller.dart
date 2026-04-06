@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/user_model.dart';
+import '../utils/storage_service.dart';
 import 'branch_management_controller.dart';
 
+enum UsersState { loading, success, error, empty }
+
 class UsersController extends GetxController {
+  final StorageService _storageService = Get.find();
+
   var users = <UserModel>[].obs;
+  var filteredUsers = <UserModel>[].obs;
+  final Rx<UsersState> state = UsersState.loading.obs;
+
+  var searchQuery = ''.obs;
+  final searchController = TextEditingController();
+
+  var isSubmitting = false.obs;
 
   var selectedRole = ''.obs;
   var selectedPosition = ''.obs;
 
   final roles = ['Doctor - Extended', 'Admin', 'Viewer'];
+  final staffRoles = ['SchoolAdmin', 'Doctor', 'Nurse', 'Teacher'];
   final positions = ['Position 1', 'Position 2'];
 
   var selectedUser = Rxn<UserModel>();
@@ -92,19 +108,88 @@ class UsersController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    users.value = [
-      UserModel(
-        email: "jane@mail.com",
-        avatarUrl: "",
-        governorate: "Sousse",
-        id: "2",
-        name: 'Jane Smith',
-        type: 'User',
-        city: 'Sousse',
-        role: 'Viewer',
-        status: 'Inactive',
-      ),
-    ];
+    fetchUsers();
+  }
+
+  /// Fetch users from API
+  Future<void> fetchUsers() async {
+    final branchData = _storageService.getSelectedBranchData();
+    final branchId = branchData?['id'] ?? '';
+
+    if (branchId.isEmpty) {
+      state.value = UsersState.empty;
+      return;
+    }
+
+    try {
+      state.value = UsersState.loading;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/users?branchId=$branchId',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'];
+          final usersList = (data['users'] as List<dynamic>?)
+                  ?.map((u) =>
+                      UserModel.fromJson(u as Map<String, dynamic>))
+                  .toList() ??
+              [];
+
+          users.assignAll(usersList);
+          _applyFilters();
+          state.value =
+              users.isEmpty ? UsersState.empty : UsersState.success;
+        } else {
+          throw Exception('API returned success: false');
+        }
+      } else {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      state.value = UsersState.error;
+      Get.snackbar(
+        'Error',
+        'Failed to load users: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
+
+  void onSearchChanged(String query) {
+    searchQuery.value = query;
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    var result = users.toList();
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value.toLowerCase();
+      result = result.where((u) =>
+        u.name.toLowerCase().contains(q) ||
+        u.email.toLowerCase().contains(q) ||
+        (u.aid ?? '').toLowerCase().contains(q)
+      ).toList();
+    }
+    filteredUsers.assignAll(result);
   }
 
   void selectUser(UserModel user) {
@@ -144,7 +229,6 @@ class UsersController extends GetxController {
     final mod = permissions[module];
     if (mod != null) {
       mod[perm] = value;
-      // Reassign to trigger observers
       permissions[module] = Map<String, bool>.from(mod);
     }
   }
@@ -152,11 +236,9 @@ class UsersController extends GetxController {
   void saveAssignedRole() {
     final user = selectedUser.value;
     if (user != null && selectedCampusIds.isNotEmpty) {
-      // Update user with campus assignments
       final updatedAssignments = campusAssignments.values.toList();
       final updatedUser = user.copyWith(campusAssignments: updatedAssignments);
 
-      // Update the user in the list
       final index = users.indexWhere((u) => u.id == user.id);
       if (index != -1) {
         users[index] = updatedUser;
@@ -168,9 +250,192 @@ class UsersController extends GetxController {
     }
   }
 
-  void deleteUser(UserModel user) {
-    users.remove(user);
-    if (selectedUser.value?.id == user.id) clearSelection();
+  /// Create a new staff user via API
+  Future<bool> createUser({
+    required String email,
+    required String givenName,
+    required String familyName,
+    required String role,
+    String? phone,
+  }) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final branchData = _storageService.getSelectedBranchData();
+      final branchId = branchData?['id'] ?? '';
+      final organizationId = branchData?['id'] ?? '';
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/users',
+      );
+
+      final body = {
+        'email': email,
+        'name': {'given': givenName, 'family': familyName},
+        'role': role,
+        'organizationId': organizationId,
+        'branchId': branchId,
+      };
+      if (phone != null && phone.isNotEmpty) {
+        body['phone'] = phone;
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201) {
+        Get.snackbar(
+          'Success',
+          'User created successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchUsers();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to create user: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Update a staff user via API
+  Future<bool> updateUser(
+    String practitionerId, {
+    required String givenName,
+    required String familyName,
+    required String email,
+    String? phone,
+    String? gender,
+  }) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/users/$practitionerId',
+      );
+
+      final body = <String, dynamic>{
+        'name': {'given': givenName, 'family': familyName},
+        'email': email,
+      };
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+      if (gender != null && gender.isNotEmpty) body['gender'] = gender;
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          'Success',
+          'User updated successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchUsers();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update user: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Delete a staff user's role via API
+  Future<bool> deleteUserApi(UserModel user) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final organizationId =
+          user.roles.isNotEmpty ? user.roles.first.organizationId : '';
+
+      var urlStr =
+          '${AppConfig.newBackendUrl}/api/school-admin/users/${user.id}';
+      if (organizationId.isNotEmpty) {
+        urlStr += '?organizationId=$organizationId';
+      }
+      final url = Uri.parse(urlStr);
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          'Success',
+          'User removed successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        if (selectedUser.value?.id == user.id) clearSelection();
+        await fetchUsers();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete user: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
   // Multi-campus management methods

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/branch_model.dart';
 import '../models/create_branch_request.dart';
+import '../utils/api_service.dart';
 import '../utils/storage_service.dart';
 
 enum BranchState { loading, success, error, empty }
 
 class BranchManagementController extends GetxController {
   final StorageService _storageService = Get.find();
+  final ApiService _apiService = Get.find();
 
   final RxList<BranchModel> branches = <BranchModel>[].obs;
   final RxList<BranchModel> filteredBranches = <BranchModel>[].obs;
@@ -69,10 +72,83 @@ class BranchManagementController extends GetxController {
     return null;
   }
 
-  // GET branches from API
+  /// Try to refresh the access token using the stored refresh token.
+  /// Returns the new access token on success, or null on failure.
+  Future<String?> _tryRefreshToken() async {
+    final refreshToken = _storageService.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      print('❌ No refresh token available');
+      return null;
+    }
+
+    print('🔄 Attempting to refresh access token...');
+    final result = await _apiService.refreshAccessToken(refreshToken);
+
+    if (result['success'] == true) {
+      final newAccessToken = result['accessToken'] as String;
+      final newRefreshToken = result['refreshToken'] as String;
+      await _storageService.saveAccessToken(newAccessToken);
+      await _storageService.saveRefreshToken(newRefreshToken);
+      print('✅ Token refreshed successfully');
+      return newAccessToken;
+    }
+
+    print('❌ Token refresh failed: ${result['error']}');
+    return null;
+  }
+
+  // GET branches - load from cache first, then refresh from API in background
   Future<void> fetchBranches() async {
     try {
       state.value = BranchState.loading;
+      isLoading.value = true;
+
+      // Load from cache first for instant UI
+      final cachedBranches = _storageService.getBranchesList();
+      if (cachedBranches != null && cachedBranches.isNotEmpty) {
+        print('📦 Loading branches from cache (${cachedBranches.length} branches)');
+        _loadBranchesFromList(cachedBranches);
+        state.value = branches.isEmpty ? BranchState.empty : BranchState.success;
+        isLoading.value = false;
+        // Continue to fetch from API in background to update
+        _fetchFromApi();
+        return;
+      }
+
+      // No cache - fetch from API directly
+      print('📡 No cache, fetching branches from API...');
+      await _fetchFromApi();
+    } catch (e) {
+      print('❌ Error in fetchBranches: $e');
+      if (branches.isEmpty) {
+        state.value = BranchState.error;
+        errorMessage.value = 'Failed to load branches: ${e.toString()}';
+      }
+      isLoading.value = false;
+    }
+  }
+
+  /// Force refresh from API (called from branches management screen)
+  Future<void> refreshBranches() async {
+    await _fetchFromApi();
+  }
+
+  /// Load branches from raw JSON list into the reactive branches list
+  void _loadBranchesFromList(List<dynamic> branchesJson) {
+    final branchesList = branchesJson
+        .map((json) => _parseBranchFromApi(Map<String, dynamic>.from(json)))
+        .toList();
+    final uniqueBranches = <String, BranchModel>{};
+    for (var branch in branchesList) {
+      uniqueBranches[branch.id] = branch;
+    }
+    branches.value = uniqueBranches.values.toList();
+    _applyFilters();
+  }
+
+  /// Fetch branches from API and update cache
+  Future<void> _fetchFromApi() async {
+    try {
       isLoading.value = true;
       print('📡 Fetching branches from API...');
 
@@ -85,16 +161,20 @@ class BranchManagementController extends GetxController {
 
       print('📍 Using organization ID: $organizationId');
 
-      // Get access token
-      final accessToken = await _storageService.getAccessToken();
-      if (accessToken == null) {
-        throw Exception('No access token found');
+      // Get access token, try refreshing if not available
+      var accessToken = _storageService.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        print('🔄 No access token, attempting token refresh...');
+        accessToken = await _tryRefreshToken();
+        if (accessToken == null) {
+          throw Exception('No access token found. Please login again.');
+        }
       }
 
       // Make API request
-      final response = await http.get(
+      var response = await http.get(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -103,6 +183,23 @@ class BranchManagementController extends GetxController {
 
       print('📡 Response Status: ${response.statusCode}');
       print('📡 Response Body: ${response.body}');
+
+      // If 401, try refreshing the token and retry once
+      if (response.statusCode == 401) {
+        print('🔄 Got 401, attempting token refresh...');
+        final newToken = await _tryRefreshToken();
+        if (newToken != null) {
+          response = await http.get(
+            Uri.parse(
+                '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $newToken',
+            },
+          );
+          print('📡 Retry Response Status: ${response.statusCode}');
+        }
+      }
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
@@ -121,8 +218,14 @@ class BranchManagementController extends GetxController {
 
           branches.value = uniqueBranches.values.toList();
 
+          // Cache the raw API response for future use
+          final cacheData = branchesJson
+              .map((json) => Map<String, dynamic>.from(json as Map))
+              .toList();
+          await _storageService.saveBranchesList(cacheData);
+
           print(
-              '✅ Branches loaded successfully: ${branches.length} unique branches');
+              '✅ Branches loaded and cached: ${branches.length} unique branches');
           print('📋 Branch IDs: ${branches.map((b) => b.id).toList()}');
 
           // Reapply current filters after fetching
@@ -140,16 +243,12 @@ class BranchManagementController extends GetxController {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error fetching branches: $e');
-      state.value = BranchState.error;
-      errorMessage.value = 'Failed to load branches: ${e.toString()}';
-      Get.snackbar(
-        'Error',
-        'Failed to load branches: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      print('❌ Error fetching branches from API: $e');
+      // Only set error state if we have no cached data showing
+      if (branches.isEmpty) {
+        state.value = BranchState.error;
+        errorMessage.value = 'Failed to load branches: ${e.toString()}';
+      }
     } finally {
       isLoading.value = false;
     }
@@ -163,8 +262,11 @@ class BranchManagementController extends GetxController {
       name: branchResponse.name,
       role: branchResponse.accountType,
       icon: 'school',
-      address:
-          '${branchResponse.address.street}, ${branchResponse.address.city}, ${branchResponse.address.governorate}',
+      address: [
+        branchResponse.address.street,
+        branchResponse.address.city,
+        branchResponse.address.governorate,
+      ].where((s) => s != null && s.isNotEmpty).join(', '),
       phone: branchResponse.phone ?? '',
       email: '',
       principalName: 'N/A',
@@ -210,7 +312,7 @@ class BranchManagementController extends GetxController {
       // Make API request
       final response = await http.post(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -289,16 +391,19 @@ class BranchManagementController extends GetxController {
       }
 
       // Prepare update request body (accountType is immutable, so exclude it)
+      final addressBody = <String, dynamic>{
+        'governorate': request.address.governorate,
+        'city': request.address.city,
+      };
+      if (request.address.street != null && request.address.street!.isNotEmpty) {
+        addressBody['street'] = request.address.street;
+      }
       final updateBody = {
         'name': request.name,
         'isHeadquarters': request.isHeadquarters,
-        'educationType': request.educationType,
+        'educationType': request.educationType?.toUpperCase(),
         'grades': request.grades,
-        'address': {
-          'governorate': request.address.governorate,
-          'city': request.address.city,
-          'street': request.address.street,
-        },
+        'address': addressBody,
         if (request.phone != null) 'phone': request.phone,
         if (request.website != null) 'website': request.website,
       };
@@ -306,7 +411,7 @@ class BranchManagementController extends GetxController {
       // Make API request
       final response = await http.put(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches/$branchId'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches/$branchId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -439,7 +544,7 @@ class BranchManagementController extends GetxController {
 
       final response = await http.post(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches/$branchId/activate'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches/$branchId/activate'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -510,7 +615,7 @@ class BranchManagementController extends GetxController {
 
       final response = await http.post(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches/$branchId/deactivate'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches/$branchId/deactivate'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -581,7 +686,7 @@ class BranchManagementController extends GetxController {
 
       final response = await http.delete(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations/$organizationId/branches/$branchId'),
+            '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches/$branchId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -626,9 +731,6 @@ class BranchManagementController extends GetxController {
     }
   }
 
-  void refreshBranches() {
-    fetchBranches();
-  }
 
   void clearError() {
     errorMessage.value = '';

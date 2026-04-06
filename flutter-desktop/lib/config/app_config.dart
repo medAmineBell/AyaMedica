@@ -1,14 +1,23 @@
 class AppConfig {
+  // Velopack update configuration (private release repo)
+  static const String updateUrl =
+      'https://github.com/Ayamedica-MP/DesktopApp/releases/latest/';
+  // Token injected at build time: --dart-define=UPDATE_TOKEN=ghp_xxx
+  static const String updateToken =
+      String.fromEnvironment('UPDATE_TOKEN', defaultValue: '');
+
   // Development mode configuration
   static const bool isDevelopment = true;
 
   // Development credentials
-  static const String devEmail = "fullcontroltest@ayamedica.com";
-  static const String devPassword = "Test1234";
+  static const String devEmail = "ahmed@ayamedica.com";
+  static const String devPassword = "22001018888818";
 
+  static const String newBackendUrl = 'http://localhost:3000';
   // NEW Backend API Configuration
-  static const String newBackendUrl =
-      'https://ayamedica-backend.ayamedica.online';
+  // static const String newBackendUrl =
+  //     'https://ayamedica-backend.ayamedica.online';
+
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';
 

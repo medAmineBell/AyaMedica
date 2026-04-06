@@ -75,11 +75,11 @@ class ProfileSummaryContent extends StatelessWidget {
             ],
           ),
         ),
-        const GuardianSection(),
+        GuardianSection(student: student),
         const SizedBox(height: 32),
         ProfileSection(student: student),
         const SizedBox(height: 32),
-        const ContactDetailsSection(),
+        ContactDetailsSection(student: student),
       ],
     );
   }

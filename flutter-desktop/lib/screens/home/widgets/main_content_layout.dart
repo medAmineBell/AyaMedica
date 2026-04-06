@@ -3,11 +3,16 @@ import 'package:flutter_getx_app/screens/appointmentScheduling/appointment_histo
 import 'package:flutter_getx_app/screens/calendar/calendar_base.dart';
 import 'package:flutter_getx_app/screens/communication/communication_screen.dart';
 import 'package:flutter_getx_app/screens/dashboard/dashboard_screen.dart';
+import 'package:flutter_getx_app/screens/schoolYear/school_year_screen.dart';
 import 'package:flutter_getx_app/screens/settings/widgets/gard_settings_screen.dart';
 import 'package:flutter_getx_app/screens/settings/ayamedica_solution_screen.dart';
 import 'package:flutter_getx_app/screens/medicalRecords/medical_records_screen.dart';
+import 'package:flutter_getx_app/screens/appointmentStudentProfile/appointment_student_profile_screen.dart';
+import 'package:flutter_getx_app/screens/appointmentStudentProfile/checked_out_walkin_screen.dart';
 import 'package:flutter_getx_app/screens/studentProfile/student_profile_screen.dart';
 import 'package:flutter_getx_app/screens/students/student_overView_screen.dart';
+import 'package:flutter_getx_app/screens/support/support_screen.dart';
+import 'package:flutter_getx_app/screens/notifications/notification_screen.dart';
 import 'package:flutter_getx_app/screens/users/user_screen.dart';
 import 'package:flutter_getx_app/screens/feedbackDashboard/feedback_details_screen.dart';
 import 'package:flutter_getx_app/screens/medicalCheckup/medical_checkup_table_screen.dart';
@@ -51,8 +56,26 @@ class MainContentLayout extends GetView<HomeController> {
             appointmentType: controller.currentAppointmentType.value,
           );
         }
-        // Fallback to appointment scheduling if no student selected
-        return AppointmentHistoryScreen();
+        // Fallback to Appointments if no student selected
+        return AppointmentSchedulingScreen();
+      case ContentType.appointmentStudentProfile:
+        if (controller.currentStudent.value != null &&
+            controller.currentAppointmentHistory.value != null) {
+          return AppointmentStudentProfileScreen(
+            student: controller.currentStudent.value!,
+            appointment: controller.currentAppointmentHistory.value!,
+          );
+        }
+        return AppointmentSchedulingScreen();
+      case ContentType.checkedOutWalkInSummary:
+        if (controller.currentStudent.value != null &&
+            controller.currentAppointmentHistory.value != null) {
+          return CheckedOutWalkInScreen(
+            student: controller.currentStudent.value!,
+            appointment: controller.currentAppointmentHistory.value!,
+          );
+        }
+        return AppointmentSchedulingScreen();
       case ContentType.studentsOverview:
         return StudentOverviewScreen();
       case ContentType.studentsList:
@@ -79,20 +102,22 @@ class MainContentLayout extends GetView<HomeController> {
         return BranchManagementScreen();
       case ContentType.gradesSettings:
         return _buildGradesSettingsContent();
+      case ContentType.schoolYear:
+        return _buildSchoolYearContent();
       case ContentType.users:
         return _buildUsersContent();
       case ContentType.settings:
         return AyamedicaSolutionScreen();
+      case ContentType.support:
+        return SupportScreen();
       case ContentType.feedbackDetails:
         return FeedbackDetailsScreen();
+      case ContentType.notifications:
+        return const NotificationScreen();
       case ContentType.communication:
         return CommunicationScreen();
       case ContentType.appointmentScheduling:
-        return Container(
-          child: Center(
-            child: AppointmentHistoryScreen(),
-          ),
-        );
+        return const AppointmentHistoryScreen();
       default:
         return DashboardScreen();
     }
@@ -100,6 +125,10 @@ class MainContentLayout extends GetView<HomeController> {
 
   Widget _buildGradesSettingsContent() {
     return GardSettingsScreen();
+  }
+
+  Widget _buildSchoolYearContent() {
+    return SchoolYearCalendarScreen();
   }
 
   Widget _buildUsersContent() {

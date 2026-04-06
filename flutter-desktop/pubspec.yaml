@@ -1,7 +1,7 @@
 name: flutter_getx_app
 description: A Flutter GetX App with theming and translations.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: ">=2.17.0 <4.0.0"
@@ -27,6 +27,7 @@ dependencies:
   excel: ^4.0.6
   multi_select_flutter: ^4.1.3
   http: ^1.1.0
+  velopack_flutter: ^0.1.0
 
 dev_dependencies:
   flutter_test:

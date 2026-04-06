@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
+import 'package:flutter_getx_app/controllers/appointment_history_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_getx_app/models/appointment_history_model.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/controllers/creating_appointment_controller.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/creating_appointment_dialog.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/notify_parents_dialog.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
+import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'dart:async';
+import 'dart:convert';
 import '../../../models/appointment.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../screens/appointmentScheduling/widgets/parents_notification_dialog.dart';
@@ -15,27 +22,48 @@ import '../screens/appointmentScheduling/widgets/parents_notification_dialog.dar
 class CreateAppointmentController extends GetxController {
   final AppointmentSchedulingController appointmentController = Get.find();
   final ApiService _apiService = Get.find<ApiService>();
-  
+  final StorageService _storageService = Get.find<StorageService>();
+
   final _formKey = GlobalKey<FormState>();
   late final List<Map<String, dynamic>> _appointmentTypes;
-  late final List<String> _doctors;
-  late final List<String> _diseaseTypes;
-  late final List<String> _diseases;
-  late final List<String> _classes;
-  late final List<String> _grades;
-  late final List<String> _vaccinationTypes;
-  late final List<Student> _students;
+  final RxList<String> _doctors = <String>[].obs;
+  final RxList<String> _diseases = <String>[].obs;
+  final RxList<String> _vaccinationTypesList = <String>[].obs;
+
+  // Predefined disease categories for Checkup/Follow-Up
+  static const List<String> predefinedDiseases = [
+    'General',
+    'Hygiene',
+    'Diabetes',
+    'Blood pressure',
+    'Cardiovascular',
+    'BMI',
+  ];
+
+  // "Other" disease text field
+  final otherDiseaseText = ''.obs;
+  final otherDiseaseController = TextEditingController();
+  final RxList<String> _classes = <String>[].obs;
+  final RxList<String> _grades = <String>[].obs;
+  final RxBool isLoadingDiseases = false.obs;
+  final RxBool isLoadingVaccinations = false.obs;
+  final RxList<Student> _students = <Student>[].obs;
+  final RxBool isLoadingClasses = false.obs;
+  final RxBool isLoadingStudents = false.obs;
 
   // Regular appointment fields
   final Rx<DateTime?> selectedDate = Rx<DateTime?>(null);
   final Rx<TimeOfDay?> selectedTime = Rx<TimeOfDay?>(null);
+
+  // Vaccination: Last confirmation date fields
+  final Rx<DateTime?> lastConfirmationDate = Rx<DateTime?>(null);
+  final Rx<TimeOfDay?> lastConfirmationTime = Rx<TimeOfDay?>(null);
   final RxString selectedType = 'Checkup'.obs;
   final RxString selectedOption = 'all'.obs;
   final RxString selectedDateTimeOption = 'addDate'.obs; // 'addDate' or 'startNow'
   final Rx<String?> selectedClass = Rx<String?>(null);
   final Rx<String?> selectedGrade = Rx<String?>(null);
   final Rx<String?> selectedDisease = Rx<String?>(null);
-  final Rx<String?> selectedDiseaseType = Rx<String?>(null);
   final Rx<String?> selectedDoctor = Rx<String?>(null);
   final Rx<String?> selectedVaccinationType = Rx<String?>(null);
   final RxList<Student> selectedStudents = <Student>[].obs;
@@ -44,17 +72,17 @@ class CreateAppointmentController extends GetxController {
   final aidController = TextEditingController();
   final Rx<Student?> walkInSelectedStudent = Rx<Student?>(null);
   final RxList<Student> filteredStudentsForWalkIn = <Student>[].obs;
+  bool _isSelectingStudent = false;
 
   // Getters for easy access
   GlobalKey<FormState> get formKey => _formKey;
   List<Map<String, dynamic>> get appointmentTypes => _appointmentTypes;
-  List<String> get doctors => _doctors;
-  List<String> get diseaseTypes => _diseaseTypes;
-  List<String> get diseases => _diseases;
-  List<String> get classes => _classes;
-  List<String> get grades => _grades;
-  List<String> get vaccinationTypes => _vaccinationTypes;
-  List<Student> get students => _students;
+  RxList<String> get doctors => _doctors;
+  RxList<String> get diseases => _diseases;
+  RxList<String> get classes => _classes;
+  RxList<String> get grades => _grades;
+  RxList<String> get vaccinationTypes => _vaccinationTypesList;
+  RxList<Student> get students => _students;
 
   @override
   void onInit() {
@@ -62,15 +90,18 @@ class CreateAppointmentController extends GetxController {
     
     // Initialize lists
     _appointmentTypes = _buildAppointmentTypes();
-    _doctors = _buildDoctorsList();
-    _diseaseTypes = _buildDiseaseTypes();
-    _diseases = _buildDiseasesList();
-    _classes = _buildClassesList();
-    _grades = _buildGradesList();
-    _vaccinationTypes = _buildVaccinationTypes();
-    _students = _buildStudentsList();
-    
-    filteredStudentsForWalkIn.value = _students;
+    _loadDoctorsFromApi();
+    fetchDiseases('');
+    fetchVaccinations('');
+
+    // Load grades from branch data
+    _loadGradesFromBranch();
+    // Load classes from API
+    _loadClassesFromApi();
+    // Load students from API
+    _loadStudentsFromApi().then((_) {
+      filteredStudentsForWalkIn.assignAll(_students);
+    });
 
     // Listen to grade and class changes for Walk-In filtering
     ever(selectedGrade, (_) => _filterStudentsForWalkIn());
@@ -80,6 +111,7 @@ class CreateAppointmentController extends GetxController {
   @override
   void onClose() {
     aidController.dispose();
+    otherDiseaseController.dispose();
     super.onClose();
   }
 
@@ -117,6 +149,16 @@ class CreateAppointmentController extends GetxController {
 
   void updateSelectedClass(String? className) {
     selectedClass.value = className;
+    selectedStudents.clear();
+    // Auto-select all students of this class for non-walk-in types
+    if (className != null && selectedType.value != 'Walk-In') {
+      _loadStudentsFromApi(
+        grade: selectedGrade.value,
+        studentClass: className,
+      ).then((_) {
+        selectedStudents.assignAll(_students);
+      });
+    }
   }
 
   void updateSelectedGrade(String? grade) {
@@ -127,10 +169,6 @@ class CreateAppointmentController extends GetxController {
     selectedDisease.value = disease;
   }
 
-  void updateSelectedDiseaseType(String? diseaseType) {
-    selectedDiseaseType.value = diseaseType;
-  }
-
   void updateSelectedDoctor(String? doctor) {
     selectedDoctor.value = doctor;
   }
@@ -139,33 +177,83 @@ class CreateAppointmentController extends GetxController {
     selectedVaccinationType.value = vaccinationType;
   }
 
+  void updateLastConfirmationDate(DateTime? date) {
+    lastConfirmationDate.value = date;
+  }
+
+  void updateLastConfirmationTime(TimeOfDay? time) {
+    lastConfirmationTime.value = time;
+  }
+
+  String get actionButtonText {
+    if (selectedType.value == 'Walk-In' || selectedDateTimeOption.value == 'startNow') {
+      return 'Start appointment';
+    }
+    return 'Add appointment';
+  }
+
+  /// Whether the form has all required fields filled for non-walk-in types
+  bool get isFormValid {
+    if (selectedType.value == 'Walk-In') return true;
+
+    // Date/time required if "Add date" is selected
+    if (selectedDateTimeOption.value == 'addDate') {
+      if (selectedDate.value == null || selectedTime.value == null) return false;
+    }
+
+    // Disease required (either dropdown or other text field must have a value)
+    if (selectedType.value != 'Vaccination') {
+      final hasDropdown = selectedDisease.value != null && selectedDisease.value!.isNotEmpty;
+      final hasOtherText = otherDiseaseText.value.trim().isNotEmpty;
+      if (!hasDropdown && !hasOtherText) return false;
+    }
+
+    // Doctor required
+    if (selectedDoctor.value == null || selectedDoctor.value!.isEmpty) return false;
+
+    // Grade required
+    if (selectedGrade.value == null || selectedGrade.value!.isEmpty) return false;
+
+    // Class required
+    if (selectedClass.value == null || selectedClass.value!.isEmpty) return false;
+
+    // Students required
+    if (selectedStudents.isEmpty) return false;
+
+    return true;
+  }
+
   void updateSelectedStudents(List<Student> students) {
     selectedStudents.value = students;
   }
 
   // Walk-In specific methods
   void updateWalkInSelectedStudent(Student? student) {
+    _isSelectingStudent = true;
     walkInSelectedStudent.value = student;
     if (student != null) {
-      aidController.text = student.id;
+      aidController.text = student.name;
       _autoSelectGradeAndClass(student);
     }
+    _isSelectingStudent = false;
   }
 
-  void searchByAID(String aid) {
-    if (aid.isEmpty) {
+  void searchByName(String name) {
+    if (_isSelectingStudent) return;
+    if (name.isEmpty) {
       walkInSelectedStudent.value = null;
+      _loadStudentsFromApi().then((_) {
+        filteredStudentsForWalkIn.assignAll(_students);
+      });
       return;
     }
 
-    final student = _students.firstWhereOrNull(
-      (s) => s.id.toLowerCase().contains(aid.toLowerCase()),
-    );
+    if (name.length < 2) return;
 
-    if (student != null) {
-      walkInSelectedStudent.value = student;
-      _autoSelectGradeAndClass(student);
-    }
+    _loadStudentsFromApi(search: name).then((_) {
+      walkInSelectedStudent.value = null;
+      filteredStudentsForWalkIn.assignAll(_students);
+    });
   }
 
   void removeWalkInSelectedStudent() {
@@ -174,26 +262,19 @@ class CreateAppointmentController extends GetxController {
   }
 
   void _filterStudentsForWalkIn() {
-    List<Student> filtered = _students;
-
-    // Here you would filter based on actual student grade/class data
-    // For now, we'll just return all students as demo data doesn't have grade/class info
-    if (selectedGrade.value != null || selectedClass.value != null) {
-      filtered = _students;
-    }
-
-    filteredStudentsForWalkIn.value = filtered;
+    if (_isSelectingStudent) return;
+    _loadStudentsFromApi(
+      grade: selectedGrade.value,
+      studentClass: selectedClass.value,
+    ).then((_) {
+      walkInSelectedStudent.value = null;
+      filteredStudentsForWalkIn.assignAll(_students);
+    });
   }
 
   void _autoSelectGradeAndClass(Student student) {
-    // Auto-select grade and class based on student data
-    // For demo purposes, we'll set some defaults
-    if (selectedGrade.value == null) {
-      selectedGrade.value = 'Grade 1';
-    }
-    if (selectedClass.value == null) {
-      selectedClass.value = 'Lion Class';
-    }
+    if (student.grade != null) selectedGrade.value = student.grade;
+    if (student.className != null) selectedClass.value = student.className;
   }
 
   void _resetWalkInFields() {
@@ -210,9 +291,27 @@ class CreateAppointmentController extends GetxController {
     selectedClass.value = null;
     selectedGrade.value = null;
     selectedDisease.value = null;
-    selectedDiseaseType.value = null;
+    otherDiseaseText.value = '';
+    otherDiseaseController.clear();
     selectedDoctor.value = null;
+    selectedVaccinationType.value = null;
+    lastConfirmationDate.value = null;
+    lastConfirmationTime.value = null;
     selectedStudents.clear();
+  }
+
+  // Map UI appointment type to API appointment type
+  String _mapAppointmentTypeToApi(String uiType) {
+    switch (uiType) {
+      case 'Checkup':
+        return 'checkup';
+      case 'Follow-Up':
+        return 'followup';
+      case 'Vaccination':
+        return 'vaccination';
+      default:
+        return uiType.toLowerCase();
+    }
   }
 
   // Regular appointment creation
@@ -224,14 +323,80 @@ class CreateAppointmentController extends GetxController {
         return;
       }
 
-      // Create appointment object
+      final branchData = _storageService.getSelectedBranchData();
+      final branchId = branchData?['id'] as String? ?? '';
+      final country = branchData?['country'] as String? ?? 'EG';
+
+      // Combine date + time into ISO8601
+      final date = selectedDate.value!;
+      final time = selectedTime.value!;
+      final combinedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute)
+          .toUtc()
+          .toIso8601String();
+
+      final apiType = _mapAppointmentTypeToApi(selectedType.value);
+      final reason = selectedType.value == 'Vaccination'
+          ? (selectedVaccinationType.value ?? '')
+          : (otherDiseaseText.value.trim().isNotEmpty
+              ? otherDiseaseText.value.trim()
+              : (selectedDisease.value ?? ''));
+
+      final body = <String, dynamic>{
+        'country': country,
+        'branchId': branchId,
+        'appointmentDate': combinedDateTime,
+        'appointmentType': apiType,
+        'reason': reason,
+        'gradeName': selectedGrade.value ?? '',
+        'gradeId': selectedGrade.value ?? '',
+        'className': selectedClass.value ?? '',
+        'classId': selectedStudents.isNotEmpty ? (selectedStudents.first.classId ?? '') : '',
+        'enableNotification': true,
+      };
+
+      // Use hygienePatients array when reason is Hygiene, otherwise patients
+      if (reason.toLowerCase() == 'hygiene' && apiType == 'checkup') {
+        body['hygienePatients'] = selectedStudents.map((s) => {
+          'patientAid': s.aid ?? '',
+          'patientNote': '',
+          'patientStatus': 'pending',
+          'hairStatus': '',
+          'hairReason': '',
+          'earsStatus': '',
+          'earsReason': '',
+          'nailsStatus': '',
+          'nailsReason': '',
+          'teethStatus': '',
+          'teethReason': '',
+          'uniformStatus': '',
+          'uniformReason': '',
+        }).toList();
+      } else {
+        body['patients'] = selectedStudents.map((s) => {
+          'patientAid': s.aid ?? '',
+          'patientNote': '',
+          'patientStatus': 'pending',
+        }).toList();
+      }
+
+      // Add vaccination-specific field
+      if (selectedType.value == 'Vaccination' && lastConfirmationDate.value != null) {
+        final lcd = lastConfirmationDate.value!;
+        final lct = lastConfirmationTime.value;
+        final combinedLastConfirmation = lct != null
+            ? DateTime(lcd.year, lcd.month, lcd.day, lct.hour, lct.minute).toUtc().toIso8601String()
+            : DateTime(lcd.year, lcd.month, lcd.day).toUtc().toIso8601String();
+        body['vaccineLastConfirmationDate'] = combinedLastConfirmation;
+      }
+
+      // Create appointment object for post-creation logic (notifications etc.)
       final appointment = Appointment(
         type: selectedType.value,
         allStudents: selectedOption.value == 'all',
         date: selectedDate.value ?? DateTime.now(),
         time: _formatTime(selectedTime.value),
-        disease: selectedDisease.value ?? '',
-        diseaseType: selectedDiseaseType.value ?? '',
+        disease: reason,
+        diseaseType: '',
         grade: selectedGrade.value ?? '',
         className: selectedClass.value ?? '',
         doctor: selectedDoctor.value ?? '',
@@ -244,9 +409,13 @@ class CreateAppointmentController extends GetxController {
       // Close the form dialog
       Get.back();
 
+      // Wait for the form dialog to fully close before showing progress
+      await Future.delayed(const Duration(milliseconds: 300));
+
       // Initialize progress controller
       Get.put(CreatingAppointmentController());
       final progressController = Get.find<CreatingAppointmentController>();
+      progressController.updateProgress(0.2);
 
       // Show loading dialog
       Get.dialog(
@@ -254,44 +423,66 @@ class CreateAppointmentController extends GetxController {
         barrierDismissible: false,
       );
 
-      // Simulate progress updates (replace with actual operations)
-      const totalSteps = 10;
-      for (int i = 1; i <= totalSteps; i++) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        progressController.updateProgress(i / totalSteps);
+      // Gradually fill progress while waiting for API
+      final progressTimer = Timer.periodic(
+        const Duration(milliseconds: 150),
+        (_) {
+          if (progressController.progress < 0.9) {
+            progressController.updateProgress(progressController.progress + 0.02);
+          }
+        },
+      );
+
+      print('📋 Create Appointment Request:');
+      print('   URL: ${AppConfig.newBackendUrl}/api/appointment-sessions');
+      print('   Body: ${jsonEncode(body)}');
+
+      final accessToken = _storageService.getAccessToken();
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/appointment-sessions');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+
+      progressTimer.cancel();
+
+      print('📋 Create Appointment Response:');
+      print('   Status: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(errorBody['message'] ?? 'Failed to create appointment session');
       }
 
-      // Create appointment via API
-      final result = await _apiService.createAppointment(appointment);
-      
+      progressController.updateProgress(1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+
       // Close dialog and clean up
       Get.back();
       Get.delete<CreatingAppointmentController>();
 
-      if (result['success']) {
-        // Add to local controller for immediate UI update
-        await appointmentController.createAppointment(appointment);
-        
-        // Show success
-        Get.snackbar(
-          'Success',
-          result['message'] ?? 'Appointment created successfully!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade800,
-          duration: const Duration(seconds: 3),
-        );
-      } else {
-        // Show error
-        Get.snackbar(
-          'Error',
-          result['error'] ?? 'Failed to create appointment',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.shade100,
-          colorText: Colors.red.shade800,
-          duration: const Duration(seconds: 5),
-        );
+      // Refresh appointments from server
+      await appointmentController.loadAppointments();
+      // Refresh appointment history list in background
+      if (Get.isRegistered<AppointmentHistoryController>()) {
+        Get.find<AppointmentHistoryController>().refreshAppointments();
       }
+
+      // Show success
+      Get.snackbar(
+        'Success',
+        'Appointment created successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        duration: const Duration(seconds: 3),
+      );
 
       // Handle parent notification
       if (selectedType.value == 'Vaccination') {
@@ -318,8 +509,10 @@ class CreateAppointmentController extends GetxController {
       }
     } catch (e) {
       // Clean up on error
-      Get.back();
-      Get.delete<CreatingAppointmentController>();
+      if (Get.isRegistered<CreatingAppointmentController>()) {
+        Get.back();
+        Get.delete<CreatingAppointmentController>();
+      }
 
       Get.snackbar(
         'Error',
@@ -368,30 +561,107 @@ class CreateAppointmentController extends GetxController {
     if (!_validateWalkInForm()) return;
 
     try {
-      final appointment = Appointment(
-        type: selectedType.value,
-        allStudents: false,
-        date: DateTime.now(),
-        time: _getCurrentTime(),
-        disease: 'Walk-in Consultation',
-        diseaseType: '',
-        grade: selectedGrade.value ?? '',
-        className: selectedClass.value ?? '',
-        doctor: 'Available Doctor',
-        selectedStudents: walkInSelectedStudent.value != null
-            ? [walkInSelectedStudent.value!]
-            : [],
+      final branchData = _storageService.getSelectedBranchData();
+      final branchId = branchData?['id'] as String? ?? '';
+      final country = branchData?['country'] as String? ?? 'EG';
+      final student = walkInSelectedStudent.value!;
+
+      final body = {
+        'country': country,
+        'branchId': branchId,
+        'appointmentDate': DateTime.now().toUtc().toIso8601String(),
+        'appointmentType': 'walkin',
+        'gradeName': selectedGrade.value ?? '',
+        'gradeId': selectedGrade.value ?? '',
+        'className': selectedClass.value ?? '',
+        'classId': student.classId ?? '',
+        'onePatientAid': student.aid ?? '',
+        'fullName': student.name,
+        'enableNotification': true,
+      };
+
+      // Close the form dialog
+      Get.back();
+
+      // Wait for the form dialog to fully close before showing progress
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Show progress dialog starting at 20%
+      Get.put(CreatingAppointmentController());
+      final progressController = Get.find<CreatingAppointmentController>();
+      progressController.updateProgress(0.2);
+
+      Get.dialog(
+        const CreatingAppointmentDialog(),
+        barrierDismissible: false,
       );
 
-      await appointmentController.createAppointment(appointment);
-      Get.back(); // Close dialog
+      // Gradually fill progress while waiting for API
+      final progressTimer = Timer.periodic(
+        const Duration(milliseconds: 150),
+        (_) {
+          if (progressController.progress < 0.9) {
+            progressController.updateProgress(progressController.progress + 0.02);
+          }
+        },
+      );
 
-      // Navigate to student profile
+      print('📋 Create Walk-In Appointment Request:');
+      print('   URL: ${AppConfig.newBackendUrl}/api/appointment-sessions');
+      print('   Body: ${jsonEncode(body)}');
+
+      final accessToken = _storageService.getAccessToken();
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/appointment-sessions');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+
+      progressTimer.cancel();
+
+      print('📋 Create Walk-In Appointment Response:');
+      print('   Status: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(errorBody['message'] ?? 'Failed to create appointment session');
+      }
+
+      progressController.updateProgress(1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Close progress dialog
+      Get.back();
+      Get.delete<CreatingAppointmentController>();
+
+      // Refresh appointment history list in background
+      if (Get.isRegistered<AppointmentHistoryController>()) {
+        Get.find<AppointmentHistoryController>().refreshAppointments();
+      }
+
+      // Navigate to appointment student profile for walk-in
       final homeController = Get.find<HomeController>();
-      homeController.navigateToStudentProfile(
-        walkInSelectedStudent.value!,
-        appointmentType: selectedType.value,
-      );
+      final responseData = jsonDecode(response.body);
+      final appointmentData = responseData['data'] as Map<String, dynamic>?;
+
+      if (appointmentData != null) {
+        final appointment = AppointmentHistory.fromJson(appointmentData);
+        homeController.navigateToAppointmentStudentProfile(
+          student,
+          appointment,
+        );
+      } else {
+        homeController.navigateToStudentProfile(
+          student,
+          appointmentType: selectedType.value,
+        );
+      }
 
       Get.snackbar(
         'Success',
@@ -401,6 +671,11 @@ class CreateAppointmentController extends GetxController {
         colorText: Colors.green.shade800,
       );
     } catch (e) {
+      // Clean up progress dialog on error
+      if (Get.isRegistered<CreatingAppointmentController>()) {
+        Get.back();
+        Get.delete<CreatingAppointmentController>();
+      }
       Get.snackbar(
         'Error',
         'Failed to start appointment: $e',
@@ -412,6 +687,12 @@ class CreateAppointmentController extends GetxController {
   }
 
   bool _validateDateTime() {
+    // "Start now" sets date/time automatically
+    if (selectedDateTimeOption.value == 'startNow') {
+      selectedDate.value = DateTime.now();
+      selectedTime.value = TimeOfDay.now();
+      return true;
+    }
     if (selectedDate.value == null || selectedTime.value == null) {
       Get.snackbar(
         'Validation Error',
@@ -469,15 +750,6 @@ class CreateAppointmentController extends GetxController {
     return DateFormat('hh:mm a').format(dt);
   }
 
-  String _getCurrentTime() {
-    final now = DateTime.now();
-    final hour =
-        now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
-    final minute = now.minute.toString().padLeft(2, '0');
-    final period = now.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
-  }
-
   // Helper methods for initializing lists
   List<Map<String, dynamic>> _buildAppointmentTypes() => [
         {
@@ -498,408 +770,300 @@ class CreateAppointmentController extends GetxController {
         },
       ];
 
-  List<String> _buildDoctorsList() => [
-        'Dr. Smith',
-        'Dr. Johnson',
-        'Dr. Williams',
-        'Dr. Brown',
-      ];
+  Future<void> _loadDoctorsFromApi() async {
+    try {
+      final branchData = _storageService.getSelectedBranchData();
+      final branchId = branchData?['id'];
+      if (branchId == null) return;
 
-  List<String> _buildDiseaseTypes() => [
-        'Type A',
-        'Type B',
-        'Type C',
-        'Type D',
-      ];
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) return;
 
-  List<String> _buildDiseasesList() => [
-        'General Health',
-        'Flu Prevention',
-        'Vision Check',
-        'Dental Checkup',
-      ];
+      final response = await http.get(
+        Uri.parse('${AppConfig.newBackendUrl}/api/school-admin/branches/$branchId/doctors'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
 
-  List<String> _buildClassesList() => [
-        'Lion Class',
-        'Tiger Class',
-        'Eagle Class',
-        'Dragon Class',
-      ];
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final staff = jsonData['data']['staff'] as List;
+          _doctors.assignAll(staff.map((d) {
+            final name = d['name'];
+            return name is Map
+                ? ((name['full'] as String?) ?? '${name['given']} ${name['family']}').trim()
+                : d['name'].toString();
+          }).toList());
+        }
+      }
+    } catch (e) {
+      print('Error loading doctors: $e');
+    }
+  }
 
-  List<String> _buildGradesList() => [
-        'Grade 1',
-        'Grade 2',
-        'Grade 3',
-        'Grade 4',
-        'Grade 5',
-      ];
+  /// Fetch diseases from API with optional search
+  Future<void> fetchDiseases(String search) async {
+    try {
+      isLoadingDiseases.value = true;
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) return;
 
-  List<String> _buildVaccinationTypes() => [
-    'COVID-19', 'Flu Vaccine', 'Hepatitis A', 'Hepatitis B', 'MMR', 
-    'Polio', 'Tetanus', 'Diphtheria', 'Pertussis', 'Chickenpox',
-    'Meningitis', 'HPV', 'Pneumococcal', 'Rotavirus', 'Hib'
-  ];
+      final branchData = _storageService.getSelectedBranchData();
+      final country = branchData?['country'] as String? ?? 'EG';
 
-  List<Student> _buildStudentsList() => [
-        Student(
-          id: '8EG390J65A',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2010-10-02'),
-          bloodType: 'O+',
-          weightKg: 39.2,
-          heightCm: 136,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Ronald Taylor',
-          firstGuardianPhone: '(903)105-7844x138',
-          firstGuardianEmail: 'ejohnson@owen-campbell.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Mr. Kevin Ramirez',
-          secondGuardianPhone: '151-548-4860',
-          secondGuardianEmail: 'jacksondennis@rhodes.net',
-          secondGuardianStatus: 'Offline',
-          city: 'North Zachary',
-          street: '365 Mcclure Spring',
-          zipCode: '63039',
-          province: 'Delaware',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL0499418',
-          passportIdNumber: 'Vi36090905',
-          nationality: 'Egyptian',
-          nationalId: '2101013573669393',
-          gender: 'Male',
-          phoneNumber: '+1-743-315-1141x81905',
-          email: 'scott82@mendoza.com',
-        ),
-        Student(
-          id: '8EG390J66B',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2015-02-26'),
-          bloodType: 'B-',
-          weightKg: 48.1,
-          heightCm: 138,
-          goToHospital: 'Al Salam Hospital',
-          firstGuardianName: 'Laura Kennedy',
-          firstGuardianPhone: '(151)240-2718',
-          firstGuardianEmail: 'ijohnson@lyons-taylor.net',
-          firstGuardianStatus: 'Offline',
-          secondGuardianName: 'Brian Cardenas',
-          secondGuardianPhone: '(492)549-0512x00087',
-          secondGuardianEmail: 'jessica97@hotmail.com',
-          secondGuardianStatus: 'Offline',
-          city: 'East Rose',
-          street: '851 Reese Heights',
-          zipCode: '99340',
-          province: 'Maryland',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL9961387',
-          passportIdNumber: 'ln06876152',
-          nationality: 'Egyptian',
-          nationalId: '2746755682256140',
-          gender: 'Female',
-          phoneNumber: '301.261.2846x390',
-          email: 'andrewmendoza@jones-carroll.info',
-        ),
-        Student(
-          id: '8EG390J67C',
-          name: 'Omar Ahmed Farid',
-          avatarColor: Color(4293870660),
-          dateOfBirth: DateTime.parse('2014-08-18'),
-          bloodType: 'A-',
-          weightKg: 39.8,
-          heightCm: 147,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Bruce Smith',
-          firstGuardianPhone: '+1-383-541-1239',
-          firstGuardianEmail: 'courtneymatthews@barnes.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Alexander Dixon',
-          secondGuardianPhone: '+1-409-517-0017',
-          secondGuardianEmail: 'ulee@yahoo.com',
-          secondGuardianStatus: 'Online',
-          city: 'South Danielville',
-          street: '9053 Kevin Ridge',
-          zipCode: '02378',
-          province: 'New Hampshire',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL8991389',
-          passportIdNumber: 'ok97972521',
-          nationality: 'Egyptian',
-          nationalId: '2628575843788600',
-          gender: 'Male',
-          phoneNumber: '001-685-915-3428x243',
-          email: 'andreathompson@hotmail.com',
-        ),
-        Student(
-          id: '8EG390J65E',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2014-01-17'),
-          bloodType: 'AB+',
-          weightKg: 35.4,
-          heightCm: 147,
-          goToHospital: 'Al Salam Hospital',
-          firstGuardianName: 'Nicole Marshall',
-          firstGuardianPhone: '331-178-7656',
-          firstGuardianEmail: 'medinagarrett@young.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Lisa Hall',
-          secondGuardianPhone: '001-605-815-5262x89726',
-          secondGuardianEmail: 'taylorjohn@gmail.com',
-          secondGuardianStatus: 'Online',
-          city: 'Whitakerside',
-          street: '70453 Kirk Course Suite 916',
-          zipCode: '62213',
-          province: 'Washington',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL9709109',
-          passportIdNumber: 'qT53122254',
-          nationality: 'Egyptian',
-          nationalId: '2777888206975572',
-          gender: 'Male',
-          phoneNumber: '471.110.3632',
-          email: 'lindsaylane@williams-harris.com',
-        ),
-        Student(
-          id: '8EGdvJ66R',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2013-09-08'),
-          bloodType: 'B-',
-          weightKg: 43.8,
-          heightCm: 145,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Diana Ochoa',
-          firstGuardianPhone: '227.571.9987',
-          firstGuardianEmail: 'rubenwashington@hotmail.com',
-          firstGuardianStatus: 'Offline',
-          secondGuardianName: 'Rachel Munoz PhD',
-          secondGuardianPhone: '001-208-871-9718x7376',
-          secondGuardianEmail: 'cgordon@pierce.info',
-          secondGuardianStatus: 'Offline',
-          city: 'Khanside',
-          street: '7120 Brittney Passage',
-          zipCode: '58606',
-          province: 'Hawaii',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL7578448',
-          passportIdNumber: 'OI47501527',
-          nationality: 'Egyptian',
-          nationalId: '2963636324432351',
-          gender: 'Male',
-          phoneNumber: '002.472.8675x12705',
-          email: 'andersonrobert@gmail.com',
-        ),
-        Student(
-          id: '8EGv390J67C',
-          name: 'Omar Ahmed Farid',
-          avatarColor: Color(4293870660),
-          dateOfBirth: DateTime.parse('2015-01-04'),
-          bloodType: 'A-',
-          weightKg: 44.6,
-          heightCm: 148,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'Samuel Lawson',
-          firstGuardianPhone: '(137)285-4585',
-          firstGuardianEmail: 'lesterjenna@baker-wu.com',
-          firstGuardianStatus: 'Offline',
-          secondGuardianName: 'Jesus Duran',
-          secondGuardianPhone: '(559)291-3822',
-          secondGuardianEmail: 'preyes@yahoo.com',
-          secondGuardianStatus: 'Online',
-          city: 'Lake Michaelmouth',
-          street: '07101 Hester Meadows Apt. 505',
-          zipCode: '47990',
-          province: 'Wisconsin',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL0303972',
-          passportIdNumber: 'iI15345273',
-          nationality: 'Egyptian',
-          nationalId: '2523725007411252',
-          gender: 'Male',
-          phoneNumber: '700-558-8839',
-          email: 'weeksaustin@hotmail.com',
-        ),
-        Student(
-          id: '8EGz390J65A',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2013-11-15'),
-          bloodType: 'O-',
-          weightKg: 46.9,
-          heightCm: 136,
-          goToHospital: 'Al Salam Hospital',
-          firstGuardianName: 'George Barron',
-          firstGuardianPhone: '001-673-192-8823x7757',
-          firstGuardianEmail: 'rogersvanessa@yahoo.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Jonathan Miller',
-          secondGuardianPhone: '001-847-809-2774x032',
-          secondGuardianEmail: 'mcdonaldalejandro@hotmail.com',
-          secondGuardianStatus: 'Offline',
-          city: 'Lake Maria',
-          street: '1781 Anderson Bypass Apt. 678',
-          zipCode: '61320',
-          province: 'New Mexico',
-          insuranceCompany: 'AXA',
-          policyNumber: 'POL1041317',
-          passportIdNumber: 'xP08361822',
-          nationality: 'Egyptian',
-          nationalId: '2716352158642562',
-          gender: 'Female',
-          phoneNumber: '001-403-536-2872x86196',
-          email: 'juan06@evans-stone.com',
-        ),
-        Student(
-          id: '8EG3s90J66B',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2012-03-06'),
-          bloodType: 'B-',
-          weightKg: 39.9,
-          heightCm: 148,
-          goToHospital: 'City Health Center',
-          firstGuardianName: 'Christopher Watson',
-          firstGuardianPhone: '+1-091-197-8573x10902',
-          firstGuardianEmail: 'daviscynthia@garrett-hall.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Melanie Bryan',
-          secondGuardianPhone: '199-296-4850',
-          secondGuardianEmail: 'rfigueroa@gmail.com',
-          secondGuardianStatus: 'Online',
-          city: 'East Danafurt',
-          street: '716 Jill Extension',
-          zipCode: '06869',
-          province: 'Minnesota',
-          insuranceCompany: 'AXA',
-          policyNumber: 'POL1048291',
-          passportIdNumber: 'PY34010496',
-          nationality: 'Egyptian',
-          nationalId: '2107742253531468',
-          gender: 'Male',
-          phoneNumber: '+1-917-514-3766',
-          email: 'caroline99@gmail.com',
-        ),
-        Student(
-          id: '8EGv3c90J67C',
-          name: 'Omar Ahmed Farid',
-          avatarColor: Color(4293870660),
-          dateOfBirth: DateTime.parse('2012-08-10'),
-          bloodType: 'A+',
-          weightKg: 35.9,
-          heightCm: 139,
-          goToHospital: 'City Health Center',
-          firstGuardianName: 'Robert Pena',
-          firstGuardianPhone: '913-588-8884x91807',
-          firstGuardianEmail: 'bmiller@smith-morgan.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Shelly Robbins',
-          secondGuardianPhone: '211-942-9712x5743',
-          secondGuardianEmail: 'johnsonthomas@edwards.com',
-          secondGuardianStatus: 'Online',
-          city: 'West Erintown',
-          street: '76066 Jacob Cliff',
-          zipCode: '13234',
-          province: 'Colorado',
-          insuranceCompany: 'AXA',
-          policyNumber: 'POL1613649',
-          passportIdNumber: 'Ba29513094',
-          nationality: 'Egyptian',
-          nationalId: '2615677392091925',
-          gender: 'Female',
-          phoneNumber: '(362)335-0010x035',
-          email: 'trose@kane-norton.com',
-        ),
-        Student(
-          id: '8EGr390J65A',
-          name: 'Ahmed Khaled Ali Ibrahim',
-          avatarColor: Color(4279450111),
-          dateOfBirth: DateTime.parse('2012-07-07'),
-          bloodType: 'A+',
-          weightKg: 37.4,
-          heightCm: 148,
-          goToHospital: 'Cleopatra Hospital',
-          firstGuardianName: 'William Roberson',
-          firstGuardianPhone: '978.654.3323x01430',
-          firstGuardianEmail: 'marksmith@gmail.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Mark Smith',
-          secondGuardianPhone: '854-977-3481x7716',
-          secondGuardianEmail: 'stephenbowers@yahoo.com',
-          secondGuardianStatus: 'Offline',
-          city: 'Johnport',
-          street: '660 Figueroa Spurs',
-          zipCode: '22438',
-          province: 'Virginia',
-          insuranceCompany: 'Allianz',
-          policyNumber: 'POL0720281',
-          passportIdNumber: 'EA01578358',
-          nationality: 'Egyptian',
-          nationalId: '2835215733633856',
-          gender: 'Female',
-          phoneNumber: '486.821.4501x334',
-          email: 'tonya49@gmail.com',
-        ),
-        Student(
-          id: '8EGz2390J66B',
-          name: 'Sara Mohamed Hassan',
-          avatarColor: Color(4279286145),
-          dateOfBirth: DateTime.parse('2011-07-16'),
-          bloodType: 'O-',
-          weightKg: 40.8,
-          heightCm: 155,
-          goToHospital: 'City Health Center',
-          firstGuardianName: 'Barry Gill',
-          firstGuardianPhone: '084-995-1606x856',
-          firstGuardianEmail: 'trevor20@gmail.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Kevin Newman',
-          secondGuardianPhone: '+1-907-902-9623x2500',
-          secondGuardianEmail: 'qrodriguez@norton.biz',
-          secondGuardianStatus: 'Offline',
-          city: 'South Eddie',
-          street: '75220 Jill Highway',
-          zipCode: '50038',
-          province: 'New Mexico',
-          insuranceCompany: 'CIB',
-          policyNumber: 'POL1693199',
-          passportIdNumber: 'Gc47739778',
-          nationality: 'Egyptian',
-          nationalId: '2798161679987357',
-          gender: 'Male',
-          phoneNumber: '818-145-2457x96216',
-          email: 'rbrown@yahoo.com',
-        ),
-        Student(
-          id: '8EG3g90J67C',
-          name: 'Omar Ahmed Farid',
-          avatarColor: Color(4293870660),
-          dateOfBirth: DateTime.parse('2014-04-27'),
-          bloodType: 'O-',
-          weightKg: 36.3,
-          heightCm: 135,
-          goToHospital: 'City Health Center',
-          firstGuardianName: 'Yvonne Armstrong',
-          firstGuardianPhone: '+1-913-474-1258x955',
-          firstGuardianEmail: 'colemanthomas@gmail.com',
-          firstGuardianStatus: 'Online',
-          secondGuardianName: 'Lisa Cohen',
-          secondGuardianPhone: '+1-469-484-4161x901',
-          secondGuardianEmail: 'sandra12@bailey.com',
-          secondGuardianStatus: 'Online',
-          city: 'Port Robertchester',
-          street: '930 Chapman Forest',
-          zipCode: '96587',
-          province: 'Colorado',
-          insuranceCompany: 'AXA',
-          policyNumber: 'POL2275709',
-          passportIdNumber: 'vB26744206',
-          nationality: 'Egyptian',
-          nationalId: '2052745994636926',
-          gender: 'Female',
-          phoneNumber: '312-437-0326x279',
-          email: 'staceyclarke@gmail.com',
-        ),
-      ];
+      var urlStr = '${AppConfig.newBackendUrl}/api/lookups/medical-records?type=diseases';
+      if (country.isNotEmpty) urlStr += '&country=$country';
+      if (search.isNotEmpty) urlStr += '&search=${Uri.encodeComponent(search)}';
+
+      final response = await http.get(
+        Uri.parse(urlStr),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'] as List;
+          _diseases.assignAll(data.map((d) => d['name'] as String).toList());
+        }
+      }
+    } catch (e) {
+      print('Error loading diseases: $e');
+    } finally {
+      isLoadingDiseases.value = false;
+    }
+  }
+
+  /// Fetch vaccinations from API with optional search
+  Future<void> fetchVaccinations(String search) async {
+    try {
+      isLoadingVaccinations.value = true;
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final branchData = _storageService.getSelectedBranchData();
+      final country = branchData?['country'] as String? ?? 'EG';
+
+      var urlStr = '${AppConfig.newBackendUrl}/api/lookups/medical-records?type=Vaccinations';
+      if (country.isNotEmpty) urlStr += '&country=$country';
+      if (search.isNotEmpty) urlStr += '&search=${Uri.encodeComponent(search)}';
+
+      final response = await http.get(
+        Uri.parse(urlStr),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'] as List;
+          _vaccinationTypesList.assignAll(data.map((d) => d['name'] as String).toList());
+        }
+      }
+    } catch (e) {
+      print('Error loading vaccinations: $e');
+    } finally {
+      isLoadingVaccinations.value = false;
+    }
+  }
+
+  void _loadGradesFromBranch() {
+    final branchData = _storageService.getSelectedBranchData();
+    if (branchData != null && branchData['grades'] is List && (branchData['grades'] as List).isNotEmpty) {
+      final gradesList = (branchData['grades'] as List)
+          .map((g) => g.toString())
+          .toList();
+      _grades.assignAll(gradesList);
+      print('📚 Loaded ${gradesList.length} grades from branch data');
+    } else {
+      // Fallback: fetch grades from API via students data
+      _loadGradesFromApi();
+    }
+  }
+
+  Future<void> _loadGradesFromApi() async {
+    final branchData = _storageService.getSelectedBranchData();
+    final branchId = branchData?['id'];
+    if (branchId == null) return;
+
+    try {
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=$branchId&page=1&limit=100',
+      );
+
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final students = jsonData['data']['students'] as List;
+          final gradeNames = <String>{};
+          for (final s in students) {
+            final grade = s['grade'] as String?;
+            if (grade != null && grade.isNotEmpty) {
+              gradeNames.add(grade);
+            }
+          }
+          if (gradeNames.isNotEmpty) {
+            final sorted = gradeNames.toList()..sort();
+            _grades.assignAll(sorted);
+            print('📚 Loaded ${gradeNames.length} grades from students API');
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading grades from API: $e');
+    }
+  }
+
+  Future<void> _loadClassesFromApi() async {
+    final branchData = _storageService.getSelectedBranchData();
+    final branchId = branchData?['id'];
+    if (branchId == null) return;
+
+    isLoadingClasses.value = true;
+    try {
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=$branchId&page=1&limit=100',
+      );
+
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final students = jsonData['data']['students'] as List;
+          final classNames = <String>{};
+          for (final s in students) {
+            final classes = s['classes'] as List? ?? [];
+            for (final c in classes) {
+              final name = c['name'] as String?;
+              if (name != null && name.isNotEmpty) {
+                classNames.add(name);
+              }
+            }
+          }
+          _classes.assignAll(classNames.toList()..sort());
+          print('🏫 Loaded ${classNames.length} classes from API');
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading classes: $e');
+    } finally {
+      isLoadingClasses.value = false;
+    }
+  }
+
+  // Load students from API
+  Future<void> _loadStudentsFromApi({String? search, String? grade, String? studentClass}) async {
+    isLoadingStudents.value = true;
+    try {
+      final branchData = _storageService.getSelectedBranchData();
+      final branchId = branchData?['id'];
+      if (branchId == null) {
+        print('⚠️ _loadStudentsFromApi: branchId is null, skipping');
+        return;
+      }
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) {
+        print('⚠️ _loadStudentsFromApi: accessToken is null, skipping');
+        return;
+      }
+
+      var urlStr = '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=$branchId&page=1&limit=100';
+      if (search != null && search.isNotEmpty) urlStr += '&search=${Uri.encodeComponent(search)}';
+      if (grade != null && grade.isNotEmpty) urlStr += '&grade=${Uri.encodeComponent(grade)}';
+      if (studentClass != null && studentClass.isNotEmpty) urlStr += '&studentClass=${Uri.encodeComponent(studentClass)}';
+
+      print('📡 Loading students from: $urlStr');
+
+      final response = await http.get(
+        Uri.parse(urlStr),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('📡 Students API response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final studentsJson = jsonData['data']['students'] as List;
+          _students.assignAll(studentsJson.map((s) => _parseStudent(s)).toList());
+          print('✅ Loaded ${_students.length} students');
+        } else {
+          print('⚠️ Students API returned success: false');
+        }
+      } else {
+        print('❌ Students API failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error loading students: $e');
+    } finally {
+      isLoadingStudents.value = false;
+    }
+  }
+
+  // Parse student from API response
+  Student _parseStudent(Map<String, dynamic> json) {
+    final nameObj = json['name'];
+    final fullName = nameObj is Map
+        ? '${nameObj['given'] ?? ''} ${nameObj['family'] ?? ''}'.trim()
+        : (nameObj?.toString() ?? 'Unknown');
+
+    final classList = json['classes'] as List? ?? [];
+    String? gradeVal;
+    String? classNameVal;
+    String? classIdVal;
+    if (classList.isNotEmpty) {
+      final firstClass = classList.first as Map<String, dynamic>;
+      gradeVal = firstClass['grade'];
+      classNameVal = firstClass['name'];
+      classIdVal = firstClass['id'] as String?;
+    }
+
+    final id = json['id'] as String? ?? '';
+    final colorValue = id.hashCode & 0xFFFFFFFF;
+    final avatarColor = Color(colorValue | 0xFF000000);
+
+    return Student(
+      id: id,
+      name: fullName,
+      avatarColor: avatarColor,
+      aid: json['aid'] as String?,
+      dateOfBirth: json['dateOfBirth'] != null ? DateTime.tryParse(json['dateOfBirth']) : null,
+      gender: json['gender'] as String?,
+      grade: gradeVal ?? json['grade'] as String?,
+      className: classNameVal ?? json['studentClass'] as String?,
+      classId: classIdVal,
+      nationality: json['nationality'] as String?,
+      nationalId: json['documentNumber'] as String?,
+      imageUrl: json['photo'] as String?,
+    );
+  }
+
 }

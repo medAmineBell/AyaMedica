@@ -29,7 +29,7 @@ class CreateBranchRequest {
     };
 
     if (educationType != null && educationType!.isNotEmpty) {
-      json['educationType'] = educationType;
+      json['educationType'] = educationType!.toUpperCase();
     }
 
     if (phone != null && phone!.isNotEmpty) {
@@ -47,27 +47,30 @@ class CreateBranchRequest {
 class BranchAddress {
   final String governorate;
   final String city;
-  final String street;
+  final String? street;
 
   BranchAddress({
     required this.governorate,
     required this.city,
-    required this.street,
+    this.street,
   });
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'governorate': governorate,
       'city': city,
-      'street': street,
     };
+    if (street != null && street!.isNotEmpty) {
+      json['street'] = street;
+    }
+    return json;
   }
 
   factory BranchAddress.fromJson(Map<String, dynamic> json) {
     return BranchAddress(
       governorate: json['governorate'] ?? '',
       city: json['city'] ?? '',
-      street: json['street'] ?? '',
+      street: json['street'],
     );
   }
 }

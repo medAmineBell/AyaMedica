@@ -9,16 +9,19 @@ import 'widgets/dynamic_login_field_widget.dart'; // Import the dynamic field wi
 import 'widgets/password_field_widget.dart'; // Import the new widget
 import 'widgets/login_button_widget.dart'; // Import the new widget
 
-class LoginScreen extends StatefulWidget { // Change to StatefulWidget
+class LoginScreen extends StatefulWidget {
+  // Change to StatefulWidget
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
   _LoginScreenState createState() => _LoginScreenState(); // Create State
 }
 
-class _LoginScreenState extends State<LoginScreen> { // Define State
+class _LoginScreenState extends State<LoginScreen> {
+  // Define State
   // Get the AuthController instance
-  final AuthController authController = Get.put(AuthController()); // Using Get.put for simplicity
+  final AuthController authController =
+      Get.put(AuthController()); // Using Get.put for simplicity
 
   @override
   Widget build(BuildContext context) {
@@ -36,24 +39,30 @@ class _LoginScreenState extends State<LoginScreen> { // Define State
               horizontal: 16,
               vertical: 32,
             ),
-          child: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Language Dropdown Placeholder
-                LanguageDropdownWidget(), // Use the new widget
+                //LanguageDropdownWidget(), // Use the new widget
                 const SizedBox(height: 32),
                 // Welcome Section
                 WelcomeSectionWidget(), // Use the new widget
                 const SizedBox(height: 32),
                 // Country Selection Placeholder
-                CountrySelectionWidget(authController: authController), // Use the new widget and pass the controller
+                CountrySelectionWidget(
+                    authController:
+                        authController), // Use the new widget and pass the controller
                 const SizedBox(height: 32),
                 // Login Method Tabs Placeholder
-                LoginMethodTabsWidget(authController: authController), // Use the new widget and pass the controller
+                LoginMethodTabsWidget(
+                    authController:
+                        authController), // Use the new widget and pass the controller
                 const SizedBox(height: 32),
                 // Dynamic Login Field (changes based on selected method)
-                DynamicLoginFieldWidget(authController: authController), // Use the dynamic field widget
+                DynamicLoginFieldWidget(
+                    authController:
+                        authController), // Use the dynamic field widget
                 const SizedBox(height: 24),
                 // Password Field
                 PasswordFieldWidget(authController: authController),
@@ -65,19 +74,35 @@ class _LoginScreenState extends State<LoginScreen> { // Define State
                     onPressed: () {},
                     child: Text(
                       'forgot_password'.tr,
-                      style: const TextStyle(color: Color(0xFF1339FF), fontSize: 14, fontWeight: FontWeight.w500), // primaryColor
+                      style: const TextStyle(
+                          color: Color(0xFF1339FF),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500), // primaryColor
                     ),
                   ),
                 ),
                 const SizedBox(height: 32),
                 // Login Button
                 LoginButtonWidget(authController: authController),
-                
+
                 // Development Mode Indicator
-                if (AuthController.isDevelopment) _buildDevelopmentIndicator(authController),
-                
+                if (AuthController.isDevelopment)
+                  _buildDevelopmentIndicator(authController),
+
                 // Error Message
-                Obx(() => authController.showLoginError.value ? _buildErrorBanner(authController) : const SizedBox.shrink()),
+                Obx(() => authController.showLoginError.value
+                    ? _buildErrorBanner(authController)
+                    : const SizedBox.shrink()),
+
+                // App Version
+                const SizedBox(height: 16),
+                const Text(
+                  'v1.0.2',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
               ],
             ),
           ),
@@ -85,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> { // Define State
       ),
     );
   }
-  
+
   Widget _buildErrorBanner(AuthController authController) {
     return Container(
       width: double.infinity,
@@ -123,17 +148,17 @@ class _LoginScreenState extends State<LoginScreen> { // Define State
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-               Text(
-  'login_failed_title'.tr,
-  style: const TextStyle(
-    color: Color(0xFF771028),
-    fontSize: 16,
-    fontFamily: 'IBM Plex Sans Arabic',
-    fontWeight: FontWeight.w700,
-    height: 1.50,
-    letterSpacing: 0.16,
-  ),
-),
+                Text(
+                  'login_failed_title'.tr,
+                  style: const TextStyle(
+                    color: Color(0xFF771028),
+                    fontSize: 16,
+                    fontFamily: 'IBM Plex Sans Arabic',
+                    fontWeight: FontWeight.w700,
+                    height: 1.50,
+                    letterSpacing: 0.16,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   authController.loginErrorMessage.value,
@@ -218,4 +243,4 @@ class _LoginScreenState extends State<LoginScreen> { // Define State
       ),
     );
   }
-} 
+}

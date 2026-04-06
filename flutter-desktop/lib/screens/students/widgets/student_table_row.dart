@@ -3,7 +3,6 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 
 class StudentTableRow extends StatelessWidget {
   final Student student;
@@ -53,42 +52,14 @@ class StudentTableRow extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          student.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (student.gender != null) ...[
-                          const SizedBox(height: 2),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: student.gender == 'Male'
-                                  ? Colors.blue.shade50
-                                  : Colors.pink.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              student.gender!,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: student.gender == 'Male'
-                                    ? Colors.blue.shade700
-                                    : Colors.pink.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: Text(
+                      student.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -98,27 +69,14 @@ class StudentTableRow extends StatelessWidget {
             // 2. AID (flex: 2)
             Expanded(
               flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.studentId ?? 'N/A',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  // if (student.studentId != null) ...[
-                  //   const SizedBox(height: 2),
-                  //   Text(
-                  //     'ID: ${student.studentId}',
-                  //     style: TextStyle(
-                  //       fontSize: 11,
-                  //       color: Colors.grey.shade600,
-                  //     ),
-                  //   ),
-                  // ],
-                ],
+              child: Text(
+                student.aid ?? 'N/A',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
@@ -133,148 +91,64 @@ class StudentTableRow extends StatelessWidget {
               ),
             ),
 
-            // 4. Last appointment date (flex: 3)
+            // 4. First Guardian (flex: 3)
             Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.lastAppointmentDate != null
-                        ? DateFormat('dd/MM/yyyy')
-                            .format(student.lastAppointmentDate!)
-                        : 'No appointment',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: student.lastAppointmentDate != null
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade500,
-                    ),
-                  ),
-                  // Show contact info below appointment date
-                  if (student.phoneNumber != null || student.email != null) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        if (student.phoneNumber != null)
-                          Flexible(
-                            child: Text(
-                              student.phoneNumber!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.blue.shade600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (student.email != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        student.email!,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ],
+              child: _buildGuardianCell(
+                name: student.firstGuardianName,
+                phone: student.firstGuardianPhone,
+                status: student.firstGuardianStatus,
+                isFirst: true,
               ),
             ),
 
-            // 5. Last appointment type (flex: 2)
+            // 5. 2nd Guardian (flex: 3)
             Expanded(
-              flex: 2,
-              child: Text(
-                student.lastAppointmentType ?? 'No appointment',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              flex: 3,
+              child: _buildGuardianCell(
+                name: student.secondGuardianName,
+                phone: student.secondGuardianPhone,
+                status: student.secondGuardianStatus,
+                isFirst: false,
               ),
             ),
 
             // 6. EMR (flex: 1)
             Expanded(
               flex: 1,
-              child: Text(
-                student.emrNumber?.toString() ?? '0',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              child: Center(
+                child: Text(
+                  student.emrNumber?.toString() ?? '0',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
 
-            // 7. Actions (flex: 2)
+            // 8. Actions (flex: 1)
             Expanded(
-              flex: 2,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // View Button
-                  IconButton(
-                    onPressed: () {
-                      controller.viewStudent(student);
-                    },
-                    icon: const Icon(Icons.visibility_outlined),
-                    iconSize: 18,
-                    tooltip: 'View Details',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.blue.shade50,
-                      foregroundColor: Colors.blue,
-                      minimumSize: const Size(32, 32),
-                      padding: const EdgeInsets.all(6),
-                    ),
+              flex: 1,
+              child: Center(
+                child: IconButton(
+                  onPressed: () {
+                    homeController.navigateToStudentProfile(
+                      student,
+                      appointmentType: 'View Profile',
+                    );
+                  },
+                  icon: const Icon(Icons.visibility_outlined),
+                  iconSize: 18,
+                  tooltip: 'View Details',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.grey.shade600,
+                    minimumSize: const Size(32, 32),
+                    padding: const EdgeInsets.all(6),
                   ),
-                  const SizedBox(width: 4),
-                  // Edit Button - FIXED
-                  IconButton(
-                    onPressed: () {
-                      print('✏️ Editing student: ${student.name}');
-                      homeController.navigateToEditStudent(student);
-                    },
-                    icon: const Icon(Icons.edit_outlined),
-                    iconSize: 18,
-                    tooltip: 'Edit Student',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.grey.shade100,
-                      foregroundColor: Colors.grey.shade700,
-                      minimumSize: const Size(32, 32),
-                      padding: const EdgeInsets.all(6),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // Delete Button
-                  IconButton(
-                    onPressed: () {
-                      controller.showDeleteConfirmation(student);
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    iconSize: 18,
-                    tooltip: 'Delete Student',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.red.shade50,
-                      foregroundColor: Colors.red,
-                      minimumSize: const Size(32, 32),
-                      padding: const EdgeInsets.all(6),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -282,4 +156,72 @@ class StudentTableRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildGuardianCell({
+    String? name,
+    String? phone,
+    String? status,
+    required bool isFirst,
+  }) {
+    if (name == null || name.isEmpty) {
+      return Text(
+        '-',
+        style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+      );
+    }
+
+    // Determine status color
+    Color statusColor;
+    if (status == 'active' || status == 'verified') {
+      statusColor = Colors.green;
+    } else if (status == 'inactive' || status == 'unverified') {
+      statusColor = Colors.red;
+    } else {
+      statusColor = Colors.grey;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+        if (phone != null && phone.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            phone,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
 }

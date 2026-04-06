@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/auth_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
-import 'package:flutter_getx_app/utils/medplum_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:flutter_getx_app/models/user_profile.dart';
 import 'package:flutter_getx_app/models/branch_model.dart';
@@ -13,7 +13,6 @@ import '../routes/app_pages.dart';
 
 class BranchSelectionController extends GetxController {
   // Services
-  final MedplumService _medplumService = Get.find<MedplumService>();
   final StorageService _storageService = Get.find<StorageService>();
 
   // Observable properties
@@ -47,53 +46,53 @@ class BranchSelectionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadUserData();
+    //_loadUserData();
     _loadBranches();
   }
 
   // Load user data from MedplumService
-  Future<void> _loadUserData() async {
-    try {
-      isLoadingUser.value = true;
+  // Future<void> _loadUserData() async {
+  //   try {
+  //     isLoadingUser.value = true;
 
-      // Get user profile from MedplumService
-      final userProfile = await _medplumService.getCurrentUserProfile();
+  //     // Get user profile from MedplumService
+  //     final userProfile = await _medplumService.getCurrentUserProfile();
 
-      if (userProfile != null) {
-        // Extract user information from profile
-        final userName = _getUserName(userProfile);
-        final userEmail = userProfile.user.email;
-        final initials = _getInitials(userName);
+  //     if (userProfile != null) {
+  //       // Extract user information from profile
+  //       final userName = _getUserName(userProfile);
+  //       final userEmail = userProfile.user.email;
+  //       final initials = _getInitials(userName);
 
-        // Update user model
-        user.value = UserModel(
-          name: userName,
-          aid: userEmail, // Using email as identifier for now
-          initials: initials,
-        );
+  //       // Update user model
+  //       user.value = UserModel(
+  //         name: userName,
+  //         aid: userEmail, // Using email as identifier for now
+  //         initials: initials,
+  //       );
 
-        print('✅ User data loaded: $userName ($userEmail)');
-      } else {
-        // Fallback to default values if no profile available
-        user.value = UserModel(
-          name: 'User',
-          aid: 'No profile available',
-          initials: 'U',
-        );
-        print('⚠️ No user profile available, using default values');
-      }
-    } catch (e) {
-      print('❌ Error loading user data: $e');
-      // Fallback to default values on error
-      user.value = UserModel(
-        name: 'User',
-        aid: 'Error loading profile',
-        initials: 'U',
-      );
-    } finally {
-      isLoadingUser.value = false;
-    }
-  }
+  //       print('✅ User data loaded: $userName ($userEmail)');
+  //     } else {
+  //       // Fallback to default values if no profile available
+  //       user.value = UserModel(
+  //         name: 'User',
+  //         aid: 'No profile available',
+  //         initials: 'U',
+  //       );
+  //       print('⚠️ No user profile available, using default values');
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error loading user data: $e');
+  //     // Fallback to default values on error
+  //     user.value = UserModel(
+  //       name: 'User',
+  //       aid: 'Error loading profile',
+  //       initials: 'U',
+  //     );
+  //   } finally {
+  //     isLoadingUser.value = false;
+  //   }
+  // }
 
   // Load organizations and branches from server
   Future<void> _loadBranches() async {
@@ -108,7 +107,7 @@ class BranchSelectionController extends GetxController {
       // Call the new API
       final response = await http.get(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/organizations'),
+            '${AppConfig.newBackendUrl}/api/organizations'),
         headers: {
           'Content-Type': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
@@ -157,6 +156,31 @@ class BranchSelectionController extends GetxController {
               '   - Unique organizations after deduplication: ${seenOrgIds.length}');
           print(
               '   - Total branches: ${branchesMap.values.expand((b) => b).length}');
+
+          // Count total selectable items (branches + orgs with no branches)
+          final orgsWithNoBranches = rawOrgData
+              .where((o) =>
+                  (branchesMap[o['id']]?.isEmpty ?? true))
+              .toList();
+          final totalBranches =
+              branchesMap.values.expand((b) => b).length;
+          final totalSelectable =
+              totalBranches + orgsWithNoBranches.length;
+
+          // Auto-select if only 1 selectable item
+          if (totalSelectable == 1) {
+            isLoadingBranches.value = false;
+            if (orgsWithNoBranches.length == 1) {
+              // The org itself is the branch
+              selectBranch(orgsWithNoBranches.first);
+            } else {
+              final firstEntry = branchesMap.entries
+                  .firstWhere((e) => e.value.isNotEmpty);
+              expandedOrganizationId.value = firstEntry.key;
+              selectBranch(firstEntry.value.first);
+            }
+            return;
+          }
 
           // Show success message
           Get.snackbar(
@@ -251,8 +275,21 @@ class BranchSelectionController extends GetxController {
     print('🏢 Selected organization: ${organization['name']}');
   }
 
-  /// Toggle organization expansion state
+  /// Toggle organization expansion state, or select directly if no branches
   void toggleOrganization(String organizationId) {
+    // If this org has no branches, treat the org itself as the branch
+    final branches = getBranchesForOrganization(organizationId);
+    if (branches.isEmpty) {
+      final org = rawOrganizations.firstWhereOrNull(
+        (o) => o['id'] == organizationId,
+      );
+      if (org != null) {
+        print('🏢 Organization has no branches, selecting org directly');
+        selectBranch(org);
+        return;
+      }
+    }
+
     if (expandedOrganizationId.value == organizationId) {
       // If clicking the same organization, collapse it
       expandedOrganizationId.value = null;
@@ -291,8 +328,14 @@ class BranchSelectionController extends GetxController {
       final isSchool = accountType.toLowerCase() == 'school';
       final isClinic = accountType.toLowerCase() == 'clinic';
 
-      // Get organization ID from the expanded organization
-      final organizationId = expandedOrganizationId.value ?? 'unknown';
+      // Get organization ID — use branch's own id as fallback (when org itself is the branch)
+      final organizationId = expandedOrganizationId.value ?? branch['id'] as String? ?? 'unknown';
+
+      // Find the organization name from rawOrganizations
+      final org = rawOrganizations.firstWhereOrNull(
+        (o) => o['id'] == organizationId,
+      );
+      final organizationName = org?['name'] ?? branch['name'] ?? '';
 
       // Prepare branch data with organization info
       final branchData = {
@@ -302,12 +345,22 @@ class BranchSelectionController extends GetxController {
         'icon': isSchool ? 'school' : 'clinic',
         'address': branch['address'],
         'phone': branch['phone'],
-        'email': null, // API doesn't have email
+        'email': null,
         'status': branch['status'],
         'parentId': organizationId,
         'organizationId': organizationId,
+        'organizationName': organizationName,
         'isSchool': isSchool,
         'isClinic': isClinic,
+        'grades': branch['grades'] is List ? branch['grades'] : [],
+        'educationType': branch['educationType'],
+        'country': branch['country'],
+        'website': branch['website'],
+        'isHeadquarters': branch['isHeadquarters'],
+        'isAdministrative': branch['isAdministrative'],
+        'totalStudents': branch['totalStudents'],
+        'totalUsers': branch['totalUsers'],
+        'medplumProject': branch['medplumProject'],
         'selected_at': DateTime.now().toIso8601String(),
       };
 
@@ -331,7 +384,8 @@ class BranchSelectionController extends GetxController {
       try {
         final homeController = Get.find<HomeController>();
         homeController.updateSelectedBranchData(branchData);
-        print('✅ Branch data updated in HomeController');
+        await homeController.fetchAndCacheUserProfile();
+        print('✅ Branch data and user profile updated in HomeController');
       } catch (e) {
         print(
             '⚠️ HomeController not found, branch data will be loaded on home screen: $e');

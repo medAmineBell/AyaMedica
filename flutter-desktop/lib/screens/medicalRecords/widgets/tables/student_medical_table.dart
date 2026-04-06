@@ -30,10 +30,10 @@ class StudentMedicalTable extends StatelessWidget {
 
   List<TableColumnConfig<MedicalStudent>> _buildColumns() {
     return [
-      // Student Info
+      // Student full name
       TableColumnConfig<MedicalStudent>(
-        header: 'Student',
-        columnWidth: const FlexColumnWidth(3),
+        header: 'Student full name',
+        columnWidth: const FlexColumnWidth(2.5),
         cellBuilder: (student, index) => Row(
           children: [
             CircleAvatar(
@@ -50,26 +50,14 @@ class StudentMedicalTable extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.fullName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ID: ${student.studentId}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
+              child: Text(
+                student.fullName,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1F2937),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -89,81 +77,48 @@ class StudentMedicalTable extends StatelessWidget {
         ),
       ),
 
-      // Number of Records
+      // AID
       TableColumnConfig<MedicalStudent>(
-        header: 'Records',
+        header: 'AID',
         columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: student.numberOfRecords > 0
-                ? Colors.blue.shade100
-                : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+        cellBuilder: (student, index) => Text(
+          student.studentId,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF374151),
           ),
+        ),
+      ),
+
+      // Number of records
+      TableColumnConfig<MedicalStudent>(
+        header: 'Number of records',
+        columnWidth: const FlexColumnWidth(1.5),
+        cellBuilder: (student, index) => InkWell(
+          onTap: () => onRowTap?.call(student),
           child: Text(
             '${student.numberOfRecords}',
-            style: TextStyle(
-              fontSize: 12,
+            style: const TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: student.numberOfRecords > 0
-                  ? Colors.blue.shade800
-                  : Colors.grey.shade600,
+              color: Color(0xFF3B82F6),
             ),
-            textAlign: TextAlign.center,
           ),
         ),
       ),
 
-      // Last Visit
+      // Last visit
       TableColumnConfig<MedicalStudent>(
-        header: 'Last Visit',
+        header: 'Last visit',
         columnWidth: const FlexColumnWidth(2),
-        cellBuilder: (student, index) => Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 14,
-              color: student.lastVisit != null
-                  ? Colors.green.shade600
-                  : Colors.grey.shade400,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              student.formattedLastVisit,
-              style: TextStyle(
-                fontSize: 12,
-                color: student.lastVisit != null
-                    ? const Color(0xFF374151)
-                    : Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Status
-      TableColumnConfig<MedicalStudent>(
-        header: 'Status',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: student.hasVisited
-                ? Colors.green.shade100
-                : Colors.orange.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            student.hasVisited ? 'Visited' : 'Not Visited',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: student.hasVisited
-                  ? Colors.green.shade800
-                  : Colors.orange.shade800,
-            ),
-            textAlign: TextAlign.center,
+        tooltip: 'Date and time of last medical visit',
+        cellBuilder: (student, index) => Text(
+          student.formattedLastVisit,
+          style: TextStyle(
+            fontSize: 13,
+            color: student.lastVisit != null
+                ? const Color(0xFF374151)
+                : Colors.grey.shade500,
           ),
         ),
       ),

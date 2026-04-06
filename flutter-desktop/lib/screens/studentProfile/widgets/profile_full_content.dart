@@ -6,7 +6,6 @@ import 'guardian_section.dart';
 import 'profile_section.dart';
 import 'contact_details_section.dart';
 import 'address_section.dart';
-import 'health_insurance_section.dart';
 import 'additional_information_section.dart';
 
 class ProfileFullContent extends StatelessWidget {
@@ -44,77 +43,33 @@ class ProfileFullContent extends StatelessWidget {
                     color: Color(0xFF111827),
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    homeController.isSummaryMode.toggle();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Summarize profile',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome,
-                          size: 10,
-                          color: Color(0xFF8B5CF6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Guardian Information
-            const GuardianSection(),
-            
+            GuardianSection(student: student),
+
             const SizedBox(height: 32),
-            
+
             // Profile Section
             ProfileSection(student: student),
-            
+
             const SizedBox(height: 32),
-            
+
             // Contact Details
-            const ContactDetailsSection(),
-            
+            ContactDetailsSection(student: student),
+
             const SizedBox(height: 32),
-            
+
             // Address
-            const AddressSection(),
-            
+            AddressSection(student: student),
+
             const SizedBox(height: 32),
-            
-            // Health Insurance Details
-            const HealthInsuranceSection(),
-            
-            const SizedBox(height: 32),
-            
+
             // Additional Information
-            const AdditionalInformationSection(),
+            AdditionalInformationSection(student: student),
           ],
         ),
       ),

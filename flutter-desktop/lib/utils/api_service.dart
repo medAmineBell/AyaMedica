@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import '../models/appointment.dart';
+import '../models/feedback.dart';
 import '../models/login_response.dart';
 import '../models/organization_model.dart';
 import '../config/app_config.dart';
@@ -246,6 +247,62 @@ class ApiService extends GetxService {
     return token;
   }
 
+  // Fetch user profile
+  Future<Map<String, dynamic>> fetchUserProfile() async {
+    try {
+      final token = _storageService.getAccessToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No access token available. Please login again.',
+        };
+      }
+
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/auth/profile');
+
+      final response = await http
+          .get(
+            url,
+            headers: _headersWithAuth(token),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return {
+            'success': true,
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': false,
+            'error': 'Failed to fetch user profile',
+          };
+        }
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Session expired. Please login again.',
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to fetch user profile',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('💥 API Service: Fetch User Profile Error: $e');
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   // Create appointment API request
   Future<Map<String, dynamic>> createAppointment(
       Appointment appointment) async {
@@ -420,6 +477,207 @@ class ApiService extends GetxService {
         };
       }
     } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get feedback list API request
+  Future<Map<String, dynamic>> getFeedbacks({
+    String? organizationId,
+    String? feedbackRequestId,
+    String? status,
+    int? rating,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (organizationId != null) queryParams['organizationId'] = organizationId;
+      if (feedbackRequestId != null) queryParams['feedbackRequestId'] = feedbackRequestId;
+      if (status != null) queryParams['status'] = status;
+      if (rating != null) queryParams['rating'] = rating.toString();
+
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/feedback').replace(
+        queryParameters: queryParams,
+      );
+
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No access token available. Please login again.',
+        };
+      }
+
+      print('📋 API Service: Fetching feedbacks...');
+      print('📤 API Service: Request URL: ${url.toString()}');
+
+      final response = await http
+          .get(
+            url,
+            headers: _headersWithAuth(token),
+          )
+          .timeout(timeout);
+
+      print('📥 API Service: Response Status: ${response.statusCode}');
+      print('📥 API Service: Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final feedbackResponse = FeedbackResponse.fromJson(jsonDecode(response.body));
+
+        if (feedbackResponse.success) {
+          print('✅ API Service: Feedbacks fetched successfully');
+          print('📊 API Service: Found ${feedbackResponse.feedbacks.length} feedbacks');
+
+          return {
+            'success': true,
+            'feedbacks': feedbackResponse.feedbacks,
+            'pagination': feedbackResponse.pagination,
+          };
+        } else {
+          return {
+            'success': false,
+            'error': 'Failed to fetch feedbacks',
+          };
+        }
+      } else if (response.statusCode == 401) {
+        print('❌ API Service: Unauthorized - Token may be expired');
+        return {
+          'success': false,
+          'error': 'Session expired. Please login again.',
+          'statusCode': response.statusCode,
+        };
+      } else {
+        try {
+          final errorData = jsonDecode(response.body);
+          print('❌ API Service: Error - ${errorData['message']}');
+          return {
+            'success': false,
+            'error': errorData['message'] ?? 'Failed to fetch feedbacks',
+            'statusCode': response.statusCode,
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'error': 'Failed to fetch feedbacks with status ${response.statusCode}',
+            'statusCode': response.statusCode,
+          };
+        }
+      }
+    } catch (e) {
+      print('💥 API Service: Fetch Feedbacks Error: $e');
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get notifications API request
+  Future<Map<String, dynamic>> getNotifications() async {
+    try {
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/notifications');
+
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No access token available. Please login again.',
+        };
+      }
+
+      print('🔔 API Service: Fetching notifications...');
+
+      final response = await http
+          .get(
+            url,
+            headers: _headersWithAuth(token),
+          )
+          .timeout(timeout);
+
+      print('📥 API Service: Notifications Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return {
+            'success': true,
+            'data': responseData['data'],
+          };
+        } else {
+          return {
+            'success': false,
+            'error': 'Failed to fetch notifications',
+          };
+        }
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Session expired. Please login again.',
+          'statusCode': response.statusCode,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to fetch notifications',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('💥 API Service: Fetch Notifications Error: $e');
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Mark notification as read API request
+  Future<Map<String, dynamic>> markNotificationAsRead(String notificationId) async {
+    try {
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/notifications/$notificationId/read');
+
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No access token available. Please login again.',
+        };
+      }
+
+      print('🔔 API Service: Marking notification $notificationId as read...');
+
+      final response = await http
+          .post(
+            url,
+            headers: _headersWithAuth(token),
+          )
+          .timeout(timeout);
+
+      print('📥 API Service: Mark Read Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': responseData,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to mark notification as read',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('💥 API Service: Mark Notification Read Error: $e');
       return {
         'success': false,
         'error': 'Network error: ${e.toString()}',

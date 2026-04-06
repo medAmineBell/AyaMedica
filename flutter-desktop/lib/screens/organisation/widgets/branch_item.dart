@@ -63,6 +63,9 @@ class BranchItem extends StatelessWidget {
   }
 
   Widget _buildBranchIcon() {
+    final branchName = (branch['name'] as String?)?.toLowerCase() ?? '';
+    final isAdministrative = branchName == 'administrative';
+
     return Container(
       width: 40,
       height: 40,
@@ -72,10 +75,10 @@ class BranchItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      child: const Icon(
-        Icons.local_hospital,
+      child: Icon(
+        isAdministrative ? Icons.admin_panel_settings : Icons.local_hospital,
         size: 20,
-        color: Color(0xFF1339FF),
+        color: const Color(0xFF1339FF),
       ),
     );
   }

@@ -139,7 +139,7 @@ class MedicalStudent {
       hour = 12;
     }
 
-    return '$day/$month/$year, ${hour.toString().padLeft(2, '0')}:$minute $period';
+    return '$day/$month/$year - ${hour.toString().padLeft(2, '0')}:$minute ${period.toUpperCase()}';
   }
 
   // Helper to check if visited

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-//import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:flutter_getx_app/models/create_branch_request.dart';
+import 'package:flutter_getx_app/utils/location_service.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
@@ -25,9 +25,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
 
   // Form state
   String _selectedAccountType = 'School';
-  String _selectedEducationType = 'British';
-  String _selectedGovernorate = 'Alexandria';
-  String _selectedCity = 'Alexandria';
+  String _selectedEducationType = 'American';
+  String? _selectedGovernorate;
+  String? _selectedCity;
   bool _isHeadquarters = false;
 
   // Image upload state
@@ -39,14 +39,27 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   List<String> _selectedGrades = [];
   final List<String> _allGrades = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'];
 
+  // Custom grade controllers (for Custom education type)
+  List<TextEditingController> _customGradeControllers = [];
+
+  // Education type to display name mapping
+  static const Map<String, String> _educationTypeFromApi = {
+    'AMERICAN': 'American',
+    'BRITISH': 'British',
+    'NATIONAL': 'National',
+    'CUSTOM': 'Custom',
+  };
+
   late HomeController homeController;
   late BranchManagementController branchController;
+  late LocationService locationService;
 
   @override
   void initState() {
     super.initState();
     homeController = Get.find();
     branchController = Get.find();
+    locationService = Get.find();
     _initializeForm();
   }
 
@@ -57,22 +70,44 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
 
       // Basic info
       _branchNameController.text = branch.name;
-      _selectedAccountType = branch.role;
+      if (branch.role.isNotEmpty) {
+        _selectedAccountType = branch.role;
+      }
 
       // Address
       if (branch.street != null && branch.street!.isNotEmpty) {
         _streetAddressController.text = branch.street!;
       }
+      // Resolve governorate: API returns key (e.g. "CAIRO"), resolve to display name
       if (branch.governorate != null && branch.governorate!.isNotEmpty) {
-        _selectedGovernorate = branch.governorate!;
+        final govName =
+            locationService.getGovernorateNameFromKey(branch.governorate!);
+        _selectedGovernorate = govName ?? branch.governorate!;
+        // Load cities for this governorate
+        final govKey =
+            locationService.getGovernorateKey(_selectedGovernorate!) ??
+                branch.governorate!.toUpperCase();
+        locationService.fetchCities(govKey).then((_) {
+          // Resolve city name after cities are loaded
+          if (branch.city != null && branch.city!.isNotEmpty) {
+            final cityName = locationService.getCityNameFromKey(branch.city!);
+            if (cityName != null) {
+              setState(() => _selectedCity = cityName);
+            } else {
+              setState(() => _selectedCity = branch.city!);
+            }
+          }
+        });
       }
       if (branch.city != null && branch.city!.isNotEmpty) {
         _selectedCity = branch.city!;
       }
 
-      // Education details
+      // Education details - normalize from API uppercase to title case
       if (branch.educationType != null && branch.educationType!.isNotEmpty) {
-        _selectedEducationType = branch.educationType!;
+        final apiType = branch.educationType!.toUpperCase();
+        _selectedEducationType =
+            _educationTypeFromApi[apiType] ?? branch.educationType!;
       }
       if (branch.grades != null && branch.grades!.isNotEmpty) {
         _selectedGrades = List.from(branch.grades!);
@@ -81,16 +116,42 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         _isHeadquarters = branch.isHeadquarters!;
       }
 
-      print('✅ Form initialized with branch data');
-      print('📋 Grades: $_selectedGrades');
-      print('📋 City: $_selectedCity, Governorate: $_selectedGovernorate');
+      // Initialize custom grade controllers if Custom education type
+      if (_selectedEducationType == 'Custom') {
+        _initCustomGradeControllers();
+      }
     }
+  }
+
+  void _initCustomGradeControllers() {
+    _disposeCustomGradeControllers();
+    _customGradeControllers = _selectedGrades
+        .map((grade) => TextEditingController(text: grade))
+        .toList();
+    if (_customGradeControllers.isEmpty) {
+      _customGradeControllers.add(TextEditingController());
+    }
+  }
+
+  void _disposeCustomGradeControllers() {
+    for (final controller in _customGradeControllers) {
+      controller.dispose();
+    }
+    _customGradeControllers = [];
+  }
+
+  void _syncCustomGradesToSelectedGrades() {
+    _selectedGrades = _customGradeControllers
+        .map((c) => c.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList();
   }
 
   @override
   void dispose() {
     _branchNameController.dispose();
     _streetAddressController.dispose();
+    _disposeCustomGradeControllers();
     super.dispose();
   }
 
@@ -216,15 +277,6 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedAccountType,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
             const SizedBox(height: 24),
             _buildQuickInfo(),
           ],
@@ -270,7 +322,8 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           _buildQuickInfoItem(
             icon: Icons.location_on_outlined,
             label: 'Location',
-            value: '$_selectedCity, $_selectedGovernorate',
+            value:
+                '${_selectedCity ?? '-'}, ${_selectedGovernorate ?? '-'}',
           ),
         ],
       ),
@@ -420,9 +473,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           children: [
             _buildBranchTypeSection(),
             const SizedBox(height: 24),
-            _buildBranchDetailsSection(),
-            const SizedBox(height: 24),
             _buildAddressDetailsSection(),
+            const SizedBox(height: 24),
+            _buildBranchDetailsSection(),
             const SizedBox(height: 40),
           ],
         ),
@@ -434,37 +487,19 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     return FormSection(
       title: 'Branch type',
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Account type',
-                value: _selectedAccountType,
-                isRequired: true,
-                items: const ['School', 'Hospital', 'Clinic', 'University'],
-                onChanged: (value) {
-                  setState(() => _selectedAccountType = value!);
-                },
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: CustomTextField(
-                controller: _branchNameController,
-                label: 'Branch name',
-                hint: 'School',
-                isRequired: true,
-                prefixIcon: Icons.business_outlined,
-                onChanged: (value) => setState(() {}),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Branch name is required';
-                  }
-                  return null;
-                },
-              ),
-            ),
-          ],
+        CustomTextField(
+          controller: _branchNameController,
+          label: 'Branch name',
+          hint: 'School',
+          isRequired: true,
+          prefixIcon: Icons.business_outlined,
+          onChanged: (value) => setState(() {}),
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'Branch name is required';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 16),
         Row(
@@ -489,43 +524,147 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     );
   }
 
+  Widget _buildAddressDetailsSection() {
+    return Obx(() {
+      final governorateNames = locationService.governorateNames;
+      final cityNames = locationService.cityNames;
+
+      // Ensure selected values are valid within current lists
+      final validGovernorate = (_selectedGovernorate != null &&
+              governorateNames.contains(_selectedGovernorate))
+          ? _selectedGovernorate
+          : null;
+      final validCity =
+          (_selectedCity != null && cityNames.contains(_selectedCity))
+              ? _selectedCity
+              : null;
+
+      return FormSection(
+        title: 'Address details',
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CustomDropdownField(
+                  label: 'Governorate',
+                  value: validGovernorate,
+                  isRequired: true,
+                  items: governorateNames,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedGovernorate = value;
+                      _selectedCity = null;
+                    });
+                    if (value != null) {
+                      final govKey = locationService.getGovernorateKey(value);
+                      if (govKey != null) {
+                        locationService.fetchCities(govKey);
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: locationService.isLoadingCities.value
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Row(
+                            children: [
+                              Text(
+                                'City',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF374151),
+                                ),
+                              ),
+                              Text(
+                                '*',
+                                style:
+                                    TextStyle(color: Colors.red, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      )
+                    : CustomDropdownField(
+                        label: 'City',
+                        value: validCity,
+                        isRequired: true,
+                        items: cityNames,
+                        onChanged: (value) {
+                          setState(() => _selectedCity = value);
+                        },
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          CustomTextField(
+            controller: _streetAddressController,
+            label: 'Street address',
+            hint: 'Street address',
+          ),
+        ],
+      );
+    });
+  }
+
   Widget _buildBranchDetailsSection() {
     return FormSection(
       title: 'Branch details',
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Education type',
-                value: _selectedEducationType,
-                isRequired: true,
-                icon: Icons.school_outlined,
-                items: const ['British', 'American', 'National'],
-                onChanged: (value) {
-                  setState(() => _selectedEducationType = value!);
-                },
-              ),
-            ),
-          ],
+        CustomDropdownField(
+          label: 'Education type',
+          value: _selectedEducationType,
+          isRequired: true,
+          icon: Icons.school_outlined,
+          items: const ['American', 'British', 'National', 'Custom'],
+          onChanged: (value) {
+            setState(() {
+              final oldType = _selectedEducationType;
+              _selectedEducationType = value!;
+              if (oldType != value) {
+                _selectedGrades.clear();
+                if (value == 'Custom') {
+                  _initCustomGradeControllers();
+                } else {
+                  _disposeCustomGradeControllers();
+                }
+              }
+            });
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Select an education type or enter a custom name here and press enter',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade500,
+          ),
         ),
         const SizedBox(height: 24),
-        _buildMultiGradeSelector(),
+        if (_selectedEducationType == 'Custom')
+          _buildCustomGradeTable()
+        else
+          _buildMultiGradeSelector(),
       ],
     );
   }
 
   Widget _buildMultiGradeSelector() {
-    // Get grades that haven't been selected yet
     final availableGrades =
         _allGrades.where((g) => !_selectedGrades.contains(g)).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            const Text(
+            Text(
               'Grades',
               style: TextStyle(
                 fontSize: 14,
@@ -533,171 +672,86 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                 color: Color(0xFF374151),
               ),
             ),
-            const Text(
+            Text(
               '*',
               style: TextStyle(color: Colors.red, fontSize: 14),
             ),
-            const Spacer(),
-            if (availableGrades.isNotEmpty &&
-                _selectedGrades.length < _allGrades.length)
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _selectedGrades = List.from(_allGrades);
-                  });
-                },
-                icon: const Icon(Icons.add_circle_outline, size: 16),
-                label: const Text('Add All'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF3B82F6),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-              ),
           ],
         ),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _selectedGrades.isEmpty
-                  ? Colors.red.shade200
-                  : const Color(0xFFE5E7EB),
-            ),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Dropdown to add grades
-              if (availableGrades.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey('grade_dropdown_${_selectedGrades.length}'),
-                  value: null,
-                  hint: Row(
-                    children: [
-                      Icon(
-                        Icons.school_outlined,
-                        size: 20,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Select grade to add',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF3B82F6)),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                  ),
-                  items: availableGrades.map((String grade) {
-                    return DropdownMenuItem(
-                      value: grade,
-                      child: Text(grade),
-                    );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedGrades.add(value);
-                      });
-                    }
-                  },
+        if (availableGrades.isNotEmpty)
+          DropdownButtonFormField<String>(
+            key: ValueKey('grade_dropdown_${_selectedGrades.length}'),
+            value: null,
+            hint: Row(
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  size: 20,
+                  color: Colors.grey.shade600,
                 ),
-
-              // Show message when all grades are selected
-              if (availableGrades.isEmpty &&
-                  _selectedGrades.length == _allGrades.length)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
+                const SizedBox(width: 8),
+                Text(
+                  'Grade name goes here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle,
-                          size: 20, color: Colors.green.shade600),
-                      const SizedBox(width: 8),
-                      Text(
-                        'All grades selected',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Selected grades chips
-              if (_selectedGrades.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Selected Grades (${_selectedGrades.length})',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                    if (_selectedGrades.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedGrades.clear();
-                          });
-                        },
-                        child: const Text(
-                          'Clear All',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _selectedGrades.map((grade) {
-                    return _buildGradeChip(grade);
-                  }).toList(),
                 ),
               ],
-            ],
+            ),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            items: availableGrades.map((String grade) {
+              return DropdownMenuItem(
+                value: grade,
+                child: Text(grade),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              if (value != null) {
+                setState(() {
+                  _selectedGrades.add(value);
+                });
+              }
+            },
+          ),
+        const SizedBox(height: 4),
+        Text(
+          'Select from the dropdown or type your own grade naming then press enter',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade500,
           ),
         ),
+        if (_selectedGrades.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _selectedGrades.map((grade) {
+              return _buildGradeChip(grade);
+            }).toList(),
+          ),
+        ],
         if (_selectedGrades.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -740,15 +794,15 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               });
             },
             child: Container(
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
               decoration: const BoxDecoration(
-                color: Color(0xFF3B82F6),
+                color: Color(0xFFEF4444),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.close,
-                size: 10,
+                size: 12,
                 color: Colors.white,
               ),
             ),
@@ -758,56 +812,199 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     );
   }
 
-  Widget _buildAddressDetailsSection() {
-    return FormSection(
-      title: 'Address details',
+  Widget _buildCustomGradeTable() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Governorate',
-                value: _selectedGovernorate,
-                isRequired: true,
-                items: const ['Alexandria', 'Cairo', 'Giza', 'Luxor', 'Aswan'],
-                onChanged: (value) {
-                  setState(() => _selectedGovernorate = value!);
-                },
+            Text(
+              'Grades',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151),
               ),
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'City',
-                value: _selectedCity,
-                isRequired: true,
-                items: const ['Alexandria', 'Cairo', 'Giza', 'Luxor', 'Aswan'],
-                onChanged: (value) {
-                  setState(() => _selectedCity = value!);
-                },
-              ),
+            Text(
+              '*',
+              style: TextStyle(color: Colors.red, fontSize: 14),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        CustomTextField(
-          controller: _streetAddressController,
-          label: 'Street address',
-          hint: 'Street address',
-          isRequired: true,
-          validator: (value) {
-            if (value?.isEmpty ?? true) {
-              return 'Street address is required';
-            }
-            return null;
-          },
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+          ),
+          child: Column(
+            children: [
+              // Table header
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Grade name',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 120,
+                      child: Text(
+                        'Actions',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Table rows
+              ...List.generate(_customGradeControllers.length, (index) {
+                return _buildCustomGradeRow(index);
+              }),
+            ],
+          ),
         ),
+        if (_customGradeControllers.isEmpty ||
+            _customGradeControllers.every((c) => c.text.trim().isEmpty))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Please add at least one grade',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red.shade700,
+              ),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _buildCustomGradeRow(int index) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _customGradeControllers[index],
+              decoration: InputDecoration(
+                hintText: 'Grade name goes here',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade400,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (value) {
+                _syncCustomGradesToSelectedGrades();
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 120,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _customGradeControllers[index].dispose();
+                      _customGradeControllers.removeAt(index);
+                      _syncCustomGradesToSelectedGrades();
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: const Color(0xFFEF4444),
+                  tooltip: 'Delete',
+                ),
+                IconButton(
+                  onPressed: () {
+                    FocusScope.of(context).requestFocus(FocusNode());
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      _customGradeControllers[index].selection =
+                          TextSelection.fromPosition(
+                        TextPosition(
+                            offset:
+                                _customGradeControllers[index].text.length),
+                      );
+                    });
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  color: const Color(0xFF6B7280),
+                  tooltip: 'Edit',
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _customGradeControllers.insert(
+                          index + 1, TextEditingController());
+                    });
+                  },
+                  icon: const Icon(Icons.add_circle_outline, size: 20),
+                  color: const Color(0xFF3B82F6),
+                  tooltip: 'Add below',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   void _handleSaveBranch() {
     if (_formKey.currentState!.validate()) {
+      // For custom education type, sync grades from controllers
+      if (_selectedEducationType == 'Custom') {
+        _syncCustomGradesToSelectedGrades();
+      }
+
       // Validate required fields
       if (_selectedGrades.isEmpty) {
         Get.snackbar(
@@ -820,6 +1017,17 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         return;
       }
 
+      final streetText = _streetAddressController.text.trim();
+
+      // Resolve governorate and city to API keys
+      final governorateKey =
+          locationService.getGovernorateKey(_selectedGovernorate ?? '') ??
+              _selectedGovernorate ??
+              '';
+      final cityKey = locationService.getCityKey(_selectedCity ?? '') ??
+          _selectedCity ??
+          '';
+
       // Create request object
       final request = CreateBranchRequest(
         name: _branchNameController.text.trim(),
@@ -828,9 +1036,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         educationType: _selectedEducationType,
         grades: _selectedGrades,
         address: BranchAddress(
-          governorate: _selectedGovernorate,
-          city: _selectedCity,
-          street: _streetAddressController.text.trim(),
+          governorate: governorateKey,
+          city: cityKey,
+          street: streetText.isEmpty ? null : streetText,
         ),
         phone: null,
         website: null,
@@ -839,7 +1047,6 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       // Check if editing or creating
       if (homeController.isEditingBranch.value &&
           homeController.branchToEdit.value != null) {
-        // UPDATE existing branch
         final branchId = homeController.branchToEdit.value!.id;
         branchController.updateBranch(branchId, request).then((success) {
           if (success) {
@@ -847,7 +1054,6 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           }
         });
       } else {
-        // CREATE new branch
         branchController.createBranch(request).then((success) {
           if (success) {
             homeController.exitBranchForm();

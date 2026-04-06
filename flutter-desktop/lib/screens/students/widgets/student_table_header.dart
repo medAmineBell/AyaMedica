@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/student_controller.dart';
+import 'student_filters_dropdown.dart';
 
 class StudentTableHeader extends StatelessWidget {
   final StudentController controller;
@@ -16,10 +17,10 @@ class StudentTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
@@ -27,8 +28,8 @@ class StudentTableHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: _buildSearchField()),
-          SizedBox(width: 16),
-          _buildActionButtons(),
+          const SizedBox(width: 16),
+          _buildActionButtons(context),
         ],
       ),
     );
@@ -53,32 +54,24 @@ class StudentTableHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.blue.shade400),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         filled: true,
         fillColor: Colors.white,
       ),
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     return Row(
       children: [
+        // Export button
         _ActionButton(
           icon: Icons.download_outlined,
           onTap: _handleExport,
         ),
-        SizedBox(width: 12),
-        _ActionButton(
-          icon: Icons.add,
-          label: 'Add student(s)',
-          onTap: onAddStudent,
-        ),
-        SizedBox(width: 12),
-        _ActionButton(
-          icon: Icons.tune,
-          label: 'Filters',
-          onTap: () {},
-        ),
+        const SizedBox(width: 12),
+        // Filters button with badge
+        _FiltersButton(controller: controller),
       ],
     );
   }
@@ -96,46 +89,107 @@ class StudentTableHeader extends StatelessWidget {
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
-  final String? label;
   final VoidCallback onTap;
 
   const _ActionButton({
     Key? key,
     required this.icon,
-    this.label,
     required this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+        ),
+        child: Center(
+          child: Icon(icon, size: 20, color: Colors.grey.shade700),
+        ),
       ),
-      child: InkWell(
-        onTap: onTap,
+    );
+  }
+}
+
+class _FiltersButton extends StatelessWidget {
+  final StudentController controller;
+
+  const _FiltersButton({Key? key, required this.controller}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final filterCount = controller.activeFilterCount;
+      return InkWell(
+        onTap: () => _showFiltersDropdown(context),
         borderRadius: BorderRadius.circular(8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: Colors.grey.shade700),
-            if (label != null) ...[
-              SizedBox(width: 8),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.tune, size: 20, color: Colors.grey.shade700),
+              const SizedBox(width: 8),
               Text(
-                label!,
+                'Filters',
                 style: TextStyle(
                   color: Colors.grey.shade700,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              if (filterCount > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      filterCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
+      );
+    });
+  }
+
+  void _showFiltersDropdown(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => StudentFiltersDropdown(
+        controller: controller,
+        position: Offset(position.dx + button.size.width - 300, position.dy + button.size.height + 4),
       ),
     );
   }

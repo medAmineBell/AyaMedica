@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../../controllers/appointment_history_controller.dart';
+import '../../../controllers/home_controller.dart';
 import '../../../models/appointment_history_model.dart';
-import '../../../shared/widgets/dynamic_table_widget.dart';
+import '../../../models/student.dart';
+import 'delete_appointment_dialog.dart';
 
 class AppointmentHistoryTableWidget extends StatelessWidget {
   const AppointmentHistoryTableWidget({super.key});
@@ -13,270 +16,351 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
 
     return Obx(() {
       final appointments = controller.displayedAppointments;
+      final isCancelled =
+          controller.selectedFilter.value.toLowerCase() == 'cancelled';
 
-      return DynamicTableWidget<AppointmentHistory>(
-        items: appointments,
-        columns: _buildColumns(),
-        actions: _buildActions(),
-        showActions: true,
-        emptyMessage: 'No appointments found',
-        headerColor: const Color(0xFFF8FAFC),
-        borderColor: const Color(0xFFE2E8F0),
+      if (appointments.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.calendar_today_outlined,
+                  size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              const Text(
+                'No appointments found',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            // Table Header
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: Table(
+                columnWidths: _columnWidths,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildHeaderCell('Name'),
+                      _buildHeaderCellWithIcon('Appointment type'),
+                      _buildHeaderCellWithIcon('Reason'),
+                      _buildHeaderCell('Cases'),
+                      _buildHeaderCellWithSort('Date & time'),
+                      _buildHeaderCell(
+                          isCancelled ? 'Cancellation reason' : 'Actions'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Table Rows
+            Table(
+              columnWidths: _columnWidths,
+              children: appointments
+                  .asMap()
+                  .entries
+                  .map((entry) =>
+                      _buildTableRow(entry.value, entry.key, isCancelled))
+                  .toList(),
+            ),
+          ],
+        ),
       );
     });
   }
 
-  List<TableColumnConfig<AppointmentHistory>> _buildColumns() {
-    return [
-      // Name Column
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Name',
-        columnWidth: const FlexColumnWidth(2.5),
-        cellBuilder: (appointment, index) => Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: _getAvatarColor(appointment.patient.id),
-              child: Text(
-                appointment.patient.initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    appointment.patient.fullName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    appointment.gradeAndClass,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Map<int, TableColumnWidth> get _columnWidths => const {
+        0: FlexColumnWidth(2.0), // Name
+        1: FlexColumnWidth(1.3), // Appointment type
+        2: FlexColumnWidth(1.0), // Type
+        3: FlexColumnWidth(0.7), // Cases
+        4: FlexColumnWidth(1.5), // Date & time
+        5: FlexColumnWidth(1.0), // Actions
+      };
 
-      // Appointment Type
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Appointment type',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (appointment, index) => Text(
-          appointment.formattedType,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF374151),
-          ),
-        ),
-      ),
-
-      // Type (Disease Type)
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Type',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (appointment, index) => Text(
-          appointment.disease ?? '—',
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF374151),
-          ),
-        ),
-      ),
-
-      // Cases
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Cases',
-        columnWidth: const FlexColumnWidth(0.8),
-        cellBuilder: (appointment, index) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '${appointment.cases}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.blue.shade800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-
-      // Date & Time
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Date & time',
-        columnWidth: const FlexColumnWidth(2),
-        cellBuilder: (appointment, index) => Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 14,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              appointment.dateTime,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF374151),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Status
-      TableColumnConfig<AppointmentHistory>(
-        header: 'Status',
-        columnWidth: const FlexColumnWidth(1.2),
-        cellBuilder: (appointment, index) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: appointment.statusBackgroundColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            appointment.statusDisplay,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: appointment.statusColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    ];
-  }
-
-  List<TableActionConfig<AppointmentHistory>> _buildActions() {
-    return [
-      TableActionConfig<AppointmentHistory>(
-        icon: Icons.delete_outline,
-        color: const Color(0xFFDC2626),
-        tooltip: 'Delete',
-        onPressed: (appointment, index) {
-          _showDeleteDialog(appointment);
-        },
-      ),
-      TableActionConfig<AppointmentHistory>(
-        icon: Icons.edit_outlined,
-        color: const Color(0xFF747677),
-        tooltip: 'Edit',
-        onPressed: (appointment, index) {
-          print('Edit appointment: ${appointment.id}');
-        },
-      ),
-      TableActionConfig<AppointmentHistory>(
-        icon: Icons.visibility_outlined,
-        color: const Color(0xFF3B82F6),
-        tooltip: 'View',
-        onPressed: (appointment, index) {
-          print('View appointment: ${appointment.id}');
-        },
-      ),
-    ];
-  }
-
-  void _showDeleteDialog(AppointmentHistory appointment) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 48,
-                color: Colors.orange.shade600,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Delete Appointment',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Are you sure you want to delete this appointment for ${appointment.patient.fullName}?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        // Handle delete
-                        print('Delete appointment: ${appointment.id}');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Delete'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+  Widget _buildHeaderCell(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF64748B),
+          letterSpacing: 0.2,
         ),
       ),
     );
   }
 
-  Color _getAvatarColor(String id) {
-    final hash = id.hashCode;
+  Widget _buildHeaderCellWithIcon(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.help_outline,
+            size: 14,
+            color: Colors.grey.shade400,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCellWithSort(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.arrow_downward,
+            size: 14,
+            color: Colors.grey.shade400,
+          ),
+        ],
+      ),
+    );
+  }
+
+  TableRow _buildTableRow(
+      AppointmentHistory appointment, int index, bool isCancelled) {
+    return TableRow(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+        ),
+      ),
+      children: [
+        _buildNameCell(appointment),
+        _buildTextCell(appointment.formattedType),
+        _buildTextCell(appointment.typeDisplay),
+        _buildTextCell(appointment.casesDisplay),
+        _buildDateTimeCell(appointment),
+        if (isCancelled)
+          _buildTextCell(appointment.cancelReason ?? '--')
+        else
+          _buildActionsCell(appointment),
+      ],
+    );
+  }
+
+  Widget _buildNameCell(AppointmentHistory appointment) {
+    // Generate color from class name hash
     final colors = [
-      const Color(0xFF3B82F6), // Blue
-      const Color(0xFF059669), // Green
-      const Color(0xFF7C3AED), // Purple
-      const Color(0xFFDC2626), // Red
-      const Color(0xFFD97706), // Orange
-      const Color(0xFF0891B2), // Cyan
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEF4444),
+      const Color(0xFFF59E0B),
+      const Color(0xFF06B6D4),
     ];
-    return colors[hash.abs() % colors.length];
+    final colorIndex = appointment.className.hashCode.abs() % colors.length;
+    final avatarColor = colors[colorIndex];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          // Avatar
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: avatarColor,
+            child: const Icon(Icons.person, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
+          // Name and subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appointment.nameDisplay,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  appointment.subtitleDisplay,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextCell(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTimeCell(AppointmentHistory appointment) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        appointment.dateTimeFormatted,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionsCell(AppointmentHistory appointment) {
+    final isFulfilled =
+        appointment.appointmentStatus.toLowerCase() == 'fulfilled';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isFulfilled) ...[
+            // Cancel
+            IconButton(
+              onPressed: () {
+                showDialog(
+                  context: Get.context!,
+                  builder: (_) =>
+                      DeleteAppointmentDialog(appointment: appointment),
+                );
+              },
+              icon: SvgPicture.asset(
+                'assets/svg/note-remove.svg',
+                width: 20,
+                height: 20,
+                color: const Color(0xFFED1F4F),
+              ),
+              iconSize: 20,
+              tooltip: 'Cancel',
+              splashRadius: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+            // Edit
+            IconButton(
+              onPressed: () {
+                // TODO: implement edit
+              },
+              icon: SvgPicture.asset(
+                'assets/svg/edit-2.svg',
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF6B7280),
+                  BlendMode.srcIn,
+                ),
+              ),
+              iconSize: 20,
+              tooltip: 'Edit',
+              splashRadius: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ],
+          // View
+          IconButton(
+            onPressed: () {
+              if (appointment.isWalkIn && appointment.onePatientAid != null) {
+                final student = Student(
+                  id: appointment.onePatientAid!,
+                  name: appointment.fullName ?? '',
+                  avatarColor: const Color(0xFF3B82F6),
+                  aid: appointment.onePatientAid,
+                  grade: appointment.gradeName,
+                  className: appointment.className,
+                  classId: appointment.classId,
+                );
+                final homeController = Get.find<HomeController>();
+                final isFulfilled = appointment.appointmentStatus.toLowerCase() == 'fulfilled';
+                if (isFulfilled) {
+                  homeController.currentStudent.value = student;
+                  homeController.currentAppointmentHistory.value = appointment;
+                  homeController.changeContent(ContentType.checkedOutWalkInSummary);
+                } else {
+                  homeController.navigateToAppointmentStudentProfile(
+                    student,
+                    appointment,
+                  );
+                }
+              } else {
+                // For checkup, follow-up, vaccination — show students table
+                final historyController =
+                    Get.find<AppointmentHistoryController>();
+                historyController.viewAppointmentStudents(appointment);
+              }
+            },
+            icon: SvgPicture.asset(
+              'assets/svg/view.svg',
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280),
+                BlendMode.srcIn,
+              ),
+            ),
+            iconSize: 20,
+            tooltip: 'View',
+            splashRadius: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+        ],
+      ),
+    );
   }
 }

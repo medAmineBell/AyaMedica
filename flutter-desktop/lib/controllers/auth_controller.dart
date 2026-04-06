@@ -242,18 +242,9 @@ class AuthController extends GetxController {
   // Logout the user and clear any session data
   Future<void> logout() async {
     try {
-      // Clear user data and login status
+      // Clear all cached user/session data
       await _storageService.saveLoginStatus(false);
-      await _storageService.clearUserData();
-      await _storageService.clearAccessToken();
-      await _storageService.clearRefreshToken();
-
-      // Clear organization and branch data
-      await _storageService.clearBranchSelectedStatus();
-      await _storageService.clearSelectedBranchData();
-      await _storageService.clearOrganizationId();
-      await _storageService.clearIsSchool();
-      await _storageService.clearIsClinic();
+      await _storageService.clearAll();
 
       // Clear the form fields
       primaryFieldController.clear();

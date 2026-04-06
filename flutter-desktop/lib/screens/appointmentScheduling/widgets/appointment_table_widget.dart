@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import 'appointment_filters_widget.dart';
 import 'appointment_table_data_widget.dart';
+import 'medical_checkup_table_widget.dart';
 import 'student_table_widget.dart';
 import 'appointment_pagination_appointments_widget.dart';
 
@@ -18,9 +19,13 @@ class AppointmentTableWidget extends StatelessWidget {
       // Show student table if we're in student view mode
       if (controller.currentViewMode.value == TableViewMode.appointmentStudents &&
           controller.selectedAppointmentForStudents.value != null) {
-        return StudentTableWidget(
-          appointment: controller.selectedAppointmentForStudents.value!,
-        );
+        final appt = controller.selectedAppointmentForStudents.value!;
+        // Show hygiene table when disease is Hygiene
+        if (appt.type.toLowerCase().contains('checkup') &&
+            appt.disease.toLowerCase() == 'hygiene') {
+          return MedicalCheckupTableWidget(appointment: appt);
+        }
+        return StudentTableWidget(appointment: appt);
       }
       if (controller.currentViewMode.value == TableViewMode.appointmentStudentsNotify &&
           controller.selectedAppointmentForStudents.value != null) {

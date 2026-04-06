@@ -19,7 +19,7 @@ class CalendarHeader extends GetView<CalendarController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Appointment scheduling',
+            'Appointments',
             style: TextStyle(
               color: Color(0xFF2D2E2E),
               fontSize: 20,
@@ -35,7 +35,7 @@ class CalendarHeader extends GetView<CalendarController> {
               const BreadcrumbWidget(
                 items: [
                   BreadcrumbItem(label: 'Ayamedica portal'),
-                  BreadcrumbItem(label: 'Appointment scheduling'),
+                  BreadcrumbItem(label: 'Appointments'),
                 ],
               ),
               PrimaryButton(
@@ -64,16 +64,24 @@ class CalendarHeader extends GetView<CalendarController> {
                 ),
                 padding: const EdgeInsets.all(4),
                 child: Obx(() => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildStatusTab('Check In', controller.checkInCount, 
-                        controller.selectedStatusFilter.value == 'checkIn', isFirst: true),
-                    _buildStatusTab('Checked out', controller.checkedOutCount,
-                        controller.selectedStatusFilter.value == 'checkedOut'),
-                    _buildStatusTab('Cancelled', controller.cancelledCount,
-                        controller.selectedStatusFilter.value == 'cancelled', isLast: true),
-                  ],
-                )),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildStatusTab('Check In', controller.checkInCount,
+                            controller.selectedStatusFilter.value == 'checkIn',
+                            isFirst: true),
+                        _buildStatusTab(
+                            'Checked out',
+                            controller.checkedOutCount,
+                            controller.selectedStatusFilter.value ==
+                                'checkedOut'),
+                        _buildStatusTab(
+                            'Cancelled',
+                            controller.cancelledCount,
+                            controller.selectedStatusFilter.value ==
+                                'cancelled',
+                            isLast: true),
+                      ],
+                    )),
               ),
               const Spacer(),
               // Export Button

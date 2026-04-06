@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
+import 'package:flutter_getx_app/models/appointment.dart';
+import 'package:flutter_getx_app/models/appointment_models.dart';
+import 'package:flutter_getx_app/models/health_status.dart';
+import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/controllers/appointment_scheduling_controller.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -11,28 +17,29 @@ class AppointmentHistoryController extends GetxController {
   final StorageService _storageService = Get.find();
 
   // Reactive variables
-  final RxList<AppointmentHistory> allAppointments = <AppointmentHistory>[].obs;
+  final RxList<AppointmentHistory> allAppointments =
+      <AppointmentHistory>[].obs;
   final RxList<AppointmentHistory> displayedAppointments =
       <AppointmentHistory>[].obs;
-  final Rx<AppointmentHistoryState> state = AppointmentHistoryState.loading.obs;
+  final Rx<AppointmentHistoryState> state =
+      AppointmentHistoryState.loading.obs;
   final RxBool isLoading = false.obs;
+  var isSubmitting = false.obs;
   final RxString searchQuery = ''.obs;
-  final RxString selectedFilter = 'all'.obs;
+  final RxString selectedFilter = 'booked'.obs;
 
-  // Pagination
-  final RxInt currentPage = 1.obs;
-  final RxInt itemsPerPage = 20.obs;
-  final RxInt totalItems = 0.obs;
-  final RxInt totalPages = 0.obs;
-
-  // Organization and Branch IDs
-  final RxString organizationId = ''.obs;
+  // Country and Branch IDs
+  final RxString country = ''.obs;
   final RxString branchId = ''.obs;
 
   // Status counts
   final RxInt checkedInCount = 0.obs;
   final RxInt checkedOutCount = 0.obs;
   final RxInt cancelledCount = 0.obs;
+
+  // View students state
+  final Rxn<Appointment> viewingAppointment = Rxn<Appointment>();
+  final RxBool isLoadingStudents = false.obs;
 
   @override
   void onInit() {
@@ -41,53 +48,35 @@ class AppointmentHistoryController extends GetxController {
     fetchAppointmentHistory();
   }
 
-  /// Load organization and branch IDs from storage
+  /// Load country and branch ID from storage
   void _loadIds() {
     final branchData = _storageService.getSelectedBranchData();
     if (branchData != null) {
       branchId.value = branchData['id'] ?? '';
-      organizationId.value = branchData['organizationId'] ??
-          branchData['parentId'] ??
-          _storageService.getOrganizationId() ??
-          '';
-      print('📍 Organization ID: ${organizationId.value}');
-      print('📍 Branch ID: ${branchId.value}');
+      country.value = branchData['country'] as String? ?? 'EG';
     }
   }
 
   /// GET - Fetch appointment history from API
-  Future<void> fetchAppointmentHistory({int page = 1}) async {
-    if (organizationId.value.isEmpty || branchId.value.isEmpty) {
-      print('❌ Cannot load appointments: Missing organization or branch ID');
-      Get.snackbar(
-        'Error',
-        'Please select a branch first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      state.value = AppointmentHistoryState.error;
+  Future<void> fetchAppointmentHistory() async {
+    if (branchId.value.isEmpty) {
+      state.value = AppointmentHistoryState.empty;
       return;
     }
 
     try {
       isLoading.value = true;
       state.value = AppointmentHistoryState.loading;
-      print('📡 Fetching appointment history...');
 
-      // Get access token
-      final accessToken = await _storageService.getAccessToken();
+      final accessToken = _storageService.getAccessToken();
       if (accessToken == null) {
         throw Exception('No access token found');
       }
 
-      // Build API URL
       final url = Uri.parse(
-        'https://ayamedica-backend.ayamedica.online/api/school-admin/appointments?organizationId=${organizationId.value}&branchId=${branchId.value}&page=$page&limit=${itemsPerPage.value}',
+        '${AppConfig.newBackendUrl}/api/appointment-sessions?country=${country.value}&branchId=${branchId.value}',
       );
-      print('📡 Request URL: $url');
 
-      // Make API request
       final response = await http.get(
         url,
         headers: {
@@ -96,37 +85,21 @@ class AppointmentHistoryController extends GetxController {
         },
       );
 
-      print('📡 Response Status: ${response.statusCode}');
-      print('📡 Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success'] == true) {
-          final historyResponse = AppointmentHistoryResponse.fromJson(jsonData);
+          final historyResponse =
+              AppointmentHistoryResponse.fromJson(jsonData);
 
-          // Update appointments
           allAppointments.assignAll(historyResponse.appointments);
           displayedAppointments.assignAll(historyResponse.appointments);
 
-          // Update pagination
-          currentPage.value = historyResponse.pagination.page;
-          totalItems.value = historyResponse.pagination.total;
-          totalPages.value = historyResponse.pagination.totalPages;
-
-          // Calculate status counts
           _calculateStatusCounts();
 
-          print('✅ Appointment history loaded successfully:');
-          print(' - Appointments: ${allAppointments.length}');
-          print(' - Total: ${totalItems.value}');
-          print(' - Page: ${currentPage.value}/${totalPages.value}');
-
-          // Update state
           state.value = displayedAppointments.isEmpty
               ? AppointmentHistoryState.empty
               : AppointmentHistoryState.success;
 
-          // Reapply filters if any
           if (searchQuery.value.isNotEmpty || selectedFilter.value != 'all') {
             _applySearchAndFilter();
           }
@@ -137,11 +110,10 @@ class AppointmentHistoryController extends GetxController {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error fetching appointment history: $e');
       state.value = AppointmentHistoryState.error;
       Get.snackbar(
         'Error',
-        'Failed to load appointment history: ${e.toString()}',
+        'Failed to load appointments: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -156,26 +128,25 @@ class AppointmentHistoryController extends GetxController {
 
   /// Calculate status counts for the tabs
   void _calculateStatusCounts() {
-    checkedInCount.value =
-        allAppointments.where((a) => a.status.toLowerCase() == 'booked').length;
+    checkedInCount.value = allAppointments
+        .where((a) => a.appointmentStatus.toLowerCase() == 'booked')
+        .length;
     checkedOutCount.value = allAppointments
-        .where((a) => a.status.toLowerCase() == 'fulfilled')
+        .where((a) => a.appointmentStatus.toLowerCase() == 'fulfilled')
         .length;
     cancelledCount.value = allAppointments
-        .where((a) => a.status.toLowerCase() == 'cancelled')
+        .where((a) => a.appointmentStatus.toLowerCase() == 'cancelled')
         .length;
   }
 
   /// SEARCH - Filter appointments by query
   void searchAppointments(String query) {
-    print('🔍 Searching for: "$query"');
     searchQuery.value = query.trim().toLowerCase();
     _applySearchAndFilter();
   }
 
   /// FILTER - Filter by status
   void filterByStatus(String filter) {
-    print('🔍 Filtering by status: $filter');
     selectedFilter.value = filter;
     _applySearchAndFilter();
   }
@@ -187,7 +158,7 @@ class AppointmentHistoryController extends GetxController {
     // Apply status filter
     if (selectedFilter.value != 'all') {
       filtered = filtered.where((appointment) {
-        return appointment.status.toLowerCase() ==
+        return appointment.appointmentStatus.toLowerCase() ==
             selectedFilter.value.toLowerCase();
       }).toList();
     }
@@ -195,58 +166,283 @@ class AppointmentHistoryController extends GetxController {
     // Apply search filter
     if (searchQuery.value.isNotEmpty) {
       filtered = filtered.where((appointment) {
-        final patientName = appointment.patient.fullName.toLowerCase();
-        final studentId = appointment.patient.studentId.toLowerCase();
-        final doctor = appointment.doctor.name.toLowerCase();
+        final grade = appointment.gradeName.toLowerCase();
+        final className = appointment.className.toLowerCase();
         final type = appointment.formattedType.toLowerCase();
-        final gradeClass = appointment.gradeAndClass.toLowerCase();
+        final patientAid = (appointment.onePatientAid ?? '').toLowerCase();
+        final disease = (appointment.disease ?? '').toLowerCase();
 
-        return patientName.contains(searchQuery.value) ||
-            studentId.contains(searchQuery.value) ||
-            doctor.contains(searchQuery.value) ||
+        return grade.contains(searchQuery.value) ||
+            className.contains(searchQuery.value) ||
             type.contains(searchQuery.value) ||
-            gradeClass.contains(searchQuery.value);
+            patientAid.contains(searchQuery.value) ||
+            disease.contains(searchQuery.value);
       }).toList();
     }
 
     displayedAppointments.assignAll(filtered);
-    print(
-        '✅ Filters applied: ${displayedAppointments.length} appointments found');
 
-    // Update state
     state.value = displayedAppointments.isEmpty
         ? AppointmentHistoryState.empty
         : AppointmentHistoryState.success;
   }
 
+  /// Delete an appointment session via API
+  Future<bool> deleteAppointment(String id) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/appointment-sessions/$id',
+      );
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          'Success',
+          'Appointment deleted successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchAppointmentHistory();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete appointment: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Cancel an appointment session via API
+  Future<bool> cancelAppointment(String id, String reason) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/appointment-sessions/$id/cancel',
+      );
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'reason': reason}),
+      );
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          'Success',
+          'Appointment cancelled successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchAppointmentHistory();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to cancel appointment: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
   /// Refresh appointments
   void refreshAppointments() {
-    fetchAppointmentHistory(page: currentPage.value);
+    fetchAppointmentHistory();
   }
-
-  /// Pagination methods
-  void goToPage(int page) {
-    if (page >= 1 && page <= totalPages.value) {
-      fetchAppointmentHistory(page: page);
-    }
-  }
-
-  void previousPage() {
-    if (currentPage.value > 1) {
-      fetchAppointmentHistory(page: currentPage.value - 1);
-    }
-  }
-
-  void nextPage() {
-    if (currentPage.value < totalPages.value) {
-      fetchAppointmentHistory(page: currentPage.value + 1);
-    }
-  }
-
-  /// Check if there are any appointments
-  bool get hasAppointments => allAppointments.isNotEmpty;
 
   /// Check if filters are active
   bool get hasActiveFilters =>
       searchQuery.value.isNotEmpty || selectedFilter.value != 'all';
+
+  /// Get active filter count for badge
+  int get activeFilterCount {
+    int count = 0;
+    if (selectedFilter.value != 'all') count++;
+    if (searchQuery.value.isNotEmpty) count++;
+    return count;
+  }
+
+  /// Fetch patients for an appointment session and show the student table
+  Future<void> viewAppointmentStudents(AppointmentHistory appointment) async {
+    try {
+      isLoadingStudents.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      // Fetch patients from API
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/appointment-sessions/${appointment.id}/patients',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final jsonData = jsonDecode(response.body);
+      if (jsonData['success'] != true) {
+        throw Exception('API returned success: false');
+      }
+
+      final patients = jsonData['data'] as List;
+
+      // Build students directly from patient data
+      final students = patients.map((patient) {
+        final given = patient['nameGiven'] as String? ?? '';
+        final family = patient['nameFamily'] as String? ?? '';
+        final fullName = '$given $family'.trim();
+        final aid = patient['patientAid'] as String? ?? '';
+        final photo = patient['photo'] as String?;
+
+        return Student(
+          id: patient['id'] ?? aid,
+          name: fullName.isNotEmpty ? fullName : aid,
+          imageUrl: photo,
+          avatarColor: Color((fullName.hashCode & 0x00FFFFFF) | 0xFF000000),
+          aid: aid,
+          grade: appointment.gradeName,
+          className: appointment.className,
+          classId: appointment.classId,
+        );
+      }).toList();
+
+      // Set initial statuses from API data into the scheduling controller
+      final schedulingController = Get.find<AppointmentSchedulingController>();
+      for (final patient in patients) {
+        final studentId = patient['id'] ?? '';
+        final patientStatus = patient['patientStatus'] as String? ?? '';
+        final patientNote = patient['patientNote'] as String? ?? '';
+        final key = '${appointment.id}_$studentId';
+
+        if (patientStatus == 'checked') {
+          schedulingController.appointmentStatuses[key] = AppointmentStatus.done;
+        } else if (patientStatus == 'absent') {
+          schedulingController.appointmentStatuses[key] = AppointmentStatus.absent;
+        } else if (patientStatus == 'issue') {
+          schedulingController.appointmentStatuses[key] = AppointmentStatus.notDone;
+        }
+        if (patientNote.isNotEmpty) {
+          schedulingController.appointmentNotes[key] = patientNote;
+        }
+
+        // Restore hygiene statuses for hygiene appointments
+        const hygieneFields = {
+          'Hair': 'hair',
+          'Ears': 'ears',
+          'Nails': 'nails',
+          'Teeth': 'teeth',
+          'Uniform': 'uniform',
+        };
+        for (final entry in hygieneFields.entries) {
+          final statusVal = patient['${entry.value}Status'] as String?;
+          if (statusVal != null && statusVal.isNotEmpty) {
+            final reasonVal = patient['${entry.value}Reason'] as String? ?? '';
+            final hKey = '${appointment.id}_${studentId}_${entry.key}';
+            if (statusVal == 'good') {
+              schedulingController.setHealthStatus(hKey, HealthStatus.good);
+            } else if (statusVal == 'issue') {
+              schedulingController.setHealthStatusWithIssue(
+                  hKey, HealthStatus.issue, reasonVal);
+            }
+          }
+        }
+      }
+
+      // Map appointment type for display
+      String displayType;
+      switch (appointment.appointmentType.toLowerCase()) {
+        case 'checkup':
+          displayType = 'Checkup';
+          break;
+        case 'followup':
+          displayType = 'Follow-Up';
+          break;
+        case 'vaccination':
+          displayType = 'Vaccination';
+          break;
+        default:
+          displayType = appointment.formattedType;
+      }
+
+      // Convert to Appointment model for StudentTableWidget
+      viewingAppointment.value = Appointment(
+        id: appointment.id,
+        type: displayType,
+        allStudents: true,
+        date: appointment.appointmentDate,
+        time: '${appointment.appointmentDate.hour.toString().padLeft(2, '0')}:${appointment.appointmentDate.minute.toString().padLeft(2, '0')}',
+        disease: appointment.disease ?? '',
+        diseaseType: '',
+        grade: appointment.gradeName,
+        className: appointment.className,
+        doctor: '',
+        selectedStudents: students,
+        status: appointment.appointmentStatus.toLowerCase() == 'fulfilled'
+            ? AppointmentStatus.done
+            : AppointmentStatus.notDone,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to load appointment students: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoadingStudents.value = false;
+    }
+  }
+
+  /// Go back from student view to appointment list
+  void backToList() {
+    viewingAppointment.value = null;
+  }
 }

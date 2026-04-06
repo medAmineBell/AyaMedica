@@ -70,258 +70,424 @@ class MobileAppUserAppScreen extends StatelessWidget {
         return DeliveryColor(Color(0xFFE6E7EA), Color(0xFF747677));
     }
   }
-void _showEmailReminderDialog(BuildContext context, MobileAppUserController controller) {
-  if (controller.users.isEmpty) {
-    Get.snackbar('No Users', 'There are no users to send reminders to.',
-        snackPosition: SnackPosition.BOTTOM);
-    return;
-  }
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Send Email Reminder',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'IBM Plex Sans Arabic',
-                  fontSize: 20,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Are you sure you want to send an email reminder to all pending parents?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF747677),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: Obx(() => DynamicTableWidget<UserAppItem>(
-                      items: controller.users.toList(),
-                      columns: [
- TableColumnConfig<UserAppItem>(
-    header: 'Student full name',
-    columnWidth: const FlexColumnWidth(3),
-    cellBuilder: (item, index) => Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: const Color(0xFF007AFF),
-          child: Text(
-            item.initials,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(item.classGroup, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ],
-    ),
-  ),
+  void _showEmailReminderDialog(
+      BuildContext context, MobileAppUserController controller) {
+    if (controller.users.isEmpty) {
+      Get.snackbar('No Users', 'There are no users to send reminders to.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
 
-  // First Guardian
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian',
-    columnWidth: const FlexColumnWidth(2),
-    cellBuilder: (item, index) => _guardianWithStatus(item.firstGuardian),
-  ),
-
-  // First Guardian Phone
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian phone number',
-    cellBuilder: (item, index) => Text(item.firstGuardian.phone),
-  ),
-
-  // First Guardian Email
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian email',
-    cellBuilder: (item, index) => Text(item.firstGuardian.email),
-  ),
-
-  // Second Guardian
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian',
-    columnWidth: const FlexColumnWidth(2),
-    cellBuilder: (item, index) => _guardianWithStatus(item.secondGuardian),
-  ),
-
-  // Second Guardian Phone
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian phone number',
-    cellBuilder: (item, index) => Text(item.secondGuardian.phone),
-  ),
-
-  // Second Guardian Email
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian email',
-    cellBuilder: (item, index) => Text(item.secondGuardian.email),
-  ),
-
-  // Second Guardian Delivery Status
-  TableColumnConfig<UserAppItem>(
-    header: 'Delivery Status',
-    cellBuilder: (item, index) => TableCellHelpers.badgeCell(
-      item.secondGuardian.deliveryStatus,
-      backgroundColor: _deliveryColor(item.secondGuardian.deliveryStatus).bg,
-      textColor: _deliveryColor(item.secondGuardian.deliveryStatus).text,
-    ),
-  ), ],
-                    )),
-              ),
-              const SizedBox(height: 32),
-
-              // 🔹 Email preview box
-              Container(
-                width: double.infinity,
-                height: 267,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                clipBehavior: Clip.antiAlias,
-                decoration: ShapeDecoration(
-                  color: const Color(0xFFFBFCFD),
-                  shape: RoundedRectangleBorder(
-                    side: const BorderSide(
-                      width: 1,
-                      color: Color(0xFFE9E9E9),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Send Email Reminder',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'IBM Plex Sans Arabic',
+                    fontSize: 20,
                   ),
-                  shadows: [
-                    BoxShadow(
-                      color: const Color(0x0C101828),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    )
-                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 5),
-                      child: Text(
-                        'Email subject: Join ayamedica today',
-                        style: TextStyle(
-                          color: Color(0xFFA6A9AC),
-                          fontSize: 14,
-                          fontFamily: 'IBM Plex Sans Arabic',
-                          fontWeight: FontWeight.w700,
-                          height: 1.43,
-                          letterSpacing: 0.28,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text:
-                                'Dear {user name}\n\nWe hope this email finds you well,\nWe would like to invite you to activate your ayamedica account through ',
-                            style: TextStyle(
-                              color: Color(0xFFA6A9AC),
-                              fontSize: 16,
-                              fontFamily: 'IBM Plex Sans Arabic',
-                              fontWeight: FontWeight.w400,
-                              height: 1.50,
+                const SizedBox(height: 16),
+                const Text(
+                  'Are you sure you want to send an email reminder to all pending parents?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF747677),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: Obx(() => DynamicTableWidget<UserAppItem>(
+                        items: controller.users.toList(),
+                        columns: [
+                          TableColumnConfig<UserAppItem>(
+                            header: 'Student full name',
+                            columnWidth: const FlexColumnWidth(3),
+                            cellBuilder: (item, index) => Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: const Color(0xFF007AFF),
+                                  child: Text(
+                                    item.initials,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.fullName,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text(item.classGroup,
+                                        style: const TextStyle(
+                                            color: Colors.grey)),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          TextSpan(
-                            text: 'this link, \n',
-                            style: TextStyle(
-                              color: Color(0xFF1339FF),
-                              fontSize: 16,
-                              fontFamily: 'IBM Plex Sans Arabic',
-                              fontWeight: FontWeight.w400,
-                              height: 1.50,
-                            ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'First Guardian',
+                            columnWidth: const FlexColumnWidth(2),
+                            cellBuilder: (item, index) =>
+                                _guardianWithStatus(item.firstGuardian),
                           ),
-                          TextSpan(
-                            text: 'Thank you, \n\nAyamedica team',
-                            style: TextStyle(
-                              color: Color(0xFFA6A9AC),
-                              fontSize: 16,
-                              fontFamily: 'IBM Plex Sans Arabic',
-                              fontWeight: FontWeight.w400,
-                              height: 1.50,
+                          TableColumnConfig<UserAppItem>(
+                            header: 'First Guardian phone number',
+                            cellBuilder: (item, index) =>
+                                Text(item.firstGuardian.phone),
+                          ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'First Guardian email',
+                            cellBuilder: (item, index) =>
+                                Text(item.firstGuardian.email),
+                          ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'Second Guardian',
+                            columnWidth: const FlexColumnWidth(2),
+                            cellBuilder: (item, index) =>
+                                _guardianWithStatus(item.secondGuardian),
+                          ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'Second Guardian phone number',
+                            cellBuilder: (item, index) =>
+                                Text(item.secondGuardian.phone),
+                          ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'Second Guardian email',
+                            cellBuilder: (item, index) =>
+                                Text(item.secondGuardian.email),
+                          ),
+                          TableColumnConfig<UserAppItem>(
+                            header: 'Delivery Status',
+                            cellBuilder: (item, index) =>
+                                TableCellHelpers.badgeCell(
+                              item.secondGuardian.deliveryStatus,
+                              backgroundColor: _deliveryColor(
+                                      item.secondGuardian.deliveryStatus)
+                                  .bg,
+                              textColor: _deliveryColor(
+                                      item.secondGuardian.deliveryStatus)
+                                  .text,
                             ),
                           ),
                         ],
+                      )),
+                ),
+                const SizedBox(height: 32),
+
+                // Email preview box
+                Container(
+                  width: double.infinity,
+                  height: 267,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: ShapeDecoration(
+                    color: const Color(0xFFFBFCFD),
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(
+                        width: 1,
+                        color: Color(0xFFE9E9E9),
                       ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    shadows: [
+                      BoxShadow(
+                        color: const Color(0x0C101828),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 5),
+                        child: Text(
+                          'Email subject: Join ayamedica today',
+                          style: TextStyle(
+                            color: Color(0xFFA6A9AC),
+                            fontSize: 14,
+                            fontFamily: 'IBM Plex Sans Arabic',
+                            fontWeight: FontWeight.w700,
+                            height: 1.43,
+                            letterSpacing: 0.28,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text:
+                                  'Dear {user name}\n\nWe hope this email finds you well,\nWe would like to invite you to activate your ayamedica account through ',
+                              style: TextStyle(
+                                color: Color(0xFFA6A9AC),
+                                fontSize: 16,
+                                fontFamily: 'IBM Plex Sans Arabic',
+                                fontWeight: FontWeight.w400,
+                                height: 1.50,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'this link, \n',
+                              style: TextStyle(
+                                color: Color(0xFF1339FF),
+                                fontSize: 16,
+                                fontFamily: 'IBM Plex Sans Arabic',
+                                fontWeight: FontWeight.w400,
+                                height: 1.50,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'Thank you, \n\nAyamedica team',
+                              style: TextStyle(
+                                color: Color(0xFFA6A9AC),
+                                fontSize: 16,
+                                fontFamily: 'IBM Plex Sans Arabic',
+                                fontWeight: FontWeight.w400,
+                                height: 1.50,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Footer with Send button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Color(0xFF747677)),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Obx(() => ElevatedButton(
+                            onPressed: controller.isSendingReminder.value
+                                ? null
+                                : () async {
+                                    final nav = Navigator.of(context);
+                                    final success = await controller
+                                        .notifyUnverifiedUsers();
+                                    if (success) {
+                                      nav.pop();
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1339FF),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: controller.isSendingReminder.value
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Send',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          )),
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 🔹 Footer with full-width Send button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Color(0xFF747677)),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // controller.sendEmailReminders();
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1339FF),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Send',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-@override
+  Widget _buildBody(MobileAppUserController controller) {
+    return Obx(() {
+      switch (controller.state.value) {
+        case MobileAppUserState.loading:
+          return const Center(child: CircularProgressIndicator());
+        case MobileAppUserState.error:
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load users',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => controller.fetchUsers(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        case MobileAppUserState.empty:
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline,
+                    size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'No mobile app users found',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => controller.fetchUsers(),
+                  child: const Text('Refresh'),
+                ),
+              ],
+            ),
+          );
+        case MobileAppUserState.success:
+          return _buildTable(controller);
+      }
+    });
+  }
+
+  Widget _buildTable(MobileAppUserController controller) {
+    return Obx(() => DynamicTableWidget<UserAppItem>(
+          items: controller.users.toList(),
+          columns: [
+            TableColumnConfig<UserAppItem>(
+              header: 'Student full name',
+              columnWidth: const FlexColumnWidth(3),
+              cellBuilder: (item, index) => Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: const Color(0xFF007AFF),
+                    child: Text(
+                      item.initials,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.fullName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold)),
+                      Text(item.classGroup,
+                          style: const TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'First Guardian',
+              columnWidth: const FlexColumnWidth(2),
+              cellBuilder: (item, index) =>
+                  _guardianWithStatus(item.firstGuardian),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'First Guardian phone number',
+              cellBuilder: (item, index) =>
+                  Text(item.firstGuardian.phone),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'First Guardian email',
+              cellBuilder: (item, index) =>
+                  Text(item.firstGuardian.email),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'Second Guardian',
+              columnWidth: const FlexColumnWidth(2),
+              cellBuilder: (item, index) =>
+                  _guardianWithStatus(item.secondGuardian),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'Second Guardian phone number',
+              cellBuilder: (item, index) =>
+                  Text(item.secondGuardian.phone),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'Second Guardian email',
+              cellBuilder: (item, index) =>
+                  Text(item.secondGuardian.email),
+            ),
+            TableColumnConfig<UserAppItem>(
+              header: 'Delivery Status',
+              cellBuilder: (item, index) => TableCellHelpers.badgeCell(
+                item.secondGuardian.deliveryStatus,
+                backgroundColor:
+                    _deliveryColor(item.secondGuardian.deliveryStatus)
+                        .bg,
+                textColor:
+                    _deliveryColor(item.secondGuardian.deliveryStatus)
+                        .text,
+              ),
+            ),
+          ],
+        ));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = Get.put(MobileAppUserController());
+    final controller = Get.find<MobileAppUserController>();
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
@@ -335,6 +501,7 @@ void _showEmailReminderDialog(BuildContext context, MobileAppUserController cont
               children: [
                 Expanded(
                   child: TextField(
+                    onChanged: (value) => controller.searchUsers(value),
                     decoration: InputDecoration(
                       hintText: 'search',
                       prefixIcon: const Icon(Icons.search),
@@ -342,17 +509,21 @@ void _showEmailReminderDialog(BuildContext context, MobileAppUserController cont
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF1339FF)),
+                        borderSide:
+                            const BorderSide(color: Color(0xFF1339FF)),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 0),
                     ),
                   ),
                 ),
@@ -374,8 +545,8 @@ void _showEmailReminderDialog(BuildContext context, MobileAppUserController cont
                 const SizedBox(width: 8),
                 Container(
                   height: 44,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
                   clipBehavior: Clip.antiAlias,
                   decoration: ShapeDecoration(
                     shape: RoundedRectangleBorder(
@@ -411,7 +582,8 @@ void _showEmailReminderDialog(BuildContext context, MobileAppUserController cont
                 SizedBox(
                   height: 44,
                   child: ElevatedButton.icon(
-onPressed: () => _showEmailReminderDialog(context, controller),
+                    onPressed: () =>
+                        _showEmailReminderDialog(context, controller),
                     icon: const Icon(Icons.notifications,
                         size: 24, color: Color(0xFFCDF7FF)),
                     label: const Text(
@@ -428,7 +600,8 @@ onPressed: () => _showEmailReminderDialog(context, controller),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1339FF),
                       foregroundColor: const Color(0xFFCDF7FF),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14),
                       textStyle: const TextStyle(
                         fontSize: 14,
                         fontFamily: 'IBM Plex Sans Arabic',
@@ -448,88 +621,8 @@ onPressed: () => _showEmailReminderDialog(context, controller),
             ),
             const SizedBox(height: 24),
 
-            // Dynamic table
-            Expanded(
-              child: Obx(() =>
-                  DynamicTableWidget<UserAppItem>(
-                    items: controller.users.toList(),
-                    columns: [
-                    TableColumnConfig<UserAppItem>(
-    header: 'Student full name',
-    columnWidth: const FlexColumnWidth(3),
-    cellBuilder: (item, index) => Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: const Color(0xFF007AFF),
-          child: Text(
-            item.initials,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(item.classGroup, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ],
-    ),
-  ),
-
-  // First Guardian
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian',
-    columnWidth: const FlexColumnWidth(2),
-    cellBuilder: (item, index) => _guardianWithStatus(item.firstGuardian),
-  ),
-
-  // First Guardian Phone
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian phone number',
-    cellBuilder: (item, index) => Text(item.firstGuardian.phone),
-  ),
-
-  // First Guardian Email
-  TableColumnConfig<UserAppItem>(
-    header: 'First Guardian email',
-    cellBuilder: (item, index) => Text(item.firstGuardian.email),
-  ),
-
-  // Second Guardian
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian',
-    columnWidth: const FlexColumnWidth(2),
-    cellBuilder: (item, index) => _guardianWithStatus(item.secondGuardian),
-  ),
-
-  // Second Guardian Phone
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian phone number',
-    cellBuilder: (item, index) => Text(item.secondGuardian.phone),
-  ),
-
-  // Second Guardian Email
-  TableColumnConfig<UserAppItem>(
-    header: 'Second Guardian email',
-    cellBuilder: (item, index) => Text(item.secondGuardian.email),
-  ),
-
-  // Second Guardian Delivery Status
-  TableColumnConfig<UserAppItem>(
-    header: 'Delivery Status',
-    cellBuilder: (item, index) => TableCellHelpers.badgeCell(
-      item.secondGuardian.deliveryStatus,
-      backgroundColor: _deliveryColor(item.secondGuardian.deliveryStatus).bg,
-      textColor: _deliveryColor(item.secondGuardian.deliveryStatus).text,
-    ),
-  ),
-                    ],
-                  ),
-              ),
-            ),
+            // Main content with loading/error/empty/success states
+            Expanded(child: _buildBody(controller)),
           ],
         ),
       ),

@@ -1,7 +1,7 @@
 import '../../../../models/student.dart';
 
 // Enum for appointment status
-enum AppointmentStatus { done, notDone,cancelled ,received,pendingApproval }
+enum AppointmentStatus { done, notDone, cancelled, received, pendingApproval, absent }
 
 // Model for appointment student combination
 class AppointmentStudent {

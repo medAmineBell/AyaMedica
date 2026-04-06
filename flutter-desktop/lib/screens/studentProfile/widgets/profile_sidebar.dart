@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/student.dart';
 
 import 'sidebar_navigation_menu.dart';
@@ -28,23 +29,7 @@ class ProfileSidebar extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: student.avatarColor,
-                    backgroundImage: AssetImage(student.gender == 'Female'
-                        ? 'assets/images/student_avatar.png'
-                        : 'assets/images/student_avatar_male.png'),
-                    child: student.avatarColor != null
-                        ? null
-                        : Text(
-                            _getInitials(student.name),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
+                  _buildAvatar(),
                   const SizedBox(height: 16),
                   Text(
                     student.name,
@@ -64,7 +49,7 @@ class ProfileSidebar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
-                      student.id,
+                      student.aid!,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF2563EB),
@@ -87,6 +72,33 @@ class ProfileSidebar extends StatelessWidget {
             // Navigation Menu
             const SidebarNavigationMenu(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final imageUrl = student.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      final fullUrl = imageUrl.startsWith('http')
+          ? imageUrl
+          : '${AppConfig.newBackendUrl}$imageUrl';
+      return CircleAvatar(
+        radius: 50,
+        backgroundColor: student.avatarColor,
+        backgroundImage: NetworkImage(fullUrl),
+        onBackgroundImageError: (_, __) {},
+      );
+    }
+    return CircleAvatar(
+      radius: 50,
+      backgroundColor: student.avatarColor,
+      child: Text(
+        _getInitials(student.name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

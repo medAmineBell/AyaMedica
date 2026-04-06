@@ -66,7 +66,7 @@ class SecondSidebar extends GetView<HomeController> {
                     _buildSectionTitle(title: "Appointments management"),
                     Obx(() => MenuItemWidget(
                           icon: 'assets/svg/calendar.svg',
-                          title: 'Appointment scheduling',
+                          title: 'Appointments',
                           isActive: controller.selectedIndex.value == 1,
                           onTap: () {
                             controller.changeIndex(1);
@@ -112,32 +112,43 @@ class SecondSidebar extends GetView<HomeController> {
                                 isLast: true),
                           ],
                         )),
-                    _buildSectionTitle(title: "Resources"),
-                    Obx(() => ExpandableMenuItem(
-                          icon: 'assets/svg/data.svg',
-                          title: 'Resources',
-                          isActive: controller.selectedIndex.value == 4,
-                          isExpanded: controller.expandedMenuItems.contains(4),
-                          onTap: () {
-                            controller.changeIndex(4);
-                            controller.changeContent(ContentType.branches);
-                          },
-                          onExpandTap: () => controller.toggleMenuExpansion(4),
-                          badge: '1',
-                          children: [
-                            _buildSubMenuItem('Branches',
-                                onTap: () => controller
-                                    .changeContent(ContentType.branches),
-                                isFirst: true),
-                            _buildSubMenuItem('Grades setting',
-                                onTap: () => controller
-                                    .changeContent(ContentType.gradesSettings)),
-                            _buildSubMenuItem('users',
-                                onTap: () =>
-                                    controller.changeContent(ContentType.users),
-                                isLast: true),
-                          ],
-                        )),
+                    Obx(() {
+                      if (controller.isRestrictedRole) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle(title: "Resources"),
+                          ExpandableMenuItem(
+                            icon: 'assets/svg/data.svg',
+                            title: 'Resources',
+                            isActive: controller.selectedIndex.value == 4,
+                            isExpanded: controller.expandedMenuItems.contains(4),
+                            onTap: () {
+                              controller.changeIndex(4);
+                              controller.changeContent(ContentType.branches);
+                            },
+                            onExpandTap: () => controller.toggleMenuExpansion(4),
+                            badge: '1',
+                            children: [
+                              _buildSubMenuItem('Branches',
+                                  onTap: () => controller
+                                      .changeContent(ContentType.branches),
+                                  isFirst: true),
+                              _buildSubMenuItem('Grades setting',
+                                  onTap: () => controller
+                                      .changeContent(ContentType.gradesSettings)),
+                              _buildSubMenuItem('School & year calendar',
+                                  onTap: () => controller
+                                      .changeContent(ContentType.schoolYear)),
+                              _buildSubMenuItem('users',
+                                  onTap: () =>
+                                      controller.changeContent(ContentType.users),
+                                  isLast: true),
+                            ],
+                          ),
+                        ],
+                      );
+                    }),
                   ],
                 ))));
   }

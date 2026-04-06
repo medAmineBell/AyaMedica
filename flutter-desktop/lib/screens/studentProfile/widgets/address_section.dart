@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/models/student.dart';
 import 'profile_field.dart';
 
 class AddressSection extends StatelessWidget {
-  const AddressSection({Key? key}) : super(key: key);
+  final Student student;
+
+  const AddressSection({Key? key, required this.student}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,14 +28,14 @@ class AddressSection extends StatelessWidget {
                 Expanded(
                   child: ProfileField(
                     label: 'City',
-                    value: 'City',
+                    value: student.city,
                   ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
                   child: ProfileField(
                     label: 'Street',
-                    value: 'Street',
+                    value: student.street,
                   ),
                 ),
               ],
@@ -43,14 +46,14 @@ class AddressSection extends StatelessWidget {
                 Expanded(
                   child: ProfileField(
                     label: 'Zip Code',
-                    value: 'Zip Code',
+                    value: student.zipCode,
                   ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
                   child: ProfileField(
                     label: 'Province',
-                    value: 'Province',
+                    value: student.province,
                   ),
                 ),
               ],

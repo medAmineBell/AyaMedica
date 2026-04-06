@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/models/chronic_disease.dart';
 import 'package:flutter_getx_app/models/create_student_request.dart';
@@ -20,12 +21,24 @@ class StudentController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
   final RxInt currentPage = 1.obs;
-  final RxInt itemsPerPage = 20.obs;
+  final RxInt itemsPerPage = 10.obs;
   final RxInt totalStudents = 0.obs;
   final RxInt totalPages = 0.obs;
   final RxList<Map<String, dynamic>> defectiveRecords =
       <Map<String, dynamic>>[].obs;
   final RxBool hasDefectiveRecords = false.obs;
+
+  // Filter state
+  final RxSet<String> selectedGrades = <String>{}.obs;
+  final RxSet<String> selectedClasses = <String>{}.obs;
+  final RxList<String> availableClasses = <String>[].obs;
+
+  static const List<String> allGrades = [
+    'G1', 'G2', 'G3', 'G4', 'G5', 'G6',
+    'G7', 'G8', 'G9', 'G10', 'G11', 'G12',
+  ];
+
+  int get activeFilterCount => selectedGrades.length + selectedClasses.length;
 
   // Branch ID from storage
   final RxString selectedBranchId = ''.obs;
@@ -93,7 +106,7 @@ class StudentController extends GetxController {
       // Make API request
       final response = await http.post(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/school-admin/students'),
+            '${AppConfig.newBackendUrl}/api/school-admin/students'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -165,7 +178,7 @@ class StudentController extends GetxController {
       // Make API request
       final response = await http.put(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/school-admin/students/$studentId'),
+            '${AppConfig.newBackendUrl}/api/school-admin/students/$studentId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -235,7 +248,7 @@ class StudentController extends GetxController {
       // Make API request
       final response = await http.delete(
         Uri.parse(
-            'https://ayamedica-backend.ayamedica.online/api/school-admin/students/$studentId'),
+            '${AppConfig.newBackendUrl}/api/school-admin/students/$studentId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -282,7 +295,7 @@ class StudentController extends GetxController {
   }
 
   // Load students from API
-  Future<void> loadStudents({int page = 1}) async {
+  Future<void> loadStudents({int page = 1, String? search, String? grade, String? studentClass}) async {
     if (selectedBranchId.value.isEmpty) {
       print('❌ Cannot load students: No branch ID available');
       Get.snackbar(
@@ -306,9 +319,11 @@ class StudentController extends GetxController {
       }
 
       // Build API URL
-      final url = Uri.parse(
-        'https://ayamedica-backend.ayamedica.online/api/school-admin/branches/${selectedBranchId.value}/students?page=$page&limit=${itemsPerPage.value}',
-      );
+      var urlStr = '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=${selectedBranchId.value}&page=$page&limit=${itemsPerPage.value}';
+      if (search != null && search.isNotEmpty) urlStr += '&search=${Uri.encodeComponent(search)}';
+      if (grade != null && grade.isNotEmpty) urlStr += '&grade=${Uri.encodeComponent(grade)}';
+      if (studentClass != null && studentClass.isNotEmpty) urlStr += '&studentClass=${Uri.encodeComponent(studentClass)}';
+      final url = Uri.parse(urlStr);
 
       // Make API request
       final response = await http.get(
@@ -339,6 +354,15 @@ class StudentController extends GetxController {
           currentPage.value = pagination['page'];
           totalStudents.value = pagination['total'];
           totalPages.value = pagination['totalPages'];
+
+          // Extract unique class names for filter
+          final classNames = <String>{};
+          for (final s in students) {
+            if (s.className != null && s.className!.isNotEmpty) {
+              classNames.add(s.className!);
+            }
+          }
+          availableClasses.value = classNames.toList()..sort();
 
           print('✅ Students loaded successfully:');
           print('   - Students: ${students.length}');
@@ -404,6 +428,10 @@ class StudentController extends GetxController {
         lastAppointmentType = lastAppointment['type'];
       }
 
+      // Parse guardians
+      final firstGuardian = json['firstGuardian'] as Map<String, dynamic>?;
+      final secondGuardian = json['secondGuardian'] as Map<String, dynamic>?;
+
       // Generate avatar color from ID
       final id = json['id'] as String;
       final colorValue = id.hashCode & 0xFFFFFFFF;
@@ -422,7 +450,7 @@ class StudentController extends GetxController {
         nationalId: json['nationalId'],
         passportIdNumber: json['passportNumber'],
         studentId: json['studentId'],
-        aid: json['id'],
+        aid: json['aid'],
         grade: grade ?? json['grade'],
         className: className,
         lastAppointmentDate: lastAppointmentDate,
@@ -431,19 +459,19 @@ class StudentController extends GetxController {
         bloodType: null,
         weightKg: null,
         heightCm: null,
-        city: null,
+        city: json['city'],
         street: null,
         zipCode: null,
         province: null,
-        nationality: null,
-        firstGuardianName: null,
-        firstGuardianPhone: null,
-        firstGuardianEmail: null,
-        firstGuardianStatus: null,
-        secondGuardianName: null,
-        secondGuardianPhone: null,
-        secondGuardianEmail: null,
-        secondGuardianStatus: null,
+        nationality: json['nationality'],
+        firstGuardianName: firstGuardian?['fullName'],
+        firstGuardianPhone: firstGuardian?['phone'],
+        firstGuardianEmail: firstGuardian?['email'],
+        firstGuardianStatus: firstGuardian?['status'],
+        secondGuardianName: secondGuardian?['fullName'],
+        secondGuardianPhone: secondGuardian?['phone'],
+        secondGuardianEmail: secondGuardian?['email'],
+        secondGuardianStatus: secondGuardian?['status'],
         goToHospital: null,
         insuranceCompany: null,
         policyNumber: null,
@@ -469,6 +497,31 @@ class StudentController extends GetxController {
     applyFilters();
   }
 
+  // Filter methods
+  void toggleGrade(String grade) {
+    if (selectedGrades.contains(grade)) {
+      selectedGrades.remove(grade);
+    } else {
+      selectedGrades.add(grade);
+    }
+    applyFilters();
+  }
+
+  void toggleClass(String className) {
+    if (selectedClasses.contains(className)) {
+      selectedClasses.remove(className);
+    } else {
+      selectedClasses.add(className);
+    }
+    applyFilters();
+  }
+
+  void clearFilters() {
+    selectedGrades.clear();
+    selectedClasses.clear();
+    applyFilters();
+  }
+
   // Apply filters
   void applyFilters() {
     filteredStudents.value = _allStudents.where((student) {
@@ -478,7 +531,7 @@ class StudentController extends GetxController {
               .toLowerCase()
               .contains(searchQuery.value.toLowerCase()) ||
           student.id.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-          (student.studentId
+          (student.aid
                   ?.toLowerCase()
                   .contains(searchQuery.value.toLowerCase()) ??
               false) ||
@@ -495,7 +548,15 @@ class StudentController extends GetxController {
       final matchesFilter = selectedFilter.value == 'All' ||
           student.gender == selectedFilter.value;
 
-      return matchesSearch && matchesFilter;
+      // Grade filter
+      final matchesGrade = selectedGrades.isEmpty ||
+          (student.grade != null && selectedGrades.contains(student.grade));
+
+      // Class filter
+      final matchesClass = selectedClasses.isEmpty ||
+          (student.className != null && selectedClasses.contains(student.className));
+
+      return matchesSearch && matchesFilter && matchesGrade && matchesClass;
     }).toList();
 
     print('✅ Filters applied: ${filteredStudents.length} students found');

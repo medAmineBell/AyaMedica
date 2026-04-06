@@ -44,7 +44,7 @@ class Appointment {
       'className': className,
       'doctor': doctor,
       'selectedStudents': selectedStudents.map((student) => student.toJson()).toList(),
-      'status': status, // Include status in JSON
+      'status': status.name, // Include status in JSON
     };
   }
 

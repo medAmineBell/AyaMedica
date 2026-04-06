@@ -96,6 +96,18 @@ class StorageService extends GetxService {
   Future<void> saveIsClinic(bool isClinic) => _box.write('isClinic', isClinic);
   Future<void> clearIsClinic() => _box.remove('isClinic');
 
+  // Branches List Cache
+  List<dynamic>? getBranchesList() => _box.read('branches_list');
+  Future<void> saveBranchesList(List<Map<String, dynamic>> branches) =>
+      _box.write('branches_list', branches);
+  Future<void> clearBranchesList() => _box.remove('branches_list');
+
+  // User Profile
+  Map<String, dynamic>? getUserProfile() => _box.read('user_profile');
+  Future<void> saveUserProfile(Map<String, dynamic> profile) =>
+      _box.write('user_profile', profile);
+  Future<void> clearUserProfile() => _box.remove('user_profile');
+
   // Refresh Token
   String? getRefreshToken() => _box.read('refresh_token');
   Future<void> saveRefreshToken(String token) =>
@@ -105,6 +117,7 @@ class StorageService extends GetxService {
   // Clear all data
   Future<void> clearAll() async {
     await clearUserData();
+    await clearUserProfile();
     await clearAccessToken();
     await clearRefreshToken();
     await clearLoginSession();
@@ -114,5 +127,6 @@ class StorageService extends GetxService {
     await clearSelectedOrganizationData();
     await clearIsSchool();
     await clearIsClinic();
+    await clearBranchesList();
   }
 }

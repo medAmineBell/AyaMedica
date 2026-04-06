@@ -8,8 +8,8 @@ import 'widgets/top_navbar.dart';
 import 'widgets/main_content_layout.dart';
 
 class HomeScreen extends StatelessWidget {
-  final AuthController authController = Get.put(AuthController());
-  final HomeController homeController = Get.put(HomeController());
+  final AuthController authController = Get.find<AuthController>();
+  final HomeController homeController = Get.find<HomeController>();
 
   @override
   Widget build(BuildContext context) {

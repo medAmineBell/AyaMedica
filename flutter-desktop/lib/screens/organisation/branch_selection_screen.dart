@@ -174,7 +174,7 @@ class BranchSelectionScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(left: 20, bottom: 16),
               child: Column(
-                children: branches.asMap().entries.map((branchEntry) {
+                children: branches.reversed.toList().asMap().entries.map((branchEntry) {
                   final branchIndex = branchEntry.key;
                   final branch = branchEntry.value;
                   final isFirst = branchIndex == 0;

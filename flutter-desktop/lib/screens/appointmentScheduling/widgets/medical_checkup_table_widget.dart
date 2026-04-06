@@ -1,327 +1,362 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
-import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/models/appointment_models.dart';
 import 'package:flutter_getx_app/models/health_status.dart';
+import 'package:flutter_getx_app/models/student.dart';
 import 'package:get/get.dart';
+import '../../../controllers/appointment_history_controller.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
-import '../../../shared/widgets/dynamic_table_widget.dart';
 
-class MedicalCheckupTableWidget extends StatelessWidget {
+class MedicalCheckupTableWidget extends StatefulWidget {
   final Appointment appointment;
-  
+  final VoidCallback? onBack;
+
   const MedicalCheckupTableWidget({
     Key? key,
     required this.appointment,
+    this.onBack,
   }) : super(key: key);
 
   @override
+  State<MedicalCheckupTableWidget> createState() =>
+      _MedicalCheckupTableWidgetState();
+}
+
+class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
+  final _searchController = TextEditingController();
+  final _searchQuery = ''.obs;
+  late final AppointmentSchedulingController controller;
+
+  Appointment get appointment => widget.appointment;
+
+  // Category-specific issue options
+  static const Map<String, List<String>> categoryIssueOptions = {
+    'Hair': ['Long', 'Lice', 'Loose', 'Absent'],
+    'Ears': ['Unclean', 'Earwax', 'Absent'],
+    'Nails': ['Unclean', 'Onychophagia/Bitten', 'Polish', 'Long', 'Absent'],
+    'Teeth': ['Unclean', 'Tartar', 'Bad breath', 'Absent'],
+    'Uniform': ['Unclean', 'Violation', 'Absent'],
+  };
+
+  static const _categories = ['Hair', 'Ears', 'Nails', 'Teeth', 'Uniform'];
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<AppointmentSchedulingController>();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ─── helpers ──────────────────────────────────────────────────────────
+
+  bool _isStudentDone(Student student) {
+    for (var cat in _categories) {
+      final key = '${appointment.id}_${student.id}_$cat';
+      final s = controller.getHealthStatus(key);
+      if (s == null) return false;
+    }
+    return true;
+  }
+
+  int _getDoneCount() {
+    return appointment.selectedStudents
+        .where((s) => _isStudentDone(s))
+        .length;
+  }
+
+  int _getNotDoneCount() {
+    return appointment.selectedStudents.length - _getDoneCount();
+  }
+
+  List<Student> _getFilteredStudents() {
+    final query = _searchQuery.value.toLowerCase();
+    return appointment.selectedStudents.where((s) {
+      if (query.isEmpty) return true;
+      return s.name.toLowerCase().contains(query) ||
+          (s.aid ?? s.id).toLowerCase().contains(query);
+    }).toList();
+  }
+
+  // ─── build ────────────────────────────────────────────────────────────
+
+  @override
   Widget build(BuildContext context) {
-
-    
-    final controller = Get.find<AppointmentSchedulingController>();
-    
-    return SizedBox(
-      width: double.infinity, // Take full available width
-      child: Column(
-        children: [
-          _buildHeader(controller),
-          
-          // Table with improved scrolling
-          SizedBox(
-            height: 500, // Fixed height to avoid layout constraints issue
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: _buildDynamicTable(controller),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildDynamicTable(AppointmentSchedulingController controller) {
-    // Define table columns configuration with flexible widths
-    final columns = [
-      TableColumnConfig<Student>(
-        header: 'Student Details',
-        columnWidth: const FlexColumnWidth(3.0), // Flexible width for student details
-        cellBuilder: (student, index) => _buildStudentCell(student),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Hair',
-        columnWidth: const FlexColumnWidth(1.5), // Flexible width for health columns
-        cellBuilder: (student, index) => _buildHealthStatusCell('Hair', student, controller),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Ears',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => _buildHealthStatusCell('Ears', student, controller),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Nails',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => _buildHealthStatusCell('Nails', student, controller),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Teeth',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => _buildHealthStatusCell('Teeth', student, controller),
-      ),
-      TableColumnConfig<Student>(
-        header: 'Uniform',
-        columnWidth: const FlexColumnWidth(1.5),
-        cellBuilder: (student, index) => _buildHealthStatusCell('Uniform', student, controller),
-      ),
-    ];
-
-    return SizedBox(
-      width: double.infinity, // Take full available width
-      child: DynamicTableWidget<Student>(
-        items: appointment.selectedStudents,
-        columns: columns,
-        showActions: false, // No action column needed for this table
-        headerColor: Colors.grey.shade50,
-        borderColor: Colors.grey.shade200,
-      ),
-    );
-  }
-
-  Widget _buildHeader(AppointmentSchedulingController controller) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         children: [
-          // Back button row
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  try {
-                    final appointmentController = Get.find<AppointmentSchedulingController>();
-                    appointmentController.currentViewMode.value = TableViewMode.appointments;
-                    print('Back button pressed - navigating to appointments table');
-                  } catch (e) {
-                    print('Error navigating back: $e');
-                    // Fallback navigation
-                    Get.back();
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.arrow_back,
-                        size: 16,
-                        color: Color(0xFF6B7280),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Back',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'Medical Checkup',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-            ],
+          _buildHeader(),
+          _buildSearchAndStatusBar(),
+          Expanded(
+            child: Obx(() {
+              // trigger reactivity on health statuses & search
+              controller.healthStatuses.length;
+              _searchQuery.value;
+
+              final students = _getFilteredStudents();
+
+              return SingleChildScrollView(
+                child: _buildTable(students),
+              );
+            }),
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Top row with search and status
-          Row(
-            children: [
-              // Search bar - flexible width
-              Expanded(
-                flex: 3,
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 12),
-                      Icon(Icons.search, color: Colors.grey.shade600, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search students...',
-                            border: InputBorder.none,
-                            hintStyle: TextStyle(color: Colors.grey.shade500),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(width: 16),
-              
-              // Complete Appointment Button
-              _buildCompleteAppointmentButton(controller),
-              
-              const SizedBox(width: 16),
-              
-              // Status indicators - flexible
-              Expanded(
-                flex: 2,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildStatusBadge(
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                      count: _getDoneCount(controller),
-                      label: 'Done',
-                    ),
-                    
-                    const SizedBox(width: 12),
-                    
-                    _buildStatusBadge(
-                      icon: Icons.cancel,
-                      color: Colors.red,
-                      count: _getNotDoneCount(controller),
-                      label: 'Not Done',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          // Progress indicator
-          const SizedBox(height: 12),
-          _buildProgressIndicator(controller),
         ],
       ),
     );
   }
 
-  Widget _buildProgressIndicator(AppointmentSchedulingController controller) {
-    final total = appointment.selectedStudents.length;
-    final completed = _getDoneCount(controller);
-    final progress = total > 0 ? completed / total : 0.0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Progress: $completed of $total students completed',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
+  // ─── HEADER (matches Figma) ───────────────────────────────────────────
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              if (widget.onBack != null) {
+                widget.onBack!();
+              } else {
+                controller.switchToAppointmentView();
+              }
+            },
+            icon: const Icon(Icons.arrow_back,
+                color: Color(0xFF6B7280), size: 20),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          const SizedBox(width: 16),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: _classColor(appointment.className),
+            child: Text(
+              appointment.className.isNotEmpty
+                  ? appointment.className.substring(0, 2).toUpperCase()
+                  : 'CL',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey.shade200,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            progress == 1.0 ? Colors.green : Colors.blue,
           ),
-        ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${appointment.className} | ${appointment.grade}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${appointment.type} | ${appointment.disease}',
+                  style: const TextStyle(
+                      fontSize: 14, color: Color(0xFF6B7280)),
+                ),
+              ],
+            ),
+          ),
+          if (appointment.status != AppointmentStatus.done)
+            ElevatedButton(
+              onPressed: () => _completeAppointment(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                elevation: 0,
+              ),
+              child: const Text('Complete Appointment'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ─── SEARCH + STATUS BADGES ──────────────────────────────────────────
+
+  Widget _buildSearchAndStatusBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 280,
+            height: 40,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => _searchQuery.value = v,
+              decoration: InputDecoration(
+                hintText: 'search',
+                hintStyle:
+                    const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                prefixIcon: const Icon(Icons.search,
+                    color: Color(0xFF9CA3AF), size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF111827)),
+            ),
+          ),
+          const Spacer(),
+          Obx(() {
+            controller.healthStatuses.length; // reactivity
+            return Row(
+              children: [
+                _buildBadge(
+                  icon: Icons.check_circle,
+                  color: const Color(0xFF059669),
+                  bg: const Color(0xFFDCFCE7),
+                  count: _getDoneCount(),
+                  label: 'Done',
+                ),
+                const SizedBox(width: 8),
+                _buildBadge(
+                  icon: Icons.cancel,
+                  color: const Color(0xFFDC2626),
+                  bg: const Color(0xFFFEE2E2),
+                  count: _getNotDoneCount(),
+                  label: 'Not Done',
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge({
+    required IconData icon,
+    required Color color,
+    required Color bg,
+    required int count,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$count $label',
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w500, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── TABLE ────────────────────────────────────────────────────────────
+
+  Widget _buildTable(List<Student> students) {
+    return Table(
+      columnWidths: const {
+        0: FlexColumnWidth(2.5), // Student
+        1: FlexColumnWidth(2),   // Hair
+        2: FlexColumnWidth(2),   // Ears
+        3: FlexColumnWidth(2),   // Nails
+        4: FlexColumnWidth(2),   // Teeth
+        5: FlexColumnWidth(2),   // Uniform
+      },
+      children: [
+        _buildHeaderRow(),
+        ...students.map((s) => _buildStudentRow(s)),
       ],
     );
   }
 
-  Widget _buildStatusBadge({
-    required IconData icon,
-    required Color color,
-    required int count,
-    required String label,
-  }) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                '$count $label',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+  TableRow _buildHeaderRow() {
+    return TableRow(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF9FAFB),
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      children: [
+        _headerCell('Student full name'),
+        ..._categories.map((c) => _headerCell(c)),
+      ],
+    );
+  }
+
+  Widget _headerCell(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF6B7280),
         ),
       ),
     );
   }
 
+  TableRow _buildStudentRow(Student student) {
+    return TableRow(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      children: [
+        _buildStudentCell(student),
+        ..._categories
+            .map((cat) => _buildHealthCell(cat, student)),
+      ],
+    );
+  }
+
+  // ─── STUDENT CELL ─────────────────────────────────────────────────────
+
   Widget _buildStudentCell(Student student) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: student.avatarColor,
-            child: Text(
-              _getInitials(student.name),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          _buildAvatar(student),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -340,7 +375,7 @@ class MedicalCheckupTableWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  student.id,
+                  student.aid ?? student.id,
                   style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF6B7280),
@@ -356,80 +391,101 @@ class MedicalCheckupTableWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildHealthStatusCell(String category, Student student, AppointmentSchedulingController controller) {
+  Widget _buildAvatar(Student student) {
+    if (student.imageUrl != null && student.imageUrl!.isNotEmpty) {
+      String url = student.imageUrl!;
+      // Prepend backend host if the URL is a relative path
+      if (url.startsWith('/')) {
+        url = '${AppConfig.newBackendUrl}$url';
+      }
+      return CircleAvatar(
+        radius: 18,
+        backgroundImage: NetworkImage(url),
+        backgroundColor: student.avatarColor,
+        onBackgroundImageError: (_, __) {},
+      );
+    }
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: student.avatarColor,
+      child: const Icon(Icons.person, color: Colors.white, size: 20),
+    );
+  }
+
+  // ─── HEALTH STATUS CELL ───────────────────────────────────────────────
+
+  Widget _buildHealthCell(String category, Student student) {
     return Obx(() {
-      final status = _getHealthStatus(category, student, controller);
-      
+      controller.healthStatuses.length; // reactivity
+      final key = '${appointment.id}_${student.id}_$category';
+      final status = controller.getHealthStatus(key);
+
       return Container(
-        padding: const EdgeInsets.all(8),
-        child: status == null 
-          ? _buildStatusSelector(category, student, controller)
-          : _buildStatusDisplay(status, category, student, controller),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        child: status == null
+            ? _buildSelector(category, student)
+            : _buildStatusChip(status, category, student),
       );
     });
   }
 
-  Widget _buildStatusSelector(String category, Student student, AppointmentSchedulingController controller) {
+  Widget _buildSelector(String category, Student student) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Good button
-        Expanded(
-          child: GestureDetector(
-            onTap: () => _setHealthStatus(category, student, controller, HealthStatus.good),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.green.shade300),
-              ),
-              child: Text(
-                'Good',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.green.shade700,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+        GestureDetector(
+          onTap: () {
+            final key = '${appointment.id}_${student.id}_$category';
+            controller.setHealthStatus(key, HealthStatus.good);
+            _syncStudentHygiene(student);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF86EFAC)),
+            ),
+            child: const Text(
+              'Good',
+              style: TextStyle(
+                color: Color(0xFF15803D),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
         ),
-        
-        const SizedBox(width: 6),
-        
-        // Issue button - Modified to capture tap position
-        Expanded(
-          child: GestureDetector(
-            onTapDown: (TapDownDetails details) => _showIssuePopupMenu(
-              category, 
-              student, 
-              controller, 
-              details.globalPosition
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('Or',
+              style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+        ),
+        GestureDetector(
+          onTapDown: (d) =>
+              _showIssueMenu(category, student, d.globalPosition),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFCA5A5)),
             ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.red.shade300),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Issue',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  'Issue',
+                  style: TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(width: 2),
-                  Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.red.shade700),
-                ],
-              ),
+                ),
+                SizedBox(width: 2),
+                Icon(Icons.keyboard_arrow_down,
+                    size: 14, color: Color(0xFFDC2626)),
+              ],
             ),
           ),
         ),
@@ -437,426 +493,274 @@ class MedicalCheckupTableWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusDisplay(HealthStatusData status, String category, Student student, AppointmentSchedulingController controller) {
+  Widget _buildStatusChip(
+      HealthStatusData status, String category, Student student) {
     final isGood = status.status == HealthStatus.good;
-    
-    if (isGood) {
-      // Show only "Good" status with undo button for good status
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Good status indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color:
+                  isGood ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade300),
+              border: Border.all(
+                color: isGood
+                    ? const Color(0xFF86EFAC)
+                    : const Color(0xFFFCA5A5),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade700,
-                  size: 16,
+                  isGood ? Icons.check_circle : Icons.cancel,
+                  color: isGood
+                      ? const Color(0xFF15803D)
+                      : const Color(0xFFDC2626),
+                  size: 14,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Good',
-                  style: TextStyle(
-                    color: Colors.green.shade700,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    isGood
+                        ? 'Good - done'
+                        : status.issueDescription ?? '',
+                    style: TextStyle(
+                      color: isGood
+                          ? const Color(0xFF15803D)
+                          : const Color(0xFFDC2626),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
+                if (!isGood) ...[
+                  const SizedBox(width: 2),
+                  const Icon(Icons.keyboard_arrow_down,
+                      size: 14, color: Color(0xFFDC2626)),
+                ],
               ],
             ),
           ),
-          
-          const SizedBox(width: 8),
-          
-          // Undo button
-          GestureDetector(
-            onTap: () => _undoHealthStatus(category, student, controller),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade300),
-              ),
-              child: Icon(
-                Icons.undo,
-                color: Colors.blue.shade700,
-                size: 14,
-              ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      // Show full status display for issues
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Issue status indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.red.shade100,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red.shade300),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.cancel,
-                  color: Colors.red.shade700,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Issue',
-                  style: TextStyle(
-                    color: Colors.red.shade700,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Issue description
-          if (status.issueDescription != null) ...[
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Text(
-                status.issueDescription!,
-                style: TextStyle(
-                  color: Colors.orange.shade800,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ],
-          
-          // Undo button
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => _undoHealthStatus(category, student, controller),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade300),
-              ),
-              child: Icon(
-                Icons.undo,
-                color: Colors.blue.shade700,
-                size: 14,
-              ),
-            ),
-          ),
-        ],
-      );
+        ),
+        const SizedBox(width: 6),
+        GestureDetector(
+          onTap: () {
+            final key = '${appointment.id}_${student.id}_$category';
+            controller.clearHealthStatus(key);
+            _syncStudentHygiene(student);
+          },
+          child: const Icon(Icons.undo, color: Color(0xFF6B7280), size: 18),
+        ),
+      ],
+    );
+  }
+
+  // ─── SYNC HYGIENE TO API ────────────────────────────────────────────
+
+  /// Syncs hygiene data to API only when ALL 5 categories for the student are filled.
+  void _syncStudentHygiene(Student student) {
+    // Check if every category has a status
+    for (final cat in _categories) {
+      final key = '${appointment.id}_${student.id}_$cat';
+      if (controller.getHealthStatus(key) == null) return; // not complete yet
     }
+
+    // All categories filled — send to API
+    final statuses = <String, HealthStatusData?>{};
+    for (final cat in _categories) {
+      final key = '${appointment.id}_${student.id}_$cat';
+      statuses[cat] = controller.getHealthStatus(key);
+    }
+    controller.updatePatientHygieneStatus(
+      sessionId: appointment.id!,
+      patientAid: student.aid ?? student.id,
+      studentId: student.id,
+      categoryStatuses: statuses,
+    );
   }
 
-  void _setHealthStatus(String category, Student student, AppointmentSchedulingController controller, HealthStatus status) {
-    final key = '${appointment.id}_${student.id}_$category';
-    controller.setHealthStatus(key, status);
-  }
+  // ─── ISSUE MENU ───────────────────────────────────────────────────────
 
-  // Modified to accept tap position
-  void _showIssuePopupMenu(String category, Student student, AppointmentSchedulingController controller, Offset tapPosition) {
-    final List<String> issueOptions = [
-      'Missing',
-      'Damaged', 
-      'Broken',
-      'Other',
-    ];
-
-    // Calculate position based on tap coordinates
-    final RenderBox overlay = Get.overlayContext!.findRenderObject() as RenderBox;
-    
-    // Create a small rect at the tap position for the popup
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        tapPosition,
-        tapPosition.translate(1, 1), // Small rect at tap position
-      ),
+  void _showIssueMenu(
+      String category, Student student, Offset tapPosition) {
+    final options = categoryIssueOptions[category] ?? [];
+    final overlay =
+        Get.overlayContext!.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(tapPosition, tapPosition.translate(1, 1)),
       Offset.zero & overlay.size,
     );
-    
-    // Show popup menu at the tap position
+
     showMenu<String>(
       context: Get.context!,
       position: position,
-      items: issueOptions.map((option) => PopupMenuItem<String>(
-        value: option,
-        child: Row(
-          children: [
-            _getIssueIcon(option),
-            const SizedBox(width: 12),
-            Text(option),
-          ],
-        ),
-      )).toList(),
+      items: options
+          .map((o) => PopupMenuItem<String>(value: o, child: Text(o)))
+          .toList(),
     ).then((value) {
       if (value != null) {
-        if (value == 'Other') {
-          // Show custom issue dialog for "Other"
-          _showCustomIssueDialog(category, student, controller);
+        if (value == 'Absent') {
+          // Mark ALL categories as Absent for this student
+          for (final cat in _categories) {
+            final k = '${appointment.id}_${student.id}_$cat';
+            controller.setHealthStatusWithIssue(k, HealthStatus.issue, 'Absent');
+          }
         } else {
-          // Set predefined issue
           final key = '${appointment.id}_${student.id}_$category';
           controller.setHealthStatusWithIssue(key, HealthStatus.issue, value);
         }
+        _syncStudentHygiene(student);
       }
     });
   }
 
-  Widget _getIssueIcon(String issueType) {
-    switch (issueType) {
-      case 'Missing':
-        return Icon(Icons.remove_circle_outline, color: Colors.orange.shade600, size: 24);
-      case 'Damaged':
-        return Icon(Icons.broken_image, color: Colors.red.shade600, size: 24);
-      case 'Broken':
-        return Icon(Icons.build, color: Colors.grey.shade600, size: 24);
-      case 'Other':
-        return Icon(Icons.more_horiz, color: Colors.blue.shade600, size: 24);
-      default:
-        return Icon(Icons.help_outline, color: Colors.grey.shade600, size: 24);
-    }
-  }
+  // ─── COMPLETE ─────────────────────────────────────────────────────────
 
-  void _showCustomIssueDialog(String category, Student student, AppointmentSchedulingController controller) {
-    final issueController = TextEditingController();
-    
+  void _completeAppointment() {
+    final markAllDone = true.obs;
+
     Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          width: MediaQuery.of(Get.context!).size.width * 0.9,
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.orange.shade600, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Issue with ${student.name}\'s $category',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              TextField(
-                controller: issueController,
-                decoration: InputDecoration(
-                  hintText: 'Describe the issue in detail...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 486),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_rounded,
+                    size: 64, color: Color(0xFF10B981)),
+                const SizedBox(height: 16),
+                Text(
+                  'Complete ${appointment.type}',
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827)),
                 ),
-                maxLines: 3,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              
-              const SizedBox(height: 20),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 8),
+                Text(
+                  'By clicking proceed, ${appointment.type} will be marked done for all the students and you can not undo this action',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 14, color: Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 24),
+                Obx(() => CheckboxListTile(
+                      value: markAllDone.value,
+                      onChanged: (val) => markAllDone.value = val ?? true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Mark All unchecked checkups status as done',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
                       ),
-                      child: const Text('Cancel'),
+                      activeColor: const Color(0xFF2563EB),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    )),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        ),
+                        child: const Text('Dismiss',
+                            style: TextStyle(color: Color(0xFF374151))),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final issue = issueController.text.trim();
-                        if (issue.isNotEmpty) {
-                          final key = '${appointment.id}_${student.id}_$category';
-                          controller.setHealthStatusWithIssue(key, HealthStatus.issue, issue);
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
                           Get.back();
-                        } else {
-                          Get.snackbar(
-                            'Error',
-                            'Please describe the issue',
-                            backgroundColor: Colors.red.shade100,
-                            colorText: Colors.red.shade700,
-                            duration: const Duration(seconds: 2),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.red.shade600,
-                        foregroundColor: Colors.white,
+
+                          // If checkbox is checked, mark all unchecked hygiene categories as good and sync
+                          if (markAllDone.value) {
+                            for (final student in appointment.selectedStudents) {
+                              bool changed = false;
+                              for (final cat in _categories) {
+                                final key =
+                                    '${appointment.id}_${student.id}_$cat';
+                                if (controller.getHealthStatus(key) == null) {
+                                  controller.setHealthStatus(
+                                      key, HealthStatus.good);
+                                  changed = true;
+                                }
+                              }
+                              if (changed) {
+                                _syncStudentHygiene(student);
+                              }
+                            }
+                          }
+
+                          // Save hygiene data and checkout
+                          controller.saveMedicalCheckupData(
+                              appointment.id!, appointment.selectedStudents);
+
+                          final success = await controller
+                              .checkoutAppointmentSession(appointment.id!);
+                          if (success) {
+                            if (Get.isRegistered<AppointmentHistoryController>()) {
+                              Get.find<AppointmentHistoryController>()
+                                  .refreshAppointments();
+                            }
+                            Get.snackbar(
+                              'Success',
+                              'Appointment completed successfully',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF10B981),
+                              colorText: Colors.white,
+                            );
+                            controller.switchToAppointmentView();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        child: const Text('Complete Appointment'),
                       ),
-                      child: const Text('Save Issue'),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
 
-  void _undoHealthStatus(String category, Student student, AppointmentSchedulingController controller) {
-    final key = '${appointment.id}_${student.id}_$category';
-    controller.clearHealthStatus(key);
-    
-    Get.snackbar(
-      'Status Cleared',
-      'Health status for ${student.name}\'s $category has been reset',
-      backgroundColor: Colors.blue.shade100,
-      colorText: Colors.blue.shade700,
-      duration: const Duration(seconds: 2),
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
+  // ─── UTILS ────────────────────────────────────────────────────────────
 
-  HealthStatusData? _getHealthStatus(String category, Student student, AppointmentSchedulingController controller) {
-    final key = '${appointment.id}_${student.id}_$category';
-    return controller.getHealthStatus(key);
-  }
-
-  String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0].toUpperCase()}${parts[1][0].toUpperCase()}';
-    }
-    return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
-  }
-
-  int _getDoneCount(AppointmentSchedulingController controller) {
-    int count = 0;
-    for (var student in appointment.selectedStudents) {
-      final categories = ['Hair', 'Ears', 'Nails', 'Teeth', 'Uniform'];
-      bool allDone = true;
-      for (var category in categories) {
-        final status = _getHealthStatus(category, student, controller);
-        if (status == null || status.status != HealthStatus.good) {
-          allDone = false;
-          break;
-        }
-      }
-      if (allDone) count++;
-    }
-    return count;
-  }
-
-  int _getNotDoneCount(AppointmentSchedulingController controller) {
-    return appointment.selectedStudents.length - _getDoneCount(controller);
-  }
-
-  Widget _buildCompleteAppointmentButton(AppointmentSchedulingController controller) {
-    final isAllMarked = _isAllStudentsMarked(controller);
-    return GestureDetector(
-      onTap: isAllMarked ? () => _completeAppointment(controller) : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isAllMarked ? Colors.green.shade100 : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isAllMarked ? Colors.green.shade300 : Colors.grey.shade300),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isAllMarked ? Icons.check_circle : Icons.pending,
-              color: isAllMarked ? Colors.green.shade700 : Colors.grey.shade700,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              isAllMarked ? 'Complete Appointment' : 'Mark All Categories',
-              style: TextStyle(
-                color: isAllMarked ? Colors.green.shade700 : Colors.grey.shade700,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _completeAppointment(AppointmentSchedulingController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Complete Appointment'),
-        content: Text('Are you sure you want to complete this medical checkup appointment?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              // Save the medical checkup data before completing
-              controller.saveMedicalCheckupData(appointment.id!, appointment.selectedStudents);
-              
-              // Mark appointment as completed
-              controller.markAppointmentAsCompleted(appointment.id!);
-              
-              Get.back();
-              Get.snackbar(
-                'Success', 
-                'Medical checkup appointment completed and data saved!', 
-                backgroundColor: Colors.green.shade100,
-                duration: const Duration(seconds: 3),
-              );
-              
-              // Navigate back to appointments table
-              controller.currentViewMode.value = TableViewMode.appointments;
-            },
-            child: const Text('Complete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _isAllStudentsMarked(AppointmentSchedulingController controller) {
-    for (var student in appointment.selectedStudents) {
-      final categories = ['Hair', 'Ears', 'Nails', 'Teeth', 'Uniform'];
-      for (var category in categories) {
-        final status = _getHealthStatus(category, student, controller);
-        if (status == null) return false;
-      }
-    }
-    return true;
+  Color _classColor(String className) {
+    final colors = [
+      const Color(0xFF6366F1),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+      const Color(0xFFF59E0B),
+      const Color(0xFF10B981),
+      const Color(0xFF3B82F6),
+    ];
+    return colors[className.hashCode.abs() % colors.length];
   }
 }

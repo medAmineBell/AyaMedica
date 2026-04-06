@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/medicalRecords/widgets/selected_student_info_sidebar.dart';
+import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
 import 'package:flutter_getx_app/screens/medicalRecords/widgets/tables/student_medical_detail_table.dart';
 import 'package:flutter_getx_app/screens/medicalRecords/widgets/tables/student_medical_table.dart';
 import 'package:get/get.dart';
@@ -12,116 +12,152 @@ class MedicalRecordsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(MedicalRecordsController());
+    final branchController = Get.find<BranchManagementController>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Medical Records',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title section with branch info
+          _buildTitleSection(controller, branchController),
+
+          // Search & actions header
+          _buildSearchHeader(controller),
+
+          // Table content
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Obx(() {
+                final MedicalStudent? student =
+                    controller.selectedStudent.value;
+
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: student == null
+                      ? _buildStudentsList(controller)
+                      : _buildStudentDetails(controller, student),
+                );
+              }),
+            ),
           ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
-        actions: [
-          // Statistics badge
-          Obx(() => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Center(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.people,
-                            size: 16, color: Colors.blue.shade700),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${controller.totalStudents.value} Students',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )),
-          Obx(() => controller.isLoading.value
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  onPressed: controller.refreshRecords,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
-                )),
-          const SizedBox(width: 8),
+
+          // Pagination
+          Obx(() => controller.totalPages.value > 1
+              ? _buildPagination(controller)
+              : const SizedBox()),
         ],
       ),
-      body: Row(
+    );
+  }
+
+  Widget _buildTitleSection(
+      MedicalRecordsController controller,
+      BranchManagementController branchController) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sidebar - only show when student is selected
+          // Title with branch count and dropdown
           Obx(() {
-            final MedicalStudent? student = controller.selectedStudent.value;
-            return student == null
-                ? const SizedBox()
-                : SelectedStudentInfoSidebar();
-          }),
-
-          // Main content
-          Expanded(
-            child: Column(
+            final count = branchController.branches.length;
+            return Row(
               children: [
-                _buildHeader(controller),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Obx(() {
-                      final MedicalStudent? student =
-                          controller.selectedStudent.value;
-
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: student == null
-                            ? _buildStudentsList(controller)
-                            : _buildStudentDetails(controller, student),
-                      );
-                    }),
+                const Text(
+                  'Medical records,',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
                   ),
                 ),
-
-                // Pagination
-                Obx(() => controller.totalPages.value > 1
-                    ? _buildPagination(controller)
-                    : const SizedBox()),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () {},
+                  borderRadius: BorderRadius.circular(4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$count ${count != 1 ? 'branches' : 'branch'}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 24,
+                        color: Colors.blue.shade600,
+                      ),
+                    ],
+                  ),
+                ),
               ],
+            );
+          }),
+          const SizedBox(height: 12),
+          // Branch chips
+          Obx(() => Wrap(
+                spacing: 8,
+                children: branchController.branches
+                    .map((branch) => _buildBranchChip(branch.name))
+                    .toList(),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBranchChip(String branchName) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            branchName,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF1E40AF),
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: () {},
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDC6B30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close,
+                size: 12,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -129,17 +165,20 @@ class MedicalRecordsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(MedicalRecordsController controller) {
+  Widget _buildSearchHeader(MedicalRecordsController controller) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
         children: [
-          Expanded(
+          // Search field
+          SizedBox(
+            width: 400,
             child: TextField(
+              onChanged: controller.searchRecords,
               decoration: InputDecoration(
-                hintText: 'Search students by name, ID, grade, or class...',
-                prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                hintText: 'search',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -150,51 +189,62 @@ class MedicalRecordsScreen extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                  borderSide: BorderSide(color: Colors.blue.shade400),
                 ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 filled: true,
-                fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                fillColor: Colors.white,
               ),
-              onChanged: controller.searchRecords,
+            ),
+          ),
+          const Spacer(),
+          // Export button
+          InkWell(
+            onTap: controller.exportRecords,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+              ),
+              child: Center(
+                child: Icon(Icons.download_outlined,
+                    size: 20, color: Colors.grey.shade700),
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: PopupMenuButton<String>(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.filter_list, color: Colors.grey.shade600),
-                    const SizedBox(width: 8),
-                    Obx(() => Text(
-                          controller.selectedFilter.value == 'all'
-                              ? 'All Students'
-                              : controller.selectedFilter.value == 'visited'
-                                  ? 'Visited'
-                                  : 'Not Visited',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        )),
-                  ],
-                ),
+          // Filters button
+          InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
               ),
-              onSelected: controller.filterByStatus,
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'all', child: Text('All Students')),
-                const PopupMenuItem(value: 'visited', child: Text('Visited')),
-                const PopupMenuItem(
-                    value: 'not_visited', child: Text('Not Visited')),
-              ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune, size: 20, color: Colors.grey.shade700),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Filters',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -204,14 +254,10 @@ class MedicalRecordsScreen extends StatelessWidget {
 
   Widget _buildStudentsList(MedicalRecordsController controller) {
     return Obx(() {
-      // Show loading state
       if (controller.state.value == MedicalRecordsState.loading) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
+        return const Center(child: CircularProgressIndicator());
       }
 
-      // Show error state
       if (controller.state.value == MedicalRecordsState.error) {
         return Center(
           child: Column(
@@ -234,7 +280,6 @@ class MedicalRecordsScreen extends StatelessWidget {
         );
       }
 
-      // Show empty state
       if (controller.state.value == MedicalRecordsState.empty) {
         return Center(
           child: Column(
@@ -256,7 +301,6 @@ class MedicalRecordsScreen extends StatelessWidget {
         );
       }
 
-      // Show students table
       return StudentMedicalTable(
         onRowTap: (MedicalStudent s) => controller.selectStudentWithDetails(s),
       );
@@ -273,19 +317,14 @@ class MedicalRecordsScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.shade200,
-              ),
+              bottom: BorderSide(color: Colors.grey.shade200),
             ),
           ),
           child: Row(
             children: [
               IconButton(
                 onPressed: controller.clearStudentDetails,
-                icon: const Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 16,
-                ),
+                icon: const Icon(Icons.arrow_back_ios_new, size: 16),
               ),
               const SizedBox(width: 8),
               Obx(() {
@@ -335,41 +374,177 @@ class MedicalRecordsScreen extends StatelessWidget {
   }
 
   Widget _buildPagination(MedicalRecordsController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
+    return Obx(() {
+      final currentPage = controller.currentPage.value;
+      final totalPages = controller.totalPages.value;
+
+      if (totalPages <= 1) return const SizedBox.shrink();
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildNavButton(
+              icon: Icons.arrow_back,
+              label: 'Previous',
+              isLeading: true,
+              enabled: currentPage > 1,
+              onTap: controller.previousPage,
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: _buildPageNumbers(currentPage, totalPages, controller),
+            ),
+            _buildNavButton(
+              icon: Icons.arrow_forward,
+              label: 'Next',
+              isLeading: false,
+              enabled: currentPage < totalPages,
+              onTap: controller.nextPage,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required String label,
+    required bool isLeading,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    final color = enabled ? Colors.grey.shade800 : Colors.grey.shade400;
+
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLeading) ...[
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+            if (!isLeading) ...[
+              const SizedBox(width: 8),
+              Icon(icon, size: 16, color: color),
+            ],
+          ],
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: controller.currentPage.value > 1
-                ? controller.previousPage
-                : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'Page ${controller.currentPage.value} of ${controller.totalPages.value}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+    );
+  }
+
+  List<Widget> _buildPageNumbers(
+      int currentPage, int totalPages, MedicalRecordsController controller) {
+    final pageNumbers = _getVisiblePages(currentPage, totalPages);
+    final pages = <Widget>[];
+
+    for (int i = 0; i < pageNumbers.length; i++) {
+      final page = pageNumbers[i];
+
+      if (page == -1) {
+        pages.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              '...',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ),
-          const SizedBox(width: 16),
-          IconButton(
-            onPressed:
-                controller.currentPage.value < controller.totalPages.value
-                    ? controller.nextPage
-                    : null,
-            icon: const Icon(Icons.chevron_right),
+        );
+      } else {
+        final isActive = page == currentPage;
+        pages.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: InkWell(
+              onTap: () => controller.goToPage(page),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: isActive
+                      ? Border.all(
+                          color: const Color(0xFF3B82F6), width: 1.5)
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    page.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                      color: isActive
+                          ? const Color(0xFF3B82F6)
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
+
+    return pages;
+  }
+
+  List<int> _getVisiblePages(int currentPage, int totalPages) {
+    if (totalPages <= 7) {
+      return List.generate(totalPages, (i) => i + 1);
+    }
+
+    final pages = <int>[];
+
+    if (currentPage <= 4) {
+      for (int i = 1; i <= 5; i++) {
+        pages.add(i);
+      }
+      pages.add(-1);
+      pages.add(totalPages - 1);
+      pages.add(totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.add(1);
+      pages.add(2);
+      pages.add(-1);
+      for (int i = totalPages - 4; i <= totalPages; i++) {
+        pages.add(i);
+      }
+    } else {
+      pages.add(1);
+      pages.add(2);
+      pages.add(3);
+      pages.add(-1);
+      pages.add(currentPage - 1);
+      pages.add(currentPage);
+      pages.add(currentPage + 1);
+      pages.add(-1);
+      pages.add(totalPages - 1);
+      pages.add(totalPages);
+    }
+
+    return pages;
   }
 }

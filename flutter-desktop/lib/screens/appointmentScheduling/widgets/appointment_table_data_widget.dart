@@ -598,12 +598,11 @@ void _showDeleteConfirmation(Appointment appointment) {
       final homeController = Get.find<HomeController>();
       homeController.showMedicalCheckupTable(appointment, studentsData);
     } else {
-      // If appointment type is "Checkup", show medical checkup table
-      if (appointment.type.toLowerCase().contains('checkup')) {
-        print('✅ Appointment is Checkup type - calling showMedicalCheckupView');
+      // If appointment is a Hygiene checkup, show medical checkup (hygiene) table
+      if (appointment.type.toLowerCase().contains('checkup') &&
+          appointment.disease.toLowerCase() == 'hygiene') {
         controller.showMedicalCheckupView(appointment);
       } else {
-        print('❌ Appointment is NOT Checkup type - calling showStudentsForAppointment');
         controller.showStudentsForAppointment(appointment);
       }
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/medicalRecord.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,7 @@ class MedicalRecordsController extends GetxController {
 
   // Branch ID (used as organizationId in API)
   final RxString branchId = ''.obs;
+  final RxString branchName = ''.obs;
 
   // Add these properties at the top with other reactive variables
   final Rx<StudentDetails?> selectedStudentDetails = Rx<StudentDetails?>(null);
@@ -57,7 +59,7 @@ class MedicalRecordsController extends GetxController {
 
       // Build API URL
       final url = Uri.parse(
-        'https://ayamedica-backend.ayamedica.online/api/school-admin/medical-records/students/$studentId?organizationId=${branchId.value}&page=$page&limit=20',
+        '${AppConfig.newBackendUrl}/api/school-admin/medical-records/students/$studentId?organizationId=${branchId.value}&page=$page&limit=20',
       );
       print('📡 Request URL: $url');
 
@@ -146,6 +148,7 @@ class MedicalRecordsController extends GetxController {
       final id = branchData['id'];
       if (id != null) {
         branchId.value = id;
+        branchName.value = branchData['name'] ?? 'Unknown Branch';
         print('📍 Got branch ID from storage: $id');
         return;
       }
@@ -183,7 +186,7 @@ class MedicalRecordsController extends GetxController {
 
       // Build API URL - Using branchId as organizationId parameter
       final url = Uri.parse(
-        'https://ayamedica-backend.ayamedica.online/api/school-admin/medical-records/students?organizationId=${branchId.value}&page=$page&limit=${itemsPerPage.value}',
+        '${AppConfig.newBackendUrl}/api/school-admin/medical-records/students?organizationId=${branchId.value}&page=$page&limit=${itemsPerPage.value}',
       );
 
       print('📡 Request URL: $url');
@@ -369,4 +372,15 @@ class MedicalRecordsController extends GetxController {
   /// Check if filters are active
   bool get hasActiveFilters =>
       searchQuery.value.isNotEmpty || selectedFilter.value != 'all';
+
+  /// Export records placeholder
+  void exportRecords() {
+    Get.snackbar(
+      'Export',
+      'Export functionality coming soon',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.blue,
+      colorText: Colors.white,
+    );
+  }
 }

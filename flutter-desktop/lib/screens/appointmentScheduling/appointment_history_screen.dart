@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/appointment_history_controller.dart';
 import 'widgets/appointment_history_table_widget.dart';
-import 'widgets/appointment_history_status_tabs_widget.dart';
+import 'widgets/create_appointment_dialog.dart';
+import 'widgets/medical_checkup_table_widget.dart';
+import 'widgets/student_table_widget.dart';
 
 class AppointmentHistoryScreen extends StatelessWidget {
   const AppointmentHistoryScreen({super.key});
@@ -13,61 +15,27 @@ class AppointmentHistoryScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Appointment scheduling',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
-        actions: [
-          // New Appointments Button
-          // Padding(
-          //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          //   child: ElevatedButton.icon(
-          //     onPressed: () {
-          //       // Navigate to create new appointment
-          //       print('Create new appointment');
-          //     },
-          //     icon: const Icon(Icons.add, size: 18),
-          //     label: const Text(
-          //       'New appointments',
-          //       style: TextStyle(
-          //         fontSize: 14,
-          //         fontWeight: FontWeight.w600,
-          //       ),
-          //     ),
-          //     style: ElevatedButton.styleFrom(
-          //       backgroundColor: const Color(0xFF3B82F6),
-          //       foregroundColor: Colors.white,
-          //       padding:
-          //           const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          //       shape: RoundedRectangleBorder(
-          //         borderRadius: BorderRadius.circular(8),
-          //       ),
-          //       elevation: 0,
-          //     ),
-          //   ),
-          // ),
-        ],
-      ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status Tabs
-          const AppointmentHistoryStatusTabsWidget(),
+          // Hide title and filters when viewing student table
+          Obx(() {
+            if (controller.viewingAppointment.value != null) {
+              return const SizedBox.shrink();
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTitleSection(controller),
+                _buildTabsAndFiltersRow(controller),
+              ],
+            );
+          }),
 
-          // Search and Filters
-          _buildSearchAndFilters(controller),
-
-          // Table
+          // Table content
           Expanded(
             child: Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -79,151 +47,386 @@ class AppointmentHistoryScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Obx(() {
-                // Show loading state
-                if (controller.state.value == AppointmentHistoryState.loading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Obx(() {
+                  // Show student table when viewing an appointment's students
+                  if (controller.viewingAppointment.value != null) {
+                    final appt = controller.viewingAppointment.value!;
+                    // Show hygiene table when disease is Hygiene
+                    if (appt.type.toLowerCase().contains('checkup') &&
+                        appt.disease.toLowerCase() == 'hygiene') {
+                      return MedicalCheckupTableWidget(
+                        appointment: appt,
+                        onBack: controller.backToList,
+                      );
+                    }
+                    return StudentTableWidget(
+                      appointment: appt,
+                      onBack: controller.backToList,
+                    );
+                  }
 
-                // Show error state
-                if (controller.state.value == AppointmentHistoryState.error) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline,
-                            size: 64, color: Colors.red.shade400),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Failed to load appointments',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: controller.refreshAppointments,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Try Again'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                  // Show loading spinner for students fetch
+                  if (controller.isLoadingStudents.value) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                // Show empty state
-                if (controller.state.value == AppointmentHistoryState.empty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.calendar_today_outlined,
-                            size: 64, color: Colors.grey.shade400),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No appointments found',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try adjusting your search or filters',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                  if (controller.state.value ==
+                      AppointmentHistoryState.loading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                // Show appointments table
-                return const AppointmentHistoryTableWidget();
-              }),
+                  if (controller.state.value == AppointmentHistoryState.error) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline,
+                              size: 64, color: Colors.red.shade400),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Failed to load appointments',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: controller.refreshAppointments,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try Again'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (controller.state.value == AppointmentHistoryState.empty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_today_outlined,
+                              size: 64, color: Colors.grey.shade400),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No appointments found',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Try adjusting your search or filters',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return const AppointmentHistoryTableWidget();
+                }),
+              ),
             ),
           ),
-
-          // Pagination
-          Obx(() => controller.totalPages.value > 1
-              ? _buildPagination(controller)
-              : const SizedBox()),
         ],
       ),
     );
   }
 
-  Widget _buildSearchAndFilters(AppointmentHistoryController controller) {
+  Widget _buildTitleSection(AppointmentHistoryController controller) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Row(
         children: [
-          // Export Button
-          IconButton(
+          const Text(
+            'Appointments',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const Spacer(),
+          ElevatedButton.icon(
             onPressed: () {
-              print('Export appointments');
+              showDialog(
+                context: Get.context!,
+                builder: (context) => const CreateAppointmentDialog(),
+              );
             },
-            icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Export',
-            style: IconButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade300),
+            icon: const Icon(
+              Icons.add,
+              size: 18,
+              color: Colors.white,
+            ),
+            label: const Text(
+              'New appointments',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1339FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Search Field
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'search',
-                prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onChanged: controller.searchAppointments,
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Filters Button
-          OutlinedButton.icon(
-            onPressed: () {
-              _showFiltersDialog(controller);
-            },
-            icon: Icon(Icons.tune, color: Colors.grey.shade700),
-            label: Obx(() => Text(
-                  'Filters ${controller.hasActiveFilters ? "•" : ""}',
-                  style: TextStyle(color: Colors.grey.shade700),
-                )),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              elevation: 0,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildTabsAndFiltersRow(AppointmentHistoryController controller) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        children: [
+          // Status filter tabs
+          Obx(() => _buildStatusTabs(controller)),
+          const Spacer(),
+          // Download button
+          _buildDownloadButton(),
+          const SizedBox(width: 12),
+          // Search field
+          _buildSearchField(controller),
+          const SizedBox(width: 12),
+          // Filters button
+          _buildFiltersButton(controller),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusTabs(AppointmentHistoryController controller) {
+    final radiusStart = const BorderRadius.only(
+      topLeft: Radius.circular(8),
+      bottomLeft: Radius.circular(8),
+    );
+    final radiusEnd = const BorderRadius.only(
+      topRight: Radius.circular(8),
+      bottomRight: Radius.circular(8),
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildStatusTab(
+          'Check In',
+          'booked',
+          controller.checkedInCount.value,
+          controller,
+          radiusStart,
+        ),
+        _buildStatusTab(
+          'Checked out',
+          'fulfilled',
+          controller.checkedOutCount.value,
+          controller,
+          BorderRadius.zero,
+        ),
+        _buildStatusTab(
+          'Cancelled',
+          'cancelled',
+          controller.cancelledCount.value,
+          controller,
+          radiusEnd,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusTab(
+    String label,
+    String filterValue,
+    int count,
+    AppointmentHistoryController controller,
+    BorderRadius borderRadius,
+  ) {
+    final isSelected = controller.selectedFilter.value == filterValue;
+
+    return GestureDetector(
+      onTap: () {
+        // Always require one tab selected — don't allow deselecting
+        if (!isSelected) {
+          controller.filterByStatus(filterValue);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1339FF) : Colors.white,
+          border: Border.all(
+            color:
+                isSelected ? const Color(0xFF1339FF) : const Color(0xFFE5E7EB),
+          ),
+          borderRadius: borderRadius,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF374151),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadButton() {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: IconButton(
+        onPressed: () {
+          Get.snackbar(
+            'Download',
+            'Appointments data is being downloaded...',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF10B981),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+        },
+        icon: const Icon(
+          Icons.download_outlined,
+          color: Color(0xFF6B7280),
+          size: 20,
+        ),
+        tooltip: 'Download',
+      ),
+    );
+  }
+
+  Widget _buildSearchField(AppointmentHistoryController controller) {
+    return Container(
+      width: 200,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: TextField(
+        onChanged: controller.searchAppointments,
+        decoration: const InputDecoration(
+          hintText: 'search',
+          hintStyle: TextStyle(
+            color: Color(0xFF9CA3AF),
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: Color(0xFF9CA3AF),
+            size: 20,
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+        style: const TextStyle(
+          fontSize: 16,
+          color: Color(0xFF111827),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFiltersButton(AppointmentHistoryController controller) {
+    return Obx(() {
+      final filterCount = controller.activeFilterCount;
+
+      return InkWell(
+        onTap: () => _showFiltersDialog(controller),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.tune,
+                color: Color(0xFF6B7280),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Filters',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              if (filterCount > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$filterCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   void _showFiltersDialog(AppointmentHistoryController controller) {
@@ -257,30 +460,10 @@ class AppointmentHistoryScreen extends StatelessWidget {
               Obx(() => Wrap(
                     spacing: 8,
                     children: [
-                      _buildFilterChip(
-                        'All',
-                        'all',
-                        controller.selectedFilter.value,
-                        controller.filterByStatus,
-                      ),
-                      _buildFilterChip(
-                        'Booked',
-                        'booked',
-                        controller.selectedFilter.value,
-                        controller.filterByStatus,
-                      ),
-                      _buildFilterChip(
-                        'Fulfilled',
-                        'fulfilled',
-                        controller.selectedFilter.value,
-                        controller.filterByStatus,
-                      ),
-                      _buildFilterChip(
-                        'Cancelled',
-                        'cancelled',
-                        controller.selectedFilter.value,
-                        controller.filterByStatus,
-                      ),
+                      _buildFilterChip('All', 'all', controller),
+                      _buildFilterChip('Booked', 'booked', controller),
+                      _buildFilterChip('Fulfilled', 'fulfilled', controller),
+                      _buildFilterChip('Cancelled', 'cancelled', controller),
                     ],
                   )),
               const SizedBox(height: 24),
@@ -314,15 +497,14 @@ class AppointmentHistoryScreen extends StatelessWidget {
   Widget _buildFilterChip(
     String label,
     String value,
-    String currentValue,
-    Function(String) onSelected,
+    AppointmentHistoryController controller,
   ) {
-    final isSelected = currentValue == value;
+    final isSelected = controller.selectedFilter.value == value;
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
-        onSelected(value);
+        controller.filterByStatus(value);
       },
       backgroundColor: Colors.white,
       selectedColor: const Color(0xFF3B82F6).withOpacity(0.1),
@@ -333,78 +515,6 @@ class AppointmentHistoryScreen extends StatelessWidget {
       ),
       side: BorderSide(
         color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade300,
-      ),
-    );
-  }
-
-  Widget _buildPagination(AppointmentHistoryController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: controller.currentPage.value > 1
-                ? controller.previousPage
-                : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          const SizedBox(width: 16),
-          ...List.generate(
-            controller.totalPages.value > 10 ? 10 : controller.totalPages.value,
-            (index) {
-              final pageNum = index + 1;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: InkWell(
-                  onTap: () => controller.goToPage(pageNum),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: controller.currentPage.value == pageNum
-                          ? const Color(0xFF3B82F6)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$pageNum',
-                      style: TextStyle(
-                        color: controller.currentPage.value == pageNum
-                            ? Colors.white
-                            : Colors.grey.shade700,
-                        fontWeight: controller.currentPage.value == pageNum
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          if (controller.totalPages.value > 10) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text('...'),
-            ),
-          ],
-          const SizedBox(width: 16),
-          IconButton(
-            onPressed:
-                controller.currentPage.value < controller.totalPages.value
-                    ? controller.nextPage
-                    : null,
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
       ),
     );
   }

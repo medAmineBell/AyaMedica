@@ -3,13 +3,13 @@ import 'package:flutter_getx_app/screens/feedbackDashboard/feedback_dashboard_sc
 import 'package:get/get.dart';
 import '../../shared/widgets/breadcrumb_widget.dart';
 import '../mobileAppUser/mobile_app_user_app_screen.dart';
-import 'widgets/gard_settings_screen.dart';
 
 class AyamedicaSolutionScreen extends StatefulWidget {
   const AyamedicaSolutionScreen({Key? key}) : super(key: key);
 
   @override
-  State<AyamedicaSolutionScreen> createState() => _AyamedicaSolutionScreenState();
+  State<AyamedicaSolutionScreen> createState() =>
+      _AyamedicaSolutionScreenState();
 }
 
 class _AyamedicaSolutionScreenState extends State<AyamedicaSolutionScreen>
@@ -19,7 +19,8 @@ class _AyamedicaSolutionScreenState extends State<AyamedicaSolutionScreen>
   @override
   void initState() {
     super.initState();
-_tabController = TabController(length: 5, vsync: this); // ✅ Matches tabs count
+    _tabController =
+        TabController(length: 2, vsync: this); // ✅ Matches tabs count
   }
 
   @override
@@ -46,98 +47,98 @@ _tabController = TabController(length: 5, vsync: this); // ✅ Matches tabs coun
                 ),
               ),
             ),
-            child:              Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Appointment connect',
+                  style: TextStyle(
+                    color: Color(0xFF2D2E2E) /* Text-Text-100 */,
+                    fontSize: 20,
+                    fontFamily: 'IBM Plex Sans Arabic',
+                    fontWeight: FontWeight.w700,
+                    height: 1.40,
+                  ),
+                ),
+                const BreadcrumbWidget(
+                  items: [
+                    BreadcrumbItem(label: 'Ayamedica portal'),
+                    BreadcrumbItem(label: 'Ayamedica solution'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Tab Bar
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              labelColor: const Color(0xFF1339FF),
+              unselectedLabelColor: const Color(0xFF595A5B),
+              indicatorColor: const Color(0xFF1339FF),
+              indicatorWeight: 2,
+              indicatorPadding: const EdgeInsets.only(bottom: 8),
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+              ),
+              tabs: const [
+                Tab(
+                  child: Row(
                     children: [
-                      const Text(
-                        'Appointment connect',
-                        style: TextStyle(
-                          color: Color(0xFF2D2E2E) /* Text-Text-100 */,
-                          fontSize: 20,
-                          fontFamily: 'IBM Plex Sans Arabic',
-                          fontWeight: FontWeight.w700,
-                          height: 1.40,
-                        ),
-                      ),
-                      const BreadcrumbWidget(
-                        items: [
-                          BreadcrumbItem(label: 'Ayamedica portal'),
-                          BreadcrumbItem(label: 'Ayamedica solution'),
-                        ],
-                      ),
+                      Icon(Icons.phone_android, size: 18),
+                      SizedBox(width: 8),
+                      Text('Mobile app Insights & Feedback'),
                     ],
                   ),
+                ),
+                Tab(
+                  child: Row(
+                    children: [
+                      Icon(Icons.group, size: 18),
+                      SizedBox(width: 8),
+                      Text('Mobile app users'),
+                    ],
+                  ),
+                ),
+                // Tab(
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.settings, size: 18),
+                //       SizedBox(width: 8),
+                //       Text('Service health'),
+                //     ],
+                //   ),
+                // ),
+                // Tab(
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.policy, size: 18),
+                //       SizedBox(width: 8),
+                //       Text('Compliance & Policies'),
+                //     ],
+                //   ),
+                // ),
+                // Tab(
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.support_agent, size: 18),
+                //       SizedBox(width: 8),
+                //       Text('Contact & support'),
+                //     ],
+                //   ),
+                // ),
+              ],
+            ),
           ),
-          
-          // Tab Bar
-      Container(
-  color: Colors.white,
-  child: TabBar(
-    controller: _tabController,
-    isScrollable: true,
-    labelColor: const Color(0xFF1339FF),
-    unselectedLabelColor: const Color(0xFF595A5B),
-    indicatorColor: const Color(0xFF1339FF),
-    indicatorWeight: 2,
-    indicatorPadding: const EdgeInsets.only(bottom: 8),
-    labelStyle: const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-    ),
-    unselectedLabelStyle: const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-    ),
-    tabs: const [
-      Tab(
-        child: Row(
-          children: [
-            Icon(Icons.phone_android, size: 18),
-            SizedBox(width: 8),
-            Text('Mobile app Insights & Feedback'),
-          ],
-        ),
-      ),
-      Tab(
-        child: Row(
-          children: [
-            Icon(Icons.group, size: 18),
-            SizedBox(width: 8),
-            Text('Mobile app users'),
-          ],
-        ),
-      ),
-      Tab(
-        child: Row(
-          children: [
-            Icon(Icons.settings, size: 18),
-            SizedBox(width: 8),
-            Text('Service health'),
-          ],
-        ),
-      ),
-      Tab(
-        child: Row(
-          children: [
-            Icon(Icons.policy, size: 18),
-            SizedBox(width: 8),
-            Text('Compliance & Policies'),
-          ],
-        ),
-      ),
-      Tab(
-        child: Row(
-          children: [
-            Icon(Icons.support_agent, size: 18),
-            SizedBox(width: 8),
-            Text('Contact & support'),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-   
+
           // Tab Content
           Expanded(
             child: TabBarView(
@@ -145,17 +146,16 @@ _tabController = TabController(length: 5, vsync: this); // ✅ Matches tabs coun
               children: [
                 // Grades Settings Tab
                 const FeedbackDashboardScreen(),
-                
+
                 // User Management Tab
                 MobileAppUserAppScreen(),
-                
-                // System Configuration Tab
-                _buildSystemConfigurationTab(),
-                
-                // Security Tab
-                _buildSecurityTab(),
-                                _buildSecurityTab(),
 
+                // // System Configuration Tab
+                // _buildSystemConfigurationTab(),
+
+                // // Security Tab
+                // _buildSecurityTab(),
+                // _buildSecurityTab(),
               ],
             ),
           ),
@@ -301,4 +301,4 @@ _tabController = TabController(length: 5, vsync: this); // ✅ Matches tabs coun
       ),
     );
   }
-} 
+}

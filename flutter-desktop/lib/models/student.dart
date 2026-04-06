@@ -41,12 +41,15 @@ class Student {
   final String? gender;
   final String? phoneNumber;
   final String? email;
+  final String? documentType;
+  final String? documentNumber;
 
   // Additional fields for the data table
   final String? studentId;
   final String? aid;
   final String? grade;
   final String? className;
+  final String? classId;
   final DateTime? lastAppointmentDate;
   final String? lastAppointmentType;
   final int? emrNumber;
@@ -84,10 +87,13 @@ class Student {
     this.gender,
     this.phoneNumber,
     this.email,
+    this.documentType,
+    this.documentNumber,
     this.studentId,
     this.aid,
     this.grade,
     this.className,
+    this.classId,
     this.lastAppointmentDate,
     this.lastAppointmentType,
     this.emrNumber,
@@ -126,10 +132,13 @@ class Student {
       gender: json['gender'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       email: json['email'] as String?,
+      documentType: json['documentType'] as String?,
+      documentNumber: json['documentNumber'] as String?,
       studentId: json['studentId'] as String?,
       aid: json['aid'] as String?,
       grade: json['grade'] as String?,
       className: json['className'] as String?,
+      classId: json['classId'] as String?,
       lastAppointmentDate: json['lastAppointmentDate'] != null ? DateTime.parse(json['lastAppointmentDate']) : null,
       lastAppointmentType: json['lastAppointmentType'] as String?,
       emrNumber: json['emrNumber'] as int?,
@@ -173,10 +182,13 @@ class Student {
       'gender': gender,
       'phoneNumber': phoneNumber,
       'email': email,
+      'documentType': documentType,
+      'documentNumber': documentNumber,
       'studentId': studentId,
       'aid': aid,
       'grade': grade,
       'className': className,
+      'classId': classId,
       'lastAppointmentDate': lastAppointmentDate?.toIso8601String(),
       'lastAppointmentType': lastAppointmentType,
       'emrNumber': emrNumber,
@@ -335,6 +347,8 @@ class Student {
     String? gender,
     String? phoneNumber,
     String? email,
+    String? documentType,
+    String? documentNumber,
     String? studentId,
     String? aid,
     String? grade,
@@ -375,6 +389,8 @@ class Student {
       gender: gender ?? this.gender,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       email: email ?? this.email,
+      documentType: documentType ?? this.documentType,
+      documentNumber: documentNumber ?? this.documentNumber,
       studentId: studentId ?? this.studentId,
       aid: aid ?? this.aid,
       grade: grade ?? this.grade,

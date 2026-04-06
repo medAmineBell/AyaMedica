@@ -17,7 +17,7 @@ class SplashScreen extends StatelessWidget {
             height: double.infinity,
             color: const Color(0xFF0D6EFD), // Main blue color from the theme
           ),
-          
+
           // Bottom decorative circles
           Positioned(
             bottom: -100,
@@ -57,21 +57,16 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // App name
-                Text(
-                  'Ayamedica',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
-                  ),
+                Image.asset(
+                  'assets/images/logo_white.png',
+                  width: 400,
                 ),
                 const SizedBox(height: 24),
                 // Loading indicator
@@ -79,15 +74,14 @@ class SplashScreen extends StatelessWidget {
                   width: 40,
                   height: 40,
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.7)),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white.withOpacity(0.7)),
                     strokeWidth: 3,
                   ),
                 ),
               ],
             ),
           ),
-          
-         
         ],
       ),
     );

@@ -14,228 +14,277 @@ import '../../controllers/home_controller.dart';
 
 class FeedbackDashboardScreen extends StatelessWidget {
   const FeedbackDashboardScreen({super.key});
-void showFeedbackDialog(BuildContext context) {
-  final TextEditingController subjectController = TextEditingController();
-  final TextEditingController explanationController = TextEditingController();
-  final controller = Get.find<FeedbackController>();
 
-  String? selectedBranch;
-  String? selectedGrade;
-  String? selectedClass;
+  Color _getStatusBackgroundColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return const Color(0xFFE8F3FF);
+      case 'in_progress':
+        return const Color(0xFFFFF7E6);
+      case 'resolved':
+      case 'approved':
+        return const Color(0xFFE6FAEB);
+      case 'rejected':
+        return const Color(0xFFFFE6E6);
+      case 'pending':
+        return const Color(0xFFF5F5F5);
+      default:
+        return const Color(0xFFF5F5F5);
+    }
+  }
 
-  showDialog(
-    context: context,
-    barrierDismissible: true,
-    builder: (_) => Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 862),
-          child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            clipBehavior: Clip.antiAlias,
-            child: StatefulBuilder(
-              builder: (context, setState) => SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Request a new feedback',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: 'IBM Plex Sans Arabic',
-                                  color: Color(0xFF2D2E2E),
-                                  height: 1.4,
+  Color _getStatusTextColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'new':
+        return const Color(0xFF1463FF);
+      case 'in_progress':
+        return const Color(0xFFCC9A06);
+      case 'resolved':
+      case 'approved':
+        return const Color(0xFF1BA94C);
+      case 'rejected':
+        return const Color(0xFFCC3E4E);
+      case 'pending':
+        return const Color(0xFF747677);
+      default:
+        return const Color(0xFF747677);
+    }
+  }
+
+  void showFeedbackDialog(BuildContext context) {
+    final TextEditingController subjectController = TextEditingController();
+    final TextEditingController explanationController = TextEditingController();
+    final controller = Get.find<FeedbackController>();
+
+    String? selectedBranch;
+    String? selectedGrade;
+    String? selectedClass;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 862),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: StatefulBuilder(
+                builder: (context, setState) => SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'Request a new feedback',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'IBM Plex Sans Arabic',
+                                    color: Color(0xFF2D2E2E),
+                                    height: 1.4,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Send a feedback form to parents to rate a specific subject',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  fontFamily: 'Inter',
-                                  color: Color(0xFF707579),
-                                  height: 1.5,
+                                SizedBox(height: 4),
+                                Text(
+                                  'Send a feedback form to parents to rate a specific subject',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    fontFamily: 'Inter',
+                                    color: Color(0xFF707579),
+                                    height: 1.5,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: Colors.black45),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Select grades and name the class',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF747677),
-                        fontFamily: 'IBM Plex Sans Arabic',
-                        letterSpacing: 0.16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FormFieldWidget(
-                      label: 'Branches',
-                      isRequired: true,
-                      child: CustomDropdown<String>(
-                        hint: 'Choose a branch',
-                        value: selectedBranch,
-                        items: DropdownHelper.createStringItems(['Branch A', 'Branch B']),
-                        onChanged: (value) => setState(() => selectedBranch = value),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FormFieldWidget(
-                            label: 'Grade(s)',
-                            child: CustomDropdown<String>(
-                              hint: 'Choose grade',
-                              value: selectedGrade,
-                              items: DropdownHelper.createStringItems(['G1', 'G2']),
-                              onChanged: (value) => setState(() => selectedGrade = value),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FormFieldWidget(
-                            label: 'Classes',
-                            child: CustomDropdown<String>(
-                              hint: 'Choose class',
-                              value: selectedClass,
-                              items: DropdownHelper.createStringItems(['Class A', 'Class B', 'Class C']),
-                              onChanged: (value) => setState(() => selectedClass = value),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (selectedGrade != null) ...[
-                      _GradePill(label: selectedGrade!),
-                    ],
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Enter the survey subject',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF747677),
-                        fontFamily: 'IBM Plex Sans Arabic',
-                        letterSpacing: 0.16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FormFieldWidget(
-                      label: 'Subject name',
-                      isRequired: true,
-                      child: CustomTextField(
-                        controller: subjectController,
-                        hint: 'Enter the subject title here',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FormFieldWidget(
-                      label: 'Explain what it’s about',
-                      child: CustomTextField(
-                        controller: explanationController,
-                        hint: 'Brief explanation about the subject',
-                        maxLines: 5,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
+                          IconButton(
                             onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text(
-                              'Back',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF2D2E2E),
+                            icon:
+                                const Icon(Icons.close, color: Colors.black45),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Select grades and name the class',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF747677),
+                          fontFamily: 'IBM Plex Sans Arabic',
+                          letterSpacing: 0.16,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FormFieldWidget(
+                        label: 'Branches',
+                        isRequired: true,
+                        child: CustomDropdown<String>(
+                          hint: 'Choose a branch',
+                          value: selectedBranch,
+                          items: DropdownHelper.createStringItems(
+                              ['Branch A', 'Branch B']),
+                          onChanged: (value) =>
+                              setState(() => selectedBranch = value),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FormFieldWidget(
+                              label: 'Grade(s)',
+                              child: CustomDropdown<String>(
+                                hint: 'Choose grade',
+                                value: selectedGrade,
+                                items: DropdownHelper.createStringItems(
+                                    ['G1', 'G2']),
+                                onChanged: (value) =>
+                                    setState(() => selectedGrade = value),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => _SendingFeedbackDialog(
-                                  onComplete: () {
-                                    controller.feedbacks.add(
-                                      FeedbackItem(
-                                        title: subjectController.text,
-                                        branch: selectedBranch ?? 'Unknown',
-                                        launchDate: DateTime.now(),
-                                        status: 'Draft',
-                                        rating: 0,
-                                        currentResponses: 0,
-                                        totalResponses: 0,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1339FF),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text(
-                              'Send survey request',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFFCDF7FF),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: FormFieldWidget(
+                              label: 'Classes',
+                              child: CustomDropdown<String>(
+                                hint: 'Choose class',
+                                value: selectedClass,
+                                items: DropdownHelper.createStringItems(
+                                    ['Class A', 'Class B', 'Class C']),
+                                onChanged: (value) =>
+                                    setState(() => selectedClass = value),
                               ),
                             ),
                           ),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (selectedGrade != null) ...[
+                        _GradePill(label: selectedGrade!),
                       ],
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Enter the survey subject',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF747677),
+                          fontFamily: 'IBM Plex Sans Arabic',
+                          letterSpacing: 0.16,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FormFieldWidget(
+                        label: 'Subject name',
+                        isRequired: true,
+                        child: CustomTextField(
+                          controller: subjectController,
+                          hint: 'Enter the subject title here',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FormFieldWidget(
+                        label: 'Explain what it’s about',
+                        child: CustomTextField(
+                          controller: explanationController,
+                          hint: 'Brief explanation about the subject',
+                          maxLines: 5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text(
+                                'Back',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF2D2E2E),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => _SendingFeedbackDialog(
+                                    onComplete: () {
+                                      // controller.feedbacks.add(
+                                      //   FeedbackItem(
+                                      //     title: subjectController.text,
+                                      //     branch: selectedBranch ?? 'Unknown',
+                                      //     launchDate: DateTime.now(),
+                                      //     status: 'Draft',
+                                      //     rating: 0,
+                                      //     currentResponses: 0,
+                                      //     totalResponses: 0,
+                                      //   ),
+                                      // );
+                                    },
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1339FF),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text(
+                                'Send survey request',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFFCDF7FF),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final controller = Get.put(FeedbackController());
 
@@ -401,8 +450,7 @@ void showFeedbackDialog(BuildContext context) {
                   height: 44,
                   child: ElevatedButton.icon(
                     onPressed: () {
-                        showFeedbackDialog(context);
-
+                      showFeedbackDialog(context);
                     },
                     icon: const Icon(Icons.add,
                         size: 24, color: Color(0xFFCDF7FF)),
@@ -440,85 +488,157 @@ void showFeedbackDialog(BuildContext context) {
             ),
             const SizedBox(height: 24),
 
-            // Dynamic table
+            // Dynamic table with loading/error states
             Expanded(
-              child: Obx(() => DynamicTableWidget<FeedbackItem>(
-                    items: controller.feedbacks.toList(),
-                    columns: [
-                      TableColumnConfig<FeedbackItem>(
-                        header: 'Feedback title',
-                        columnWidth: const FlexColumnWidth(3),
-                        cellBuilder: (item, index) => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
-                            Text(item.branch,
-                                style: const TextStyle(color: Colors.grey)),
-                          ],
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1339FF),
+                    ),
+                  );
+                }
+
+                if (controller.errorMessage.value.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          controller.errorMessage.value,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => controller.fetchFeedbacks(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1339FF),
+                          ),
+                          child: const Text(
+                            'Retry',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (controller.feedbacks.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.feedback_outlined,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No feedbacks found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return DynamicTableWidget<FeedbackItem>(
+                  items: controller.feedbacks.toList(),
+                  columns: [
+                    TableColumnConfig<FeedbackItem>(
+                      header: 'Feedback subject',
+                      columnWidth: const FlexColumnWidth(3),
+                      cellBuilder: (item, index) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.subject,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600)),
+                          Text(item.organizationId ?? '',
+                              style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    TableColumnConfig<FeedbackItem>(
+                      header: 'Created date',
+                      columnWidth: const FlexColumnWidth(2),
+                      cellBuilder: (item, index) => TableCellHelpers.textCell(
+                        '${item.createdAt.day.toString().padLeft(2, '0')}/${item.createdAt.month.toString().padLeft(2, '0')}/${item.createdAt.year}',
+                      ),
+                    ),
+                    TableColumnConfig<FeedbackItem>(
+                      header: 'Status',
+                      cellBuilder: (item, index) =>
+                          TableCellHelpers.badgeCell(
+                        item.status,
+                        backgroundColor: _getStatusBackgroundColor(item.status),
+                        textColor: _getStatusTextColor(item.status),
+                      ),
+                    ),
+                    TableColumnConfig<FeedbackItem>(
+                      header: 'Rating',
+                      tooltip: 'Feedback rating',
+                      cellBuilder: (item, index) =>
+                          TableCellHelpers.badgeCell(
+                        '${item.rating} ★',
+                        backgroundColor: const Color(0xFFFFF7E6),
+                        textColor: const Color(0xFFCC9A06),
+                      ),
+                    ),
+                    TableColumnConfig<FeedbackItem>(
+                      header: 'Message',
+                      columnWidth: const FlexColumnWidth(2),
+                      cellBuilder: (item, index) => Text(
+                        item.message,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF747677),
                         ),
                       ),
-                      TableColumnConfig<FeedbackItem>(
-                        header: 'Launch date & time',
-                        columnWidth: const FlexColumnWidth(2),
-                        cellBuilder: (item, index) => TableCellHelpers.textCell(
-                          '${item.launchDate.day.toString().padLeft(2, '0')}/${item.launchDate.month.toString().padLeft(2, '0')}/${item.launchDate.year}',
-                        ),
-                      ),
-                      TableColumnConfig<FeedbackItem>(
-                        header: 'Status',
-                        cellBuilder: (item, index) =>
-                            TableCellHelpers.badgeCell(
-                          item.status,
-                          backgroundColor: const Color(0xFFE6FAEB),
-                          textColor: const Color(0xFF1BA94C),
-                        ),
-                      ),
-                      TableColumnConfig<FeedbackItem>(
-                        header: 'Overall rating',
-                        tooltip: 'Average rating',
-                        cellBuilder: (item, index) =>
-                            TableCellHelpers.badgeCell(
-                          '${item.rating.toStringAsFixed(1)} ★',
-                          backgroundColor: const Color(0xFFFFF7E6),
-                          textColor: const Color(0xFFCC9A06),
-                        ),
-                      ),
-                      TableColumnConfig<FeedbackItem>(
-                        header: 'Number of responses',
-                        tooltip: 'Answered / Total',
-                        cellBuilder: (item, index) =>
-                            TableCellHelpers.badgeCell(
-                          '${item.currentResponses}/${item.totalResponses}',
-                          backgroundColor: const Color(0xFFE8F3FF),
-                          textColor: const Color(0xFF1463FF),
-                        ),
-                      ),
-                    ],
-                    actions: [
-                      TableActionConfig<FeedbackItem>(
-                        icon: Icons.visibility_outlined,
-                        tooltip: 'View',
-                        onPressed: (item, index) {
-                          controller.selectedFeedback.value = item;
-                          final homeController = Get.find<HomeController>();
-                          homeController.changeContent(ContentType.feedbackDetails);
-                        },
-                      ),
-                      TableActionConfig<FeedbackItem>(
-                        icon: Icons.notifications_none,
-                        tooltip: 'Notify',
-                        onPressed: (item, index) => controller.notify(item),
-                      ),
-                      TableActionConfig<FeedbackItem>(
-                        icon: Icons.airplanemode_on_sharp,
-                        color: Color(0xffD6A100) ,
-                        tooltip: 'Highlight',
-                        onPressed: (item, index) => controller.highlight(item),
-                      ),
-                    ],
-                  )),
+                    ),
+                  ],
+                  actions: [
+                    TableActionConfig<FeedbackItem>(
+                      icon: Icons.visibility_outlined,
+                      tooltip: 'View',
+                      onPressed: (item, index) {
+                        controller.selectedFeedback.value = item;
+                        final homeController = Get.find<HomeController>();
+                        homeController
+                            .changeContent(ContentType.feedbackDetails);
+                      },
+                    ),
+                    TableActionConfig<FeedbackItem>(
+                      icon: Icons.notifications_none,
+                      tooltip: 'Notify',
+                      onPressed: (item, index) => controller.notify(item),
+                    ),
+                    TableActionConfig<FeedbackItem>(
+                      icon: Icons.airplanemode_on_sharp,
+                      color: const Color(0xffD6A100),
+                      tooltip: 'Highlight',
+                      onPressed: (item, index) => controller.highlight(item),
+                    ),
+                  ],
+                );
+              }),
             ),
           ],
         ),
@@ -526,6 +646,7 @@ void showFeedbackDialog(BuildContext context) {
     );
   }
 }
+
 class _SendingFeedbackDialog extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -573,7 +694,8 @@ class _SendingFeedbackDialogState extends State<_SendingFeedbackDialog> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 16),
-            const Icon(Icons.check_circle_outline, size: 56, color: Color(0xFF00C447)),
+            const Icon(Icons.check_circle_outline,
+                size: 56, color: Color(0xFF00C447)),
             const SizedBox(height: 24),
             const Text(
               'Sending feedback request',
@@ -608,7 +730,8 @@ class _SendingFeedbackDialogState extends State<_SendingFeedbackDialog> {
                       value: progress / total,
                       minHeight: 6.32,
                       backgroundColor: const Color(0xFFD8FAE4),
-                      valueColor: const AlwaysStoppedAnimation(Color(0xFF00C447)),
+                      valueColor:
+                          const AlwaysStoppedAnimation(Color(0xFF00C447)),
                     ),
                   ),
                 ),
@@ -632,6 +755,7 @@ class _SendingFeedbackDialogState extends State<_SendingFeedbackDialog> {
     );
   }
 }
+
 class _GradePill extends StatelessWidget {
   final String label;
 

@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../utils/medplum_service.dart';
 import '../../../models/fhir_organization.dart';
 import 'expandable_menu_item.dart';
 import 'menu_item_widget.dart';
@@ -86,38 +85,61 @@ class SecondSidebar extends GetView<HomeController> {
     required VoidCallback onTap,
     bool isFirst = false,
     bool isLast = false,
+    ContentType? contentType,
+    int? parentIndex,
   }) {
-    return SizedBox(
-      height: 32,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 24,
-            height: 32,
-            child: CustomPaint(
-              painter: TreeConnectorPainter(
-                isFirst: isFirst,
-                isLast: isLast,
-              ),
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: InkWell(
-              onTap: onTap,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF595A5B),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+    return Obx(() {
+      final isActive =
+          contentType != null && controller.currentContent.value == contentType;
+      return SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 32,
+              child: CustomPaint(
+                painter: TreeConnectorPainter(
+                  isFirst: isFirst,
+                  isLast: isLast,
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  if (parentIndex != null) {
+                    controller.changeIndex(parentIndex);
+                  }
+                  onTap();
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color:
+                        isActive ? const Color(0xFFE8F5E9) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: isActive
+                          ? const Color(0xFF2E7D32)
+                          : const Color(0xFF595A5B),
+                      fontSize: 12,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildCampusInfo(BuildContext context) {
@@ -151,29 +173,35 @@ class SecondSidebar extends GetView<HomeController> {
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
-              child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Al Riyadh Campus",
-                style: TextStyle(
-                  color: Color(0xFF2D2E2E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+          Expanded(child: Obx(() {
+            final branchData = controller.selectedBranchData.value;
+            final organizationName =
+                branchData?['organizationName'] ?? 'Select Organization';
+            final branchName = branchData?['name'] ?? 'Select Branch';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  organizationName,
+                  style: const TextStyle(
+                    color: Color(0xFF2D2E2E),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                "School management ",
-                style: TextStyle(
-                  color: Color(0xFF595A5B),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                Text(
+                  branchName,
+                  style: const TextStyle(
+                    color: Color(0xFF595A5B),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ) // _buildCampusInfoDropdown(context),
-              ),
+              ],
+            );
+          })),
         ],
       ),
     );
@@ -197,7 +225,6 @@ class SecondSidebar extends GetView<HomeController> {
             controller.changeIndex(0);
             controller.changeContent(ContentType.dashboard);
           },
-          badge: '1',
         ),
 
         /*_buildSectionTitle(title: "Communication"),
@@ -214,11 +241,11 @@ class SecondSidebar extends GetView<HomeController> {
         _buildSectionTitle(title: "Appointments management"),
         MenuItemWidget(
           icon: 'assets/svg/calendar.svg',
-          title: 'Appointment scheduling',
+          title: 'Appointments',
           isActive: controller.selectedIndex.value == 5,
           onTap: () {
             controller.changeIndex(5);
-            controller.changeContent(ContentType.calendar);
+            controller.changeContent(ContentType.appointmentScheduling);
           },
           // badge: '1',
         ),
@@ -228,7 +255,7 @@ class SecondSidebar extends GetView<HomeController> {
           /*_buildSectionTitle(title: "School Management"),
           MenuItemWidget(
             icon: 'assets/svg/calendar.svg',
-            title: 'Appointment scheduling',
+            title: 'Appointments',
             isActive: controller.selectedIndex.value == 1,
             onTap: () {
               controller.changeIndex(1);
@@ -243,50 +270,63 @@ class SecondSidebar extends GetView<HomeController> {
             isExpanded: controller.expandedMenuItems.contains(3),
             onTap: () {
               controller.changeIndex(3);
-              controller.changeContent(ContentType.studentsOverview);
+              controller.changeContent(ContentType.studentsList);
             },
             onExpandTap: () => controller.toggleMenuExpansion(3),
-            badge: '1',
             children: [
-              _buildSubMenuItem('Overview',
-                  onTap: () =>
-                      controller.changeContent(ContentType.studentsOverview),
-                  isFirst: true),
               _buildSubMenuItem('Students list',
                   onTap: () =>
-                      controller.changeContent(ContentType.studentsList)),
+                      controller.changeContent(ContentType.studentsList),
+                  isFirst: true,
+                  contentType: ContentType.studentsList,
+                  parentIndex: 3),
               _buildSubMenuItem('Medical records',
                   onTap: () =>
-                      controller.changeContent(ContentType.medicalCheckups)),
+                      controller.changeContent(ContentType.medicalCheckups),
+                  contentType: ContentType.medicalCheckups,
+                  parentIndex: 3),
               _buildSubMenuItem('Reports',
                   onTap: () => controller.changeContent(ContentType.reports),
-                  isLast: true),
+                  isLast: true,
+                  contentType: ContentType.reports,
+                  parentIndex: 3),
             ],
           ),
-          _buildSectionTitle(title: "Resources"),
-          ExpandableMenuItem(
-            icon: 'assets/svg/data.svg',
-            title: 'Resources',
-            isActive: controller.selectedIndex.value == 4,
-            isExpanded: controller.expandedMenuItems.contains(4),
-            onTap: () {
-              controller.changeIndex(4);
-              controller.changeContent(ContentType.branches);
-            },
-            onExpandTap: () => controller.toggleMenuExpansion(4),
-            badge: '1',
-            children: [
-              _buildSubMenuItem('Branches',
-                  onTap: () => controller.changeContent(ContentType.branches),
-                  isFirst: true),
-              _buildSubMenuItem('Classes setting',
-                  onTap: () =>
-                      controller.changeContent(ContentType.gradesSettings)),
-              _buildSubMenuItem('Users',
-                  onTap: () => controller.changeContent(ContentType.users),
-                  isLast: true),
-            ],
-          ),
+          if (!controller.isRestrictedRole) ...[
+            _buildSectionTitle(title: "Resources"),
+            ExpandableMenuItem(
+              icon: 'assets/svg/data.svg',
+              title: 'Resources',
+              isActive: controller.selectedIndex.value == 4,
+              isExpanded: controller.expandedMenuItems.contains(4),
+              onTap: () {
+                controller.changeIndex(4);
+                controller.changeContent(ContentType.branches);
+              },
+              onExpandTap: () => controller.toggleMenuExpansion(4),
+              children: [
+                _buildSubMenuItem('Branches',
+                    onTap: () => controller.changeContent(ContentType.branches),
+                    isFirst: true,
+                    contentType: ContentType.branches,
+                    parentIndex: 4),
+                _buildSubMenuItem('Classes setting',
+                    onTap: () =>
+                        controller.changeContent(ContentType.gradesSettings),
+                    contentType: ContentType.gradesSettings,
+                    parentIndex: 4),
+                _buildSubMenuItem('School & year calendar',
+                    onTap: () => controller.changeContent(ContentType.schoolYear),
+                    contentType: ContentType.schoolYear,
+                    parentIndex: 4),
+                _buildSubMenuItem('Users',
+                    onTap: () => controller.changeContent(ContentType.users),
+                    isLast: true,
+                    contentType: ContentType.users,
+                    parentIndex: 4),
+              ],
+            ),
+          ],
         ],
 
         // Clinic-specific items
@@ -312,45 +352,57 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.studentsOverview);
             },
             onExpandTap: () => controller.toggleMenuExpansion(3),
-            badge: '1',
             children: [
               _buildSubMenuItem('Patient Overview',
                   onTap: () =>
                       controller.changeContent(ContentType.studentsOverview),
-                  isFirst: true),
+                  isFirst: true,
+                  contentType: ContentType.studentsOverview,
+                  parentIndex: 3),
               _buildSubMenuItem('Patient Records',
                   onTap: () =>
-                      controller.changeContent(ContentType.studentsList)),
+                      controller.changeContent(ContentType.studentsList),
+                  contentType: ContentType.studentsList,
+                  parentIndex: 3),
               _buildSubMenuItem('Medical Records',
                   onTap: () =>
                       controller.changeContent(ContentType.medicalCheckups),
-                  isLast: true),
+                  isLast: true,
+                  contentType: ContentType.medicalCheckups,
+                  parentIndex: 3),
             ],
           ),
-          _buildSectionTitle(title: "Medical Resources"),
-          ExpandableMenuItem(
-            icon: 'assets/svg/data.svg',
-            title: 'Resources',
-            isActive: controller.selectedIndex.value == 4,
-            isExpanded: controller.expandedMenuItems.contains(4),
-            onTap: () {
-              controller.changeIndex(4);
-              controller.changeContent(ContentType.branches);
-            },
-            onExpandTap: () => controller.toggleMenuExpansion(4),
-            badge: '1',
-            children: [
-              _buildSubMenuItem('Departments',
-                  onTap: () => controller.changeContent(ContentType.branches),
-                  isFirst: true),
-              _buildSubMenuItem('Medical Staff',
-                  onTap: () =>
-                      controller.changeContent(ContentType.gradesSettings)),
-              _buildSubMenuItem('Staff Management',
-                  onTap: () => controller.changeContent(ContentType.users),
-                  isLast: true),
-            ],
-          ),
+          if (!controller.isRestrictedRole) ...[
+            _buildSectionTitle(title: "Medical Resources"),
+            ExpandableMenuItem(
+              icon: 'assets/svg/data.svg',
+              title: 'Resources',
+              isActive: controller.selectedIndex.value == 4,
+              isExpanded: controller.expandedMenuItems.contains(4),
+              onTap: () {
+                controller.changeIndex(4);
+                controller.changeContent(ContentType.branches);
+              },
+              onExpandTap: () => controller.toggleMenuExpansion(4),
+              children: [
+                _buildSubMenuItem('Departments',
+                    onTap: () => controller.changeContent(ContentType.branches),
+                    isFirst: true,
+                    contentType: ContentType.branches,
+                    parentIndex: 4),
+                _buildSubMenuItem('Medical Staff',
+                    onTap: () =>
+                        controller.changeContent(ContentType.gradesSettings),
+                    contentType: ContentType.gradesSettings,
+                    parentIndex: 4),
+                _buildSubMenuItem('Staff Management',
+                    onTap: () => controller.changeContent(ContentType.users),
+                    isLast: true,
+                    contentType: ContentType.users,
+                    parentIndex: 4),
+              ],
+            ),
+          ],
         ],
 
         // Show default items if neither school nor clinic is selected
@@ -365,30 +417,37 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.appointmentScheduling);
             },
           ),
-          _buildSectionTitle(title: "Resources"),
-          ExpandableMenuItem(
-            icon: 'assets/svg/data.svg',
-            title: 'Resources',
-            isActive: controller.selectedIndex.value == 4,
-            isExpanded: controller.expandedMenuItems.contains(4),
-            onTap: () {
-              controller.changeIndex(4);
-              controller.changeContent(ContentType.branches);
-            },
-            onExpandTap: () => controller.toggleMenuExpansion(4),
-            badge: '1',
-            children: [
-              _buildSubMenuItem('Branches',
-                  onTap: () => controller.changeContent(ContentType.branches),
-                  isFirst: true),
-              _buildSubMenuItem('Settings',
-                  onTap: () =>
-                      controller.changeContent(ContentType.gradesSettings)),
-              _buildSubMenuItem('Users',
-                  onTap: () => controller.changeContent(ContentType.users),
-                  isLast: true),
-            ],
-          ),
+          if (!controller.isRestrictedRole) ...[
+            _buildSectionTitle(title: "Resources"),
+            ExpandableMenuItem(
+              icon: 'assets/svg/data.svg',
+              title: 'Resources',
+              isActive: controller.selectedIndex.value == 4,
+              isExpanded: controller.expandedMenuItems.contains(4),
+              onTap: () {
+                controller.changeIndex(4);
+                controller.changeContent(ContentType.branches);
+              },
+              onExpandTap: () => controller.toggleMenuExpansion(4),
+              children: [
+                _buildSubMenuItem('Branches',
+                    onTap: () => controller.changeContent(ContentType.branches),
+                    isFirst: true,
+                    contentType: ContentType.branches,
+                    parentIndex: 4),
+                _buildSubMenuItem('Settings',
+                    onTap: () =>
+                        controller.changeContent(ContentType.gradesSettings),
+                    contentType: ContentType.gradesSettings,
+                    parentIndex: 4),
+                _buildSubMenuItem('Users',
+                    onTap: () => controller.changeContent(ContentType.users),
+                    isLast: true,
+                    contentType: ContentType.users,
+                    parentIndex: 4),
+              ],
+            ),
+          ],
         ],
       ],
     );
@@ -403,14 +462,14 @@ class SecondSidebar extends GetView<HomeController> {
       if (organizationId.isNotEmpty &&
           mainOrganization.value == null &&
           !isLoadingMainOrganization.value) {
-        _loadMainOrganization(organizationId);
+        //_loadMainOrganization(organizationId);
       }
 
       // Load child organizations when organization ID is available
       if (organizationId.isNotEmpty &&
           childOrganizations.isEmpty &&
           !isLoadingChildOrganizations.value) {
-        _loadChildOrganizations(organizationId);
+        //_loadChildOrganizations(organizationId);
       }
 
       // Show loading skeleton if loading main organization
@@ -519,54 +578,54 @@ class SecondSidebar extends GetView<HomeController> {
     });
   }
 
-  Future<void> _loadMainOrganization(String organizationId) async {
-    try {
-      isLoadingMainOrganization.value = true;
+  // Future<void> _loadMainOrganization(String organizationId) async {
+  //   try {
+  //     isLoadingMainOrganization.value = true;
 
-      final medplumService = Get.find<MedplumService>();
-      final result = await medplumService.fetchOrganizationById(
-        organizationId: organizationId,
-      );
+  //     final medplumService = Get.find<MedplumService>();
+  //     final result = await medplumService.fetchOrganizationById(
+  //       organizationId: organizationId,
+  //     );
 
-      if (result['success'] == true) {
-        final organization = result['organization'] as FhirOrganization;
-        mainOrganization.value = organization;
-        print('✅ Loaded main organization: ${organization.name}');
-      } else {
-        print('❌ Failed to load main organization: ${result['message']}');
-      }
-    } catch (e) {
-      print('💥 Error loading main organization: $e');
-    } finally {
-      isLoadingMainOrganization.value = false;
-    }
-  }
+  //     if (result['success'] == true) {
+  //       final organization = result['organization'] as FhirOrganization;
+  //       mainOrganization.value = organization;
+  //       print('✅ Loaded main organization: ${organization.name}');
+  //     } else {
+  //       print('❌ Failed to load main organization: ${result['message']}');
+  //     }
+  //   } catch (e) {
+  //     print('💥 Error loading main organization: $e');
+  //   } finally {
+  //     isLoadingMainOrganization.value = false;
+  //   }
+  // }
 
-  Future<void> _loadChildOrganizations(String parentOrganizationId) async {
-    try {
-      isLoadingChildOrganizations.value = true;
+  // Future<void> _loadChildOrganizations(String parentOrganizationId) async {
+  //   try {
+  //     isLoadingChildOrganizations.value = true;
 
-      final medplumService = Get.find<MedplumService>();
-      final result = await medplumService.fetchChildOrganizations(
-        parentOrganizationId: parentOrganizationId,
-      );
+  //     final medplumService = Get.find<MedplumService>();
+  //     final result = await medplumService.fetchChildOrganizations(
+  //       parentOrganizationId: parentOrganizationId,
+  //     );
 
-      if (result['success'] == true) {
-        final organizations = result['organizations'] as List<FhirOrganization>;
-        childOrganizations.value = organizations;
-        print('✅ Loaded ${organizations.length} child organizations');
-        for (final org in organizations) {
-          print('   - ${org.name} (${_getOrganizationTypeDisplay(org)})');
-        }
-      } else {
-        print('❌ Failed to load child organizations: ${result['message']}');
-      }
-    } catch (e) {
-      print('💥 Error loading child organizations: $e');
-    } finally {
-      isLoadingChildOrganizations.value = false;
-    }
-  }
+  //     if (result['success'] == true) {
+  //       final organizations = result['organizations'] as List<FhirOrganization>;
+  //       childOrganizations.value = organizations;
+  //       print('✅ Loaded ${organizations.length} child organizations');
+  //       for (final org in organizations) {
+  //         print('   - ${org.name} (${_getOrganizationTypeDisplay(org)})');
+  //       }
+  //     } else {
+  //       print('❌ Failed to load child organizations: ${result['message']}');
+  //     }
+  //   } catch (e) {
+  //     print('💥 Error loading child organizations: $e');
+  //   } finally {
+  //     isLoadingChildOrganizations.value = false;
+  //   }
+  // }
 
   Widget _buildLoadingSkeleton() {
     return TweenAnimationBuilder<double>(

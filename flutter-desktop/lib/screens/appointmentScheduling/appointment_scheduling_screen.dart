@@ -186,7 +186,7 @@ class AppointmentSchedulingScreen
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Appointment scheduling',
+                        'Appointments',
                         style: TextStyle(
                           color: Color(0xFF2D2E2E) /* Text-Text-100 */,
                           fontSize: 20,
@@ -198,7 +198,7 @@ class AppointmentSchedulingScreen
                       const BreadcrumbWidget(
                         items: [
                           BreadcrumbItem(label: 'Ayamedica portal'),
-                          BreadcrumbItem(label: 'Appointment scheduling'),
+                          BreadcrumbItem(label: 'Appointments'),
                         ],
                       ),
                     ],

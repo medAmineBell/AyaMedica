@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/models/student.dart';
 import 'status_badge.dart';
 
 class GuardianSection extends StatelessWidget {
-  const GuardianSection({Key? key}) : super(key: key);
+  final Student student;
+
+  const GuardianSection({Key? key, required this.student}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,20 +29,16 @@ class GuardianSection extends StatelessWidget {
               const SizedBox(width: 8),
               Row(
                 children: [
-                  const Text(
-                    'Jane Doe',
-                    style: TextStyle(
+                  Text(
+                    student.firstGuardianName ?? '-',
+                    style: const TextStyle(
                       color: Color(0xFF111827),
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  StatusBadge(
-                    label: 'Undefined',
-                    bgColor: const Color(0xFFD1D5DB),
-                    dotColor: const Color(0xFF6B7280),
-                  ),
+                  _buildStatusBadge(student.firstGuardianStatus),
                 ],
               )
             ],
@@ -74,26 +73,45 @@ class GuardianSection extends StatelessWidget {
               const SizedBox(width: 8),
               Row(
                 children: [
-                  const Text(
-                    'Jane Doe',
-                    style: TextStyle(
+                  Text(
+                    student.secondGuardianName ?? '-',
+                    style: const TextStyle(
                       color: Color(0xFF111827),
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  StatusBadge(
-                    label: 'Offline',
-                    bgColor: const Color(0xFFFEE2E2),
-                    dotColor: const Color(0xFFDC2626),
-                  ),
+                  if (student.secondGuardianName != null) ...[
+                    const SizedBox(width: 8),
+                    _buildStatusBadge(student.secondGuardianStatus),
+                  ],
                 ],
               )
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStatusBadge(String? status) {
+    if (status == 'active') {
+      return const StatusBadge(
+        label: 'Active',
+        bgColor: Color(0xFFDCFCE7),
+        dotColor: Color(0xFF16A34A),
+      );
+    } else if (status == 'inactive') {
+      return const StatusBadge(
+        label: 'Inactive',
+        bgColor: Color(0xFFFEE2E2),
+        dotColor: Color(0xFFDC2626),
+      );
+    }
+    return const StatusBadge(
+      label: 'Undefined',
+      bgColor: Color(0xFFD1D5DB),
+      dotColor: Color(0xFF6B7280),
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 
 class UsersEmptyScreen extends StatelessWidget {
-  final UsersController controller = Get.put(UsersController());
+  final UsersController controller = Get.find<UsersController>();
 
   @override
   Widget build(BuildContext context) {

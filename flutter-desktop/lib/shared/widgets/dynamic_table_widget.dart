@@ -78,13 +78,22 @@ class DynamicTableWidget<T> extends StatelessWidget {
       columnWidths[columns.length] = FixedColumnWidth(actionColumnWidth ?? 120);
     }
 
-    return Table(
-      columnWidths: columnWidths,
+    return Column(
       children: [
-        _buildHeaderRow(),
-        ...items.asMap().entries.map((entry) {
-          return _buildDataRow(entry.value, entry.key);
-        }).toList(),
+        Table(
+          columnWidths: columnWidths,
+          children: [_buildHeaderRow()],
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Table(
+              columnWidths: columnWidths,
+              children: items.asMap().entries.map((entry) {
+                return _buildDataRow(entry.value, entry.key);
+              }).toList(),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -110,8 +119,7 @@ class DynamicTableWidget<T> extends StatelessWidget {
         child: column.headerWidget ??
             Row(
               children: [
-                SizedBox(
-                  width: 89, // Fixed width for header cells
+                Flexible(
                   child: Text(
                     column.header,
                     style: const TextStyle(

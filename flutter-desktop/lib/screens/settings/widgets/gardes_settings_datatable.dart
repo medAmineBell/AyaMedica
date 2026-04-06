@@ -1,27 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/controllers/gardes_controller.dart';
-import 'package:flutter_getx_app/models/appointment.dart';
-import 'package:flutter_getx_app/models/gardes.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
+import 'package:flutter_getx_app/screens/settings/widgets/create_class_grade.dart';
 import 'package:get/get.dart';
-import '../../../controllers/appointment_scheduling_controller.dart';
-import '../../../models/appointment_models.dart';
 
 class GardesSettingsDatatable extends StatelessWidget {
   const GardesSettingsDatatable({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<GardesController>();
+    final controller = Get.find<ResourcesController>();
 
     return Obx(() {
-      final gardes = controller.gardes;
+      final classes = controller.filteredClasses;
 
-      if (gardes.isEmpty) {
+      if (controller.isLoading.value) {
+        return Container(
+          padding: const EdgeInsets.all(64),
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      if (classes.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(32),
           child: const Center(
             child: Text(
-              'No gardes found',
+              'No classes found',
               style: TextStyle(
                 fontSize: 16,
                 color: Color(0xFF6B7280),
@@ -31,24 +37,35 @@ class GardesSettingsDatatable extends StatelessWidget {
         );
       }
 
-      return Table(
-        columnWidths: const {
-          0: FlexColumnWidth(3), // Name
-          1: FlexColumnWidth(2), // Type
-          2: FlexColumnWidth(2), // Appointment type
-          3: FlexColumnWidth(2), // Date & time
-          4: FlexColumnWidth(2), // Status
-          5: FlexColumnWidth(2), // Actions
-        },
-        children: [
-          // Header
-          _buildHeaderRow(),
-
-          // Data rows
-          ...gardes.map((garde) {
-            return _buildDataRow(garde, controller);
-          }).toList(),
-        ],
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Table(
+          columnWidths: const {
+            0: FlexColumnWidth(3), // Name
+            1: FlexColumnWidth(2), // Grade
+            2: FlexColumnWidth(2), // Max Capacity
+            3: FlexColumnWidth(2), // Current Capacity
+            4: FlexColumnWidth(2), // Actions
+          },
+          children: [
+            // Header
+            _buildHeaderRow(),
+            // Data rows
+            ...classes.map((classItem) {
+              return _buildDataRow(classItem, controller);
+            }).toList(),
+          ],
+        ),
       );
     });
   }
@@ -56,7 +73,7 @@ class GardesSettingsDatatable extends StatelessWidget {
   TableRow _buildHeaderRow() {
     return TableRow(
       decoration: const BoxDecoration(
-        color: Color.fromARGB(255, 240, 242, 245),
+        color: Color(0xFFF9FAFB),
         border: Border(
           bottom: BorderSide(color: Color(0xFFE5E7EB)),
         ),
@@ -64,51 +81,41 @@ class GardesSettingsDatatable extends StatelessWidget {
       children: [
         _buildHeaderCell(
           child: const Text(
-            'Branch name & AID',
+            'Class Name',
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-        ),
-        _buildHeaderCell(
-          child: Row(
-            children: [
-              const Text(
-                'Class',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.help_outline,
-                size: 14,
-                color: Colors.grey.shade400,
-              ),
-            ],
-          ),
-        ),
-        _buildHeaderCell(
-          child: const Text(
-            'Maximum capacity',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
             ),
           ),
         ),
         _buildHeaderCell(
           child: const Text(
-            'Actual capacity',
+            'Grade',
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
+        ),
+        _buildHeaderCell(
+          child: const Text(
+            'Maximum Capacity',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
+        ),
+        _buildHeaderCell(
+          child: const Text(
+            'Current Students',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
             ),
           ),
         ),
@@ -117,8 +124,8 @@ class GardesSettingsDatatable extends StatelessWidget {
             'Actions',
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
             ),
           ),
         ),
@@ -126,162 +133,159 @@ class GardesSettingsDatatable extends StatelessWidget {
     );
   }
 
-  TableRow _buildDataRow(gardes, GardesController controller) {
+  TableRow _buildDataRow(
+      Map<String, dynamic> classItem, ResourcesController controller) {
+    final currentStudents = classItem['studentCount'] ?? 0;
+    final maxCapacity = classItem['maximumCapacity'] ?? 0;
+
     return TableRow(
       decoration: const BoxDecoration(
+        color: Colors.white,
         border: Border(
           bottom: BorderSide(color: Color(0xFFE5E7EB)),
         ),
       ),
       children: [
-        // Clickable Avatar
-
-        // Clickable Name
+        // Class Name with Avatar
         _buildDataCell(
           child: Row(
             children: [
-              InkWell(
-                // onTap: () => _showStudentDetails(appointment),
-                borderRadius: BorderRadius.circular(20),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: _getClassColor(gardes.name),
-                  child: Text(
-                    gardes.name.isNotEmpty
-                        ? gardes.name.substring(0, 2).toUpperCase()
-                        : 'CL',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: _getClassColor(classItem['name'] ?? ''),
+                child: Text(
+                  (classItem['name'] ?? 'CL')
+                      .split(' ')
+                      .take(2)
+                      .map((word) => word.isNotEmpty ? word[0] : '')
+                      .join()
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              InkWell(
-                // onTap: () => _showStudentDetails(appointment),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${gardes.name}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF374151),
-                          decorationColor: Color(0xFF374151),
-                        ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      classItem['name'] ?? 'Unknown',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${gardes.NumClasses} classes ',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      classItem['classType'] ?? 'Offline',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-
+        // Grade
         _buildDataCell(
           child: Text(
-            gardes.ClassName,
+            classItem['grade'] ?? '-',
             style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7280),
             ),
           ),
         ),
+        // Max Capacity
         _buildDataCell(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: gardes.MaxCapacity > 20
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFFEF3C7),
+              color: const Color(0xFFDCFCE7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${gardes.MaxCapacity} Students',
-              style: TextStyle(
+              '$maxCapacity Students',
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: gardes.MaxCapacity > 20
-                    ? const Color(0xFF059669)
-                    : const Color(0xFFD97706),
+                color: Color(0xFF059669),
               ),
             ),
           ),
         ),
+        // Current Students
         _buildDataCell(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: gardes.ActualCapacity > 20
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFFEF3C7),
+              color: currentStudents > (maxCapacity * 0.8)
+                  ? const Color(0xFFFEF3C7)
+                  : const Color(0xFFDCFCE7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${gardes.ActualCapacity} Students',
+              '$currentStudents Students',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: gardes.ActualCapacity > 20
-                    ? const Color(0xFF059669)
-                    : const Color(0xFFD97706),
+                color: currentStudents > (maxCapacity * 0.8)
+                    ? const Color(0xFFD97706)
+                    : const Color(0xFF059669),
               ),
             ),
           ),
         ),
-
+        // Actions
         _buildDataCell(
-          child: _buildActionButtons(gardes),
+          child: _buildActionButtons(classItem, controller),
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(Gardes gardes) {
+  Widget _buildActionButtons(
+      Map<String, dynamic> classItem, ResourcesController controller) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           onPressed: () {
-            // _showDeleteConfirmation(appointment);
+            _showDeleteConfirmation(classItem, controller);
           },
           icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          tooltip: 'Delete',
         ),
         IconButton(
           onPressed: () {
-            // Handle edit appointment
+            _showEditDialog(classItem);
           },
           icon: const Icon(Icons.edit_outlined,
               color: Color(0xFF6B7280), size: 18),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          tooltip: 'Edit',
         ),
-        // IconButton(
-        //   onPressed: () {
-        //     // Handle view appointment details - could also show student details
-        //     // _showStudentDetails(appointment);
-        //   },
-        //   icon: const Icon(Icons.visibility_outlined,
-        //       color: Color(0xFF6B7280), size: 18),
-        //   padding: const EdgeInsets.all(4),
-        //   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        // ),
+        IconButton(
+          onPressed: () {
+            controller.loadClassDetails(classItem['id']);
+          },
+          icon: const Icon(Icons.visibility_outlined,
+              color: Color(0xFF6B7280), size: 18),
+          padding: const EdgeInsets.all(4),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          tooltip: 'View Details',
+        ),
       ],
     );
   }
@@ -314,32 +318,77 @@ class GardesSettingsDatatable extends StatelessWidget {
     return colors[hash.abs() % colors.length];
   }
 
-  void _showDeleteConfirmation(appointment) {
+  void _showDeleteConfirmation(
+      Map<String, dynamic> classItem, ResourcesController controller) {
     Get.dialog(
       AlertDialog(
-        title: const Text('Delete Appointment'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                color: Color(0xFFFC2E53), size: 28),
+            SizedBox(width: 12),
+            Text(
+              'Delete Class',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
+            ),
+          ],
+        ),
         content: Text(
-            'Are you sure you want to delete the appointment for ${appointment.className}?'),
+          'Are you sure you want to delete "${classItem['name']}"? This action cannot be undone.',
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF6B7280),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF6B7280),
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              // Handle delete logic here
-              Get.back();
+          ElevatedButton(
+            onPressed: () async {
+              Get.back(); // Close dialog
+              await controller.deleteClass(classItem['id']);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFC2E53),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
+      barrierDismissible: true,
     );
   }
 
-  // Navigate to student view
-  void _showStudentDetails(Appointment appointment) {
-    final controller = Get.find<AppointmentSchedulingController>();
-    controller.showStudentsForAppointment(appointment);
+  void _showEditDialog(Map<String, dynamic> classItem) {
+    Get.dialog(
+      CreateClassScreen(classToEdit: classItem),
+    );
   }
 }

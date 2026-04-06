@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/create_appointment_dialog.dart';
 import 'package:flutter_getx_app/screens/settings/widgets/create_class_grade.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
@@ -13,85 +12,73 @@ class GardesSettingsEmpty extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            'assets/svg/teacher.svg',
+          // Icon
+          Container(
             width: 120,
             height: 120,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFFE5E7EB),
-              BlendMode.srcIn,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.school_outlined,
+              size: 64,
+              color: Colors.grey[400],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
+
+          // Title
           const Text(
-            'No records',
+            'No Classes Yet',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: const Color(0xFF858789) /* Text-Text-70 */,
-              fontSize: 32,
-              fontFamily: 'IBM Plex Sans Arabic',
-              fontWeight: FontWeight.w700,
-              height: 1.25,
-              letterSpacing: -0.24,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF111827),
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'There  are no grades available ',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF858789),
-              fontSize: 14,
-              fontFamily: 'IBM Plex Sans Arabic',
-              fontWeight: FontWeight.w400,
-              height: 1.43,
-            ),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              side: const BorderSide(
-                width: 1,
-                color: Color(0xFF595A5B), // Stroke-Stroke-90
+          const SizedBox(height: 16),
+
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'There are no classes available. Click the button below to create your first class.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
               ),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Add Class Button
+          ElevatedButton.icon(
+            onPressed: () {
+              Get.dialog(
+                const CreateClassScreen(),
+              );
+            },
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text(
+              'Add New Class',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1339FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              shadowColor: const Color(0x0C101828),
-              elevation: 2, // BoxShadow blurRadius: 2 equivalent
-              backgroundColor: Colors.transparent,
+              elevation: 0,
             ),
-            onPressed: () {
-              Get.dialog(
-                CreateClassScreen(),
-              );
-            },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  'assets/svg/plus-square.svg',
-                  width: 16,
-                  height: 16,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'New garde',
-                  style: TextStyle(
-                    color: Color(0xFF747677), // Text-Text-80
-                    fontSize: 14,
-                    fontFamily: 'IBM Plex Sans Arabic',
-                    fontWeight: FontWeight.w500,
-                    height: 1.43,
-                    letterSpacing: 0.28,
-                  ),
-                ),
-              ],
-            ),
-          )
+          ),
         ],
       ),
     );

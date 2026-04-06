@@ -12,7 +12,7 @@ class AppointmentsList extends GetView<CalendarController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final filteredAppointments = controller.filteredAppointments;
-      
+
       if (filteredAppointments.isEmpty) {
         return Center(
           child: Text(
@@ -31,9 +31,8 @@ class AppointmentsList extends GetView<CalendarController> {
             // Table Header
             _buildTableHeader(),
             // Table Rows
-            ...filteredAppointments.map((appointment) => 
-              _buildAppointmentRow(context, appointment)
-            ),
+            ...filteredAppointments.map(
+                (appointment) => _buildAppointmentRow(context, appointment)),
           ],
         ),
       );
@@ -52,10 +51,13 @@ class AppointmentsList extends GetView<CalendarController> {
       child: Row(
         children: [
           Expanded(flex: 2, child: _buildHeaderCell('Name')),
-          Expanded(flex: 1, child: _buildHeaderCell('Appointment type', showInfo: true)),
+          Expanded(
+              flex: 1,
+              child: _buildHeaderCell('Appointment type', showInfo: true)),
           Expanded(flex: 1, child: _buildHeaderCell('Type', showInfo: true)),
           Expanded(flex: 1, child: _buildHeaderCell('Cases')),
-          Expanded(flex: 1, child: _buildHeaderCell('Date & time', showSort: true)),
+          Expanded(
+              flex: 1, child: _buildHeaderCell('Date & time', showSort: true)),
           Expanded(flex: 1, child: _buildHeaderCell('Status', showInfo: true)),
           Expanded(flex: 1, child: _buildHeaderCell('Actions')),
         ],
@@ -63,7 +65,8 @@ class AppointmentsList extends GetView<CalendarController> {
     );
   }
 
-  Widget _buildHeaderCell(String text, {bool showInfo = false, bool showSort = false}) {
+  Widget _buildHeaderCell(String text,
+      {bool showInfo = false, bool showSort = false}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -93,9 +96,10 @@ class AppointmentsList extends GetView<CalendarController> {
   }
 
   Widget _buildAppointmentRow(BuildContext context, Appointment appointment) {
-    final status = controller.appointmentStatuses[appointment.id] ?? appointment.status;
+    final status =
+        controller.appointmentStatuses[appointment.id] ?? appointment.status;
     final isStartingSoon = _isStartingSoon(appointment);
-    
+
     return InkWell(
       onTap: () {
         // Show appointment details in the same view
@@ -167,12 +171,12 @@ class AppointmentsList extends GetView<CalendarController> {
   }
 
   Widget _buildNameCell(Appointment appointment) {
-    final studentCount = appointment.allStudents 
-        ? '23 students' 
+    final studentCount = appointment.allStudents
+        ? '23 students'
         : appointment.selectedStudents.length == 1
             ? appointment.selectedStudents.first.name
             : '${appointment.selectedStudents.length} students';
-    
+
     final displayName = appointment.allStudents
         ? '${appointment.className} | ${appointment.grade}'
         : appointment.selectedStudents.isNotEmpty
@@ -242,17 +246,16 @@ class AppointmentsList extends GetView<CalendarController> {
       appointment.diseaseType.isEmpty ? '--' : appointment.diseaseType,
       style: TextStyle(
         fontSize: 14,
-        color: appointment.diseaseType.isEmpty 
-            ? Colors.grey[400] 
+        color: appointment.diseaseType.isEmpty
+            ? Colors.grey[400]
             : const Color(0xFF374151),
       ),
     );
   }
 
   Widget _buildCasesCell(Appointment appointment) {
-    final cases = appointment.allStudents 
-        ? 23 
-        : appointment.selectedStudents.length;
+    final cases =
+        appointment.allStudents ? 23 : appointment.selectedStudents.length;
     return Text(
       cases.toString(),
       style: const TextStyle(
@@ -306,40 +309,43 @@ class AppointmentsList extends GetView<CalendarController> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        statusText,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: textColor,
-        ),
-      ),
-    );
+        // padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        // decoration: BoxDecoration(
+        //   color: backgroundColor,
+        //   borderRadius: BorderRadius.circular(6),
+        // ),
+        // child: Text(
+        //   statusText,
+        //   style: TextStyle(
+        //     fontSize: 12,
+        //     fontWeight: FontWeight.w500,
+        //     color: textColor,
+        //   ),
+        // ),
+        );
   }
 
   Widget _buildActionsCell(BuildContext context, Appointment appointment) {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFF6B7280)),
+          icon: const Icon(Icons.delete_outline,
+              size: 20, color: Color(0xFF6B7280)),
           onPressed: () {
             controller.deleteAppointment(appointment.id!);
           },
         ),
         IconButton(
-          icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF6B7280)),
+          icon: const Icon(Icons.edit_outlined,
+              size: 20, color: Color(0xFF6B7280)),
           onPressed: () {
             // Handle edit
             print('Edit appointment: ${appointment.id}');
           },
         ),
         IconButton(
-          icon: const Icon(Icons.visibility_outlined, size: 20, color: Color(0xFF6B7280)),
+          icon: const Icon(Icons.visibility_outlined,
+              size: 20, color: Color(0xFF6B7280)),
           onPressed: () {
             // Handle view
             print('View appointment: ${appointment.id}');
@@ -361,7 +367,7 @@ class AppointmentsList extends GetView<CalendarController> {
     final now = DateTime.now();
     final appointmentDateTime = _parseAppointmentDateTime(appointment);
     if (appointmentDateTime == null) return false;
-    
+
     final difference = appointmentDateTime.difference(now);
     return difference.inMinutes >= 0 && difference.inMinutes <= 5;
   }
@@ -370,7 +376,7 @@ class AppointmentsList extends GetView<CalendarController> {
     final now = DateTime.now();
     final appointmentDateTime = _parseAppointmentDateTime(appointment);
     if (appointmentDateTime == null) return 0;
-    
+
     final difference = appointmentDateTime.difference(now);
     return difference.inMinutes.clamp(0, 999);
   }
@@ -380,11 +386,11 @@ class AppointmentsList extends GetView<CalendarController> {
       // Parse time like "08:00 AM - 08:30 AM" and extract start time
       final timeParts = appointment.time.split(' - ');
       if (timeParts.isEmpty) return null;
-      
+
       final startTimeStr = timeParts[0].trim();
       final timeFormat = DateFormat('hh:mm a');
       final parsedTime = timeFormat.parse(startTimeStr);
-      
+
       return DateTime(
         appointment.date.year,
         appointment.date.month,
@@ -404,4 +410,3 @@ class AppointmentsList extends GetView<CalendarController> {
     }
   }
 }
-
