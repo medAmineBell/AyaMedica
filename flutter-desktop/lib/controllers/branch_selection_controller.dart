@@ -380,33 +380,13 @@ class BranchSelectionController extends GetxController {
       print('   - Is School: $isSchool');
       print('   - Is Clinic: $isClinic');
 
-      // Update HomeController with selected branch data
-      try {
-        final homeController = Get.find<HomeController>();
-        homeController.updateSelectedBranchData(branchData);
-        await homeController.fetchAndCacheUserProfile();
-        print('✅ Branch data and user profile updated in HomeController');
-      } catch (e) {
-        print(
-            '⚠️ HomeController not found, branch data will be loaded on home screen: $e');
-      }
-
       isLoading.value = false;
-
-      // Show success message
-      Get.snackbar(
-        'Success',
-        'Organization ${branch['name']} selected',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
 
       print('✅ Branch selected successfully: ${branch['name']}');
 
-      // Navigate to home screen after a short delay
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Delete any existing HomeController so it gets freshly created on HomeScreen
+      Get.delete<HomeController>(force: true);
+
       Get.offAllNamed(Routes.HOME);
     } catch (e) {
       isLoading.value = false;
