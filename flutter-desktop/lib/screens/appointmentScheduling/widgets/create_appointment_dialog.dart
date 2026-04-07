@@ -574,7 +574,7 @@ class CreateAppointmentDialog extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Student AID Search
+        // Student name search
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -605,6 +605,91 @@ class CreateAppointmentDialog extends StatelessWidget {
               ),
               onChanged: controller.searchByName,
             ),
+            // Search results list
+            Obx(() {
+              if (controller.searchResults.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  itemCount: controller.searchResults.length,
+                  itemBuilder: (context, index) {
+                    final student = controller.searchResults[index];
+                    return InkWell(
+                      onTap: () => controller.selectStudentFromSearch(student),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          border: index < controller.searchResults.length - 1
+                              ? const Border(
+                                  bottom: BorderSide(
+                                      color: Color(0xFFF3F4F6)))
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: student.avatarColor,
+                              child: Text(
+                                _getInitials(student.name),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    student.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF374151),
+                                    ),
+                                  ),
+                                  if (student.aid != null &&
+                                      student.aid!.isNotEmpty)
+                                    Text(
+                                      student.aid!,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF9CA3AF),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
           ],
         ),
 
@@ -621,7 +706,7 @@ class CreateAppointmentDialog extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Grade, Class, Student dropdowns
+        // Grade, Class, Student dropdowns - step by step
         Row(
           children: [
             Expanded(
@@ -639,8 +724,12 @@ class CreateAppointmentDialog extends StatelessWidget {
                     label: 'Class',
                     hint: 'Class name',
                     value: controller.selectedClass.value,
-                    items: DropdownHelper.createStringItems(controller.classes),
-                    onChanged: controller.updateSelectedClass,
+                    items: controller.selectedGrade.value != null
+                        ? DropdownHelper.createStringItems(controller.classes)
+                        : [],
+                    onChanged: controller.selectedGrade.value != null
+                        ? controller.updateSelectedClass
+                        : (_) {},
                   )),
             ),
             const SizedBox(width: 16),
@@ -649,15 +738,19 @@ class CreateAppointmentDialog extends StatelessWidget {
                     label: 'Student name',
                     hint: 'Student name',
                     value: controller.walkInSelectedStudent.value,
-                    items: controller.filteredStudentsForWalkIn
-                        .map(
-                          (student) => DropdownMenuItem<Student>(
-                            value: student,
-                            child: Text(student.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: controller.updateWalkInSelectedStudent,
+                    items: controller.selectedClass.value != null
+                        ? controller.filteredStudentsForWalkIn
+                            .map(
+                              (student) => DropdownMenuItem<Student>(
+                                value: student,
+                                child: Text(student.name),
+                              ),
+                            )
+                            .toList()
+                        : [],
+                    onChanged: controller.selectedClass.value != null
+                        ? controller.updateWalkInSelectedStudent
+                        : (_) {},
                   )),
             ),
           ],
@@ -781,30 +874,37 @@ class CreateAppointmentDialog extends StatelessWidget {
                   CreateAppointmentController.predefinedDiseases),
               onChanged: (value) => controller.updateSelectedDisease(value),
             )),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller.otherDiseaseController,
-          onChanged: (value) => controller.otherDiseaseText.value = value,
-          decoration: InputDecoration(
-            hintText: 'Other...',
-            hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        Obx(() {
+          if (controller.selectedDisease.value != 'General') {
+            return const SizedBox.shrink();
+          }
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: TextFormField(
+              controller: controller.otherDiseaseController,
+              onChanged: (value) => controller.otherDiseaseText.value = value,
+              decoration: InputDecoration(
+                hintText: 'Other...',
+                hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF2563EB)),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

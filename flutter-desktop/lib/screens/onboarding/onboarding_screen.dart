@@ -21,23 +21,26 @@ class OnboardingScreen extends StatelessWidget {
                 children: [
                   OnboardingPage(
                     title: 'Gateway to Your Adventure',
-                    description: 'Enjoy various housing options, from budget to luxury, in Ayamedica.',
+                    description:
+                        'Enjoy various housing options, from budget to luxury, in Ayamedica.',
                     imagePath: 'assets/images/onboarding1.png',
                   ),
                   OnboardingPage(
                     title: 'Find Your Perfect Match',
-                    description: 'Discover healthcare services tailored to your specific needs and preferences.',
+                    description:
+                        'Discover healthcare services tailored to your specific needs and preferences.',
                     imagePath: 'assets/images/onboarding2.png',
                   ),
                   OnboardingPage(
                     title: 'Book with Confidence',
-                    description: 'Secure appointments with trusted healthcare providers in just a few taps.',
+                    description:
+                        'Secure appointments with trusted healthcare providers in just a few taps.',
                     imagePath: 'assets/images/onboarding3.png',
                   ),
                 ],
               ),
             ),
-            
+
             // Page indicators
             Obx(
               () => Row(
@@ -46,10 +49,10 @@ class OnboardingScreen extends StatelessWidget {
                   3,
                   (index) => Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                     width: controller.currentPage.value == index ? 24 : 8,
+                    width: controller.currentPage.value == index ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                       borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(4),
                       color: controller.currentPage.value == index
                           ? const Color(0xFFD0FD0D) // Bright yellow-green color
                           : const Color(0xFFE2E2E2), // Light gray
@@ -58,9 +61,9 @@ class OnboardingScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Navigation buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -71,7 +74,8 @@ class OnboardingScreen extends StatelessWidget {
                     onPressed: controller.skip,
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -84,8 +88,7 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
-                  
+
                   // Next button
                   Obx(
                     () => Expanded(
@@ -94,9 +97,11 @@ class OnboardingScreen extends StatelessWidget {
                             ? controller.getStarted
                             : controller.nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D6EFD), // Blue color
+                          backgroundColor:
+                              const Color(0xFF1339FF), // Blue color
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
@@ -105,7 +110,9 @@ class OnboardingScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              controller.currentPage.value == 2 ? 'Get Started' : 'Next',
+                              controller.currentPage.value == 2
+                                  ? 'Get Started'
+                                  : 'Next',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -121,8 +128,6 @@ class OnboardingScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
-        
           ],
         ),
       ),

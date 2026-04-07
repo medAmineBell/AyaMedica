@@ -108,7 +108,7 @@ class _StudentFiltersDropdownState extends State<StudentFiltersDropdown> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF3B82F6),
+                  color: Color(0xFF1339FF),
                 ),
               ),
             );
@@ -215,7 +215,7 @@ class _StudentFiltersDropdownState extends State<StudentFiltersDropdown> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                  borderSide: const BorderSide(color: Color(0xFF1339FF)),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -266,11 +266,11 @@ class _StudentFiltersDropdownState extends State<StudentFiltersDropdown> {
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF3B82F6) : Colors.white,
+                color: isSelected ? const Color(0xFF1339FF) : Colors.white,
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFF3B82F6)
+                      ? const Color(0xFF1339FF)
                       : Colors.grey.shade400,
                   width: 1.5,
                 ),

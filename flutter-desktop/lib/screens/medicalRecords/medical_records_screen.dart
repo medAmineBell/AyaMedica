@@ -63,8 +63,7 @@ class MedicalRecordsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTitleSection(
-      MedicalRecordsController controller,
+  Widget _buildTitleSection(MedicalRecordsController controller,
       BranchManagementController branchController) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
@@ -485,8 +484,7 @@ class MedicalRecordsScreen extends StatelessWidget {
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: isActive
-                      ? Border.all(
-                          color: const Color(0xFF3B82F6), width: 1.5)
+                      ? Border.all(color: const Color(0xFF1339FF), width: 1.5)
                       : null,
                 ),
                 child: Center(
@@ -496,7 +494,7 @@ class MedicalRecordsScreen extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                       color: isActive
-                          ? const Color(0xFF3B82F6)
+                          ? const Color(0xFF1339FF)
                           : Colors.grey.shade700,
                     ),
                   ),

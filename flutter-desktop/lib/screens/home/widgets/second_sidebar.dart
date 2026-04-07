@@ -216,16 +216,16 @@ class SecondSidebar extends GetView<HomeController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Common items for both School and Clinic
-        _buildSectionTitle(title: "School dashboard"),
-        MenuItemWidget(
-          icon: 'assets/svg/chart-square.svg',
-          title: 'Dashboard',
-          isActive: controller.selectedIndex.value == 0,
-          onTap: () {
-            controller.changeIndex(0);
-            controller.changeContent(ContentType.dashboard);
-          },
-        ),
+        // _buildSectionTitle(title: "School dashboard"),
+        // MenuItemWidget(
+        //   icon: 'assets/svg/chart-square.svg',
+        //   title: 'Dashboard',
+        //   isActive: controller.selectedIndex.value == 0,
+        //   onTap: () {
+        //     controller.changeIndex(0);
+        //     controller.changeContent(ContentType.dashboard);
+        //   },
+        // ),
 
         /*_buildSectionTitle(title: "Communication"),
         MenuItemWidget(
@@ -283,16 +283,17 @@ class SecondSidebar extends GetView<HomeController> {
               _buildSubMenuItem('Medical records',
                   onTap: () =>
                       controller.changeContent(ContentType.medicalCheckups),
+                  isLast: true,
                   contentType: ContentType.medicalCheckups,
                   parentIndex: 3),
-              _buildSubMenuItem('Reports',
-                  onTap: () => controller.changeContent(ContentType.reports),
-                  isLast: true,
-                  contentType: ContentType.reports,
-                  parentIndex: 3),
+              // _buildSubMenuItem('Reports',
+              //     onTap: () => controller.changeContent(ContentType.reports),
+              //     isLast: true,
+              //     contentType: ContentType.reports,
+              //     parentIndex: 3),
             ],
           ),
-          if (!controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',
@@ -315,10 +316,11 @@ class SecondSidebar extends GetView<HomeController> {
                         controller.changeContent(ContentType.gradesSettings),
                     contentType: ContentType.gradesSettings,
                     parentIndex: 4),
-                _buildSubMenuItem('School & year calendar',
-                    onTap: () => controller.changeContent(ContentType.schoolYear),
-                    contentType: ContentType.schoolYear,
-                    parentIndex: 4),
+                // TODO: Re-enable when School & year calendar is ready
+                // _buildSubMenuItem('School & year calendar',
+                //     onTap: () => controller.changeContent(ContentType.schoolYear),
+                //     contentType: ContentType.schoolYear,
+                //     parentIndex: 4),
                 _buildSubMenuItem('Users',
                     onTap: () => controller.changeContent(ContentType.users),
                     isLast: true,
@@ -372,7 +374,7 @@ class SecondSidebar extends GetView<HomeController> {
                   parentIndex: 3),
             ],
           ),
-          if (!controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Medical Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',
@@ -417,7 +419,7 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.appointmentScheduling);
             },
           ),
-          if (!controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',

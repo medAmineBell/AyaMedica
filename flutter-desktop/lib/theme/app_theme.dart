@@ -5,7 +5,7 @@ class AppTheme {
   // Color Palette from Style Guide
   static const Map<String, Map<String, Color>> colorPalette = {
     'info': {
-      'main': Color(0xFF0D6EFD), // #0D6EFD
+      'main': Color(0xFF1339FF), // #1339FF
       'surface': Color(0xFFD0E1FF), // #D0E1FF
       'border': Color(0xFFA7CAFF), // #A7CAFF
       'hover': Color(0xFF0B5ED7), // #0B5ED7

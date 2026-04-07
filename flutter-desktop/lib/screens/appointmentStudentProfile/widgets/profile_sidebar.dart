@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/student.dart';
+import 'package:get/get.dart';
+import '../../../../controllers/home_controller.dart';
 
 import 'sidebar_navigation_menu.dart';
 
@@ -14,6 +16,8 @@ class ProfileSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<HomeController>();
+
     return SingleChildScrollView(
       child: Container(
         width: 280,
@@ -27,46 +31,50 @@ class ProfileSidebar extends StatelessWidget {
             // Student Avatar and Info
             Container(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  _buildAvatar(),
-                  const SizedBox(height: 16),
-                  Text(
-                    student.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+              child: Obx(() {
+                final activeStudent = controller.currentStudent.value ?? student;
+                return Column(
+                  children: [
+                    _buildAvatar(activeStudent),
+                    const SizedBox(height: 16),
+                    Text(
+                      activeStudent.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF111827),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCCF1FF),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      student.aid!,
+                    const SizedBox(height: 8),
+                    if (activeStudent.aid != null)
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCCF1FF),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          activeStudent.aid!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF2563EB),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${activeStudent.grade ?? ''} ${activeStudent.className ?? ''}'.trim(),
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF2563EB),
-                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'G4 Lions',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              }),
             ),
 
             // Navigation Menu
@@ -77,24 +85,24 @@ class ProfileSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
-    final imageUrl = student.imageUrl;
+  Widget _buildAvatar(Student s) {
+    final imageUrl = s.imageUrl;
     if (imageUrl != null && imageUrl.isNotEmpty) {
       final fullUrl = imageUrl.startsWith('http')
           ? imageUrl
           : '${AppConfig.newBackendUrl}$imageUrl';
       return CircleAvatar(
         radius: 50,
-        backgroundColor: student.avatarColor,
+        backgroundColor: s.avatarColor,
         backgroundImage: NetworkImage(fullUrl),
         onBackgroundImageError: (_, __) {},
       );
     }
     return CircleAvatar(
       radius: 50,
-      backgroundColor: student.avatarColor,
+      backgroundColor: s.avatarColor,
       child: Text(
-        _getInitials(student.name),
+        _getInitials(s.name),
         style: const TextStyle(
           color: Colors.white,
           fontSize: 24,

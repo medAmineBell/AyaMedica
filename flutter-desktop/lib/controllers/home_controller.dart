@@ -34,7 +34,7 @@ enum ContentType {
 }
 
 class HomeController extends GetxController {
-  final RxInt selectedIndex = 0.obs;
+  final RxInt selectedIndex = 5.obs;
   final RxInt selectedSideIndex = 0.obs;
   final RxBool isSummaryMode = false.obs;
   final RxBool isChronicExpanded = true.obs;
@@ -45,7 +45,7 @@ class HomeController extends GetxController {
   final RxBool isMonitoringSignsView = false.obs;
   final RxBool isPlansView = false.obs;
 
-  final Rx<ContentType> currentContent = ContentType.dashboard.obs;
+  final Rx<ContentType> currentContent = ContentType.appointmentScheduling.obs;
   final Rx<Student?> currentStudent = Rx<Student?>(null);
   final RxString currentAppointmentType = ''.obs;
   final Rx<dynamic> currentAppointment = Rx<dynamic>(null);
@@ -70,6 +70,7 @@ class HomeController extends GetxController {
   final RxString userRole = ''.obs;
   final RxString userInitials = ''.obs;
   final RxnString userAvatarUrl = RxnString(null);
+  final RxBool isRoleLoaded = false.obs;
 
   // Whether the user's role restricts access to settings and resources
   bool get isRestrictedRole {
@@ -81,11 +82,15 @@ class HomeController extends GetxController {
   final Rx<Map<String, dynamic>?> selectedBranchData =
       Rx<Map<String, dynamic>?>(null);
 
+  // Doctors list - loaded once at startup
+  final RxList<String> doctors = <String>[].obs;
+  final RxBool isDoctorsLoaded = false.obs;
+
   void changeIndex(int index) {
     selectedIndex.value = index;
     switch (index) {
       case 0:
-        currentContent.value = ContentType.dashboard;
+        currentContent.value = ContentType.appointmentScheduling;
         break;
       case 1:
         currentContent.value = ContentType.appointmentScheduling;
@@ -127,6 +132,7 @@ class HomeController extends GetxController {
     currentContent.value = ContentType.appointmentStudentProfile;
 
     // Fetch full student data from medical record API
+    print('[HomeController] medicalRecordId: ${appointment.medicalRecordId}, appointmentId: ${appointment.id}');
     if (appointment.medicalRecordId != null) {
       _fetchStudentFromMedicalRecord(appointment.id, appointment.medicalRecordId!);
     }
@@ -151,11 +157,13 @@ class HomeController extends GetxController {
         },
       );
 
+      print('[HomeController] _fetchStudentFromMedicalRecord status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success'] == true) {
           final data = jsonData['data'] as Map<String, dynamic>;
           if (data['student'] is Map<String, dynamic>) {
+            print('[HomeController] Updating student from API data');
             _updateStudentFromApi(data['student'] as Map<String, dynamic>);
           }
         }
@@ -177,6 +185,8 @@ class HomeController extends GetxController {
     final firstGuardian = s['firstGuardian'] as Map<String, dynamic>?;
     final secondGuardian = s['secondGuardian'] as Map<String, dynamic>?;
 
+    print('[HomeController] Guardian data - first: ${firstGuardian?['fullName']}, phone: ${firstGuardian?['phone']}, email: ${firstGuardian?['email']}');
+    print('[HomeController] Guardian data - second: ${secondGuardian?['fullName']}, phone: ${secondGuardian?['phone']}, email: ${secondGuardian?['email']}');
     currentStudent.value = current.copyWith(
       name: fullName,
       dateOfBirth: s['dateOfBirth'] != null
@@ -366,6 +376,7 @@ class HomeController extends GetxController {
     }
 
     userAvatarUrl.value = data['avatarUrl'];
+    isRoleLoaded.value = true;
   }
 
   @override
@@ -373,6 +384,45 @@ class HomeController extends GetxController {
     super.onInit();
     loadSelectedBranchData();
     fetchAndCacheUserProfile();
+    loadDoctors();
+  }
+
+  /// Load doctors list once at startup
+  Future<void> loadDoctors() async {
+    try {
+      final storageService = Get.find<StorageService>();
+      final branchData = storageService.getSelectedBranchData();
+      final branchId = branchData?['id'];
+      if (branchId == null) return;
+
+      final accessToken = storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.newBackendUrl}/api/school-admin/branches/$branchId/doctors'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final staff = jsonData['data']['staff'] as List;
+          doctors.assignAll(staff.map((d) {
+            final name = d['name'];
+            return name is Map
+                ? ((name['full'] as String?) ?? '${name['given']} ${name['family']}').trim()
+                : d['name'].toString();
+          }).toList());
+        }
+      }
+    } catch (e) {
+      print('Error loading doctors: $e');
+    } finally {
+      isDoctorsLoaded.value = true;
+    }
   }
 
   // Add these methods to HomeController class

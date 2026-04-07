@@ -347,8 +347,8 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                   _type == _VitalSignsType.bmi
                       ? '${appointment.type} | ${appointment.disease}'
                       : '${appointment.selectedStudents.length} students',
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF6B7280)),
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
               ],
             ),
@@ -447,7 +447,14 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
 
   Widget _buildBmiFilterChips() {
     final counts = _getBmiCategoryCounts();
-    final filters = ['All', 'Normal', 'Overweight', 'Obesity', 'Underweight', 'Absent'];
+    final filters = [
+      'All',
+      'Normal',
+      'Overweight',
+      'Obesity',
+      'Underweight',
+      'Absent'
+    ];
 
     return Obx(() => Row(
           children: filters.map((filter) {
@@ -459,38 +466,32 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
             Color borderColor;
             switch (filter) {
               case 'Normal':
-                chipColor =
-                    isSelected ? const Color(0xFFDCFCE7) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFDCFCE7) : Colors.white;
                 textColor = const Color(0xFF059669);
                 borderColor = const Color(0xFF86EFAC);
                 break;
               case 'Overweight':
-                chipColor =
-                    isSelected ? const Color(0xFFDBEAFE) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFDBEAFE) : Colors.white;
                 textColor = const Color(0xFF2563EB);
                 borderColor = const Color(0xFF93C5FD);
                 break;
               case 'Obesity':
-                chipColor =
-                    isSelected ? const Color(0xFFFEE2E2) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFFEE2E2) : Colors.white;
                 textColor = const Color(0xFFDC2626);
                 borderColor = const Color(0xFFFCA5A5);
                 break;
               case 'Underweight':
-                chipColor =
-                    isSelected ? const Color(0xFFFEE2E2) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFFEE2E2) : Colors.white;
                 textColor = const Color(0xFFDC2626);
                 borderColor = const Color(0xFFFCA5A5);
                 break;
               case 'Absent':
-                chipColor =
-                    isSelected ? const Color(0xFFF3F4F6) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFF3F4F6) : Colors.white;
                 textColor = const Color(0xFF6B7280);
                 borderColor = const Color(0xFFD1D5DB);
                 break;
               default: // All
-                chipColor =
-                    isSelected ? const Color(0xFFDBEAFE) : Colors.white;
+                chipColor = isSelected ? const Color(0xFFDBEAFE) : Colors.white;
                 textColor = const Color(0xFF2563EB);
                 borderColor = const Color(0xFF93C5FD);
             }
@@ -568,17 +569,17 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
         return const {
           0: FlexColumnWidth(2.5), // Student
           1: FlexColumnWidth(1.5), // Blood Glucose
-          2: FlexColumnWidth(2),   // Medication
-          3: FlexColumnWidth(2),   // Administration Form
+          2: FlexColumnWidth(2), // Medication
+          3: FlexColumnWidth(2), // Administration Form
           4: FlexColumnWidth(1.2), // Doze
           5: FlexColumnWidth(1.2), // Unit
         };
       case _VitalSignsType.bloodPressure:
         return const {
           0: FlexColumnWidth(2.5), // Student
-          1: FlexColumnWidth(2),   // Blood Pressure
-          2: FlexColumnWidth(2),   // Medication
-          3: FlexColumnWidth(2),   // Administration Form
+          1: FlexColumnWidth(2), // Blood Pressure
+          2: FlexColumnWidth(2), // Medication
+          3: FlexColumnWidth(2), // Administration Form
           4: FlexColumnWidth(1.2), // Doze
           5: FlexColumnWidth(1.2), // Unit
         };
@@ -586,19 +587,19 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
         return const {
           0: FlexColumnWidth(2.5), // Student
           1: FlexColumnWidth(1.5), // Heart Rate
-          2: FlexColumnWidth(2),   // Medication
-          3: FlexColumnWidth(2),   // Administration Form
+          2: FlexColumnWidth(2), // Medication
+          3: FlexColumnWidth(2), // Administration Form
           4: FlexColumnWidth(1.2), // Doze
           5: FlexColumnWidth(1.2), // Unit
         };
       case _VitalSignsType.bmi:
         return const {
-          0: FlexColumnWidth(2),   // Student
+          0: FlexColumnWidth(2), // Student
           1: FlexColumnWidth(1.5), // Presence
           2: FlexColumnWidth(1.2), // Height
           3: FlexColumnWidth(1.2), // Weight
-          4: FlexColumnWidth(2),   // Note
-          5: FlexColumnWidth(2),   // BMI Result
+          4: FlexColumnWidth(2), // Note
+          5: FlexColumnWidth(2), // BMI Result
         };
     }
   }
@@ -686,8 +687,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               enabled: !isDone),
           _buildTextInputCell(student, 'doze', data.doze,
               enabled: !isDone, numeric: true),
-          _buildDropdownCell(
-              student, 'unit', _unitOptions, data.unit,
+          _buildDropdownCell(student, 'unit', _unitOptions, data.unit,
               enabled: !isDone),
         ];
         break;
@@ -701,8 +701,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               enabled: !isDone),
           _buildTextInputCell(student, 'doze', data.doze,
               enabled: !isDone, numeric: true),
-          _buildDropdownCell(
-              student, 'unit', _unitOptions, data.unit,
+          _buildDropdownCell(student, 'unit', _unitOptions, data.unit,
               enabled: !isDone),
         ];
         break;
@@ -717,8 +716,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               enabled: !isDone),
           _buildTextInputCell(student, 'doze', data.doze,
               enabled: !isDone, numeric: true),
-          _buildDropdownCell(
-              student, 'unit', _unitOptions, data.unit,
+          _buildDropdownCell(student, 'unit', _unitOptions, data.unit,
               enabled: !isDone),
         ];
         break;
@@ -726,13 +724,15 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
         final isAbsent = data.presence.toLowerCase() == 'absent';
         cells = [
           _buildStudentCell(student),
-          _buildDropdownCell(student, 'presence', _presenceOptions,
-              data.presence,
+          _buildDropdownCell(
+              student, 'presence', _presenceOptions, data.presence,
               enabled: !isDone),
           _buildTextInputCell(student, 'height', data.height,
-              enabled: !isDone && !isAbsent, numeric: true),
+              enabled: !isDone && !isAbsent, numeric: true,
+              minValue: 30, maxValue: 250, validationLabel: 'Height'),
           _buildTextInputCell(student, 'weight', data.weight,
-              enabled: !isDone && !isAbsent, numeric: true),
+              enabled: !isDone && !isAbsent, numeric: true,
+              minValue: 1, maxValue: 300, validationLabel: 'Weight'),
           _buildTextInputCell(student, 'note', data.note,
               enabled: !isDone && !isAbsent),
           _buildBmiResultCell(data),
@@ -810,6 +810,21 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
     );
   }
 
+  // ─── VALIDATION ────────────────────────────────────────────────────────
+
+  // Tracks which fields have been blurred (lost focus) at least once
+  final Set<String> _blurredFields = {};
+
+  String? _validateNumericRange(String value, double? minValue, double? maxValue, String fieldLabel) {
+    if (value.isEmpty) return null;
+    final parsed = double.tryParse(value);
+    if (parsed == null) return 'Invalid number';
+    if (parsed <= 0) return '$fieldLabel must be greater than 0';
+    if (minValue != null && parsed < minValue) return '$fieldLabel must be at least ${minValue.toInt()}';
+    if (maxValue != null && parsed > maxValue) return '$fieldLabel must be at most ${maxValue.toInt()}';
+    return null;
+  }
+
   // ─── TEXT INPUT CELL ──────────────────────────────────────────────────
 
   Widget _buildTextInputCell(
@@ -818,51 +833,98 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
     String initialValue, {
     bool enabled = true,
     bool numeric = false,
+    double? minValue,
+    double? maxValue,
+    String? validationLabel,
   }) {
     final ctrl = _getTextController(student.id, fieldName, initialValue);
+    final hasValidation = numeric && (minValue != null || maxValue != null);
+    final blurKey = '${student.id}_$fieldName';
+
+    // Only show error after the field has been blurred
+    String? errorText;
+    if (hasValidation && _blurredFields.contains(blurKey)) {
+      errorText = _validateNumericRange(ctrl.text, minValue, maxValue, validationLabel ?? fieldName);
+    }
+
+    final isError = errorText != null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: SizedBox(
-        height: 40,
-        child: TextField(
-          controller: ctrl,
-          enabled: enabled,
-          keyboardType: numeric
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          inputFormatters: numeric
-              ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
-              : null,
-          onChanged: (value) {
-            controller.setVitalSignsField(_key(student), fieldName, value);
-            _syncIfComplete(student);
-          },
-          decoration: InputDecoration(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      child: Tooltip(
+        message: errorText ?? '',
+        child: SizedBox(
+          height: 40,
+          child: Focus(
+            onFocusChange: (hasFocus) {
+              if (!hasFocus && hasValidation) {
+                setState(() {
+                  _blurredFields.add(blurKey);
+                });
+              }
+            },
+            child: TextField(
+              controller: ctrl,
+              enabled: enabled,
+              keyboardType: numeric
+                  ? const TextInputType.numberWithOptions(decimal: true)
+                  : TextInputType.text,
+              inputFormatters: numeric
+                  ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
+                  : null,
+              onChanged: (value) {
+                controller.setVitalSignsField(_key(student), fieldName, value);
+                if (hasValidation) {
+                  final error = _validateNumericRange(value, minValue, maxValue, validationLabel ?? fieldName);
+                  if (error == null) {
+                    _syncIfComplete(student);
+                  }
+                  // Re-render to clear error if user fixes it while still focused
+                  if (_blurredFields.contains(blurKey)) {
+                    setState(() {});
+                  }
+                } else {
+                  _syncIfComplete(student);
+                }
+              },
+              decoration: InputDecoration(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isError ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isError ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                  ),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                filled: !enabled || isError,
+                fillColor: isError ? const Color(0xFFFEF2F2) : const Color(0xFFF9FAFB),
+                suffixIcon: isError
+                    ? const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18)
+                    : null,
+              ),
+              style: TextStyle(
+                fontSize: 14,
+                color: isError
+                    ? const Color(0xFFDC2626)
+                    : enabled
+                        ? const Color(0xFF111827)
+                        : const Color(0xFF9CA3AF),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF2563EB)),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            filled: !enabled,
-            fillColor: const Color(0xFFF9FAFB),
-          ),
-          style: TextStyle(
-            fontSize: 14,
-            color: enabled ? const Color(0xFF111827) : const Color(0xFF9CA3AF),
           ),
         ),
       ),
@@ -873,8 +935,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
 
   Widget _buildBloodPressureCell(Student student, VitalSignsData data,
       {bool enabled = true}) {
-    final sysCtrl =
-        _getTextController(student.id, 'bpSystolic', data.systolic);
+    final sysCtrl = _getTextController(student.id, 'bpSystolic', data.systolic);
     final diaCtrl =
         _getTextController(student.id, 'bpDiastolic', data.diastolic);
 
@@ -928,8 +989,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
 
   InputDecoration _inputDecoration(bool enabled) {
     return InputDecoration(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -986,17 +1046,18 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               icon: Icon(
                 Icons.arrow_drop_down,
-                color: enabled
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFF9CA3AF),
+                color:
+                    enabled ? const Color(0xFF2563EB) : const Color(0xFF9CA3AF),
               ),
               hint: Text(
-                fieldName == 'presence' ? 'Select' : fieldName == 'unit' ? 'Unit' : 'Select',
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF9CA3AF)),
+                fieldName == 'presence'
+                    ? 'Select'
+                    : fieldName == 'unit'
+                        ? 'Unit'
+                        : 'Select',
+                style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
               ),
-              style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF111827)),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
               onChanged: enabled
                   ? (value) {
                       if (value != null) {
@@ -1093,17 +1154,16 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                   onChanged: _onDrugSearchChanged,
                   decoration: InputDecoration(
                     hintText: 'Search medication...',
-                    hintStyle: const TextStyle(
-                        color: Color(0xFF9CA3AF), fontSize: 14),
+                    hintStyle:
+                        const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                     prefixIcon: const Icon(Icons.search,
                         color: Color(0xFF9CA3AF), size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFE5E7EB)),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   style: const TextStyle(fontSize: 14),
                 ),
@@ -1111,8 +1171,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                 Expanded(
                   child: Obx(() {
                     if (_isLoadingDrugs.value) {
-                      return const Center(
-                          child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator());
                     }
                     if (_drugResults.isEmpty) {
                       return const Center(
@@ -1127,8 +1186,8 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                         final name =
                             drug['drug_name'] ?? drug['name'] ?? 'Unknown';
                         return ListTile(
-                          title: Text(name,
-                              style: const TextStyle(fontSize: 14)),
+                          title:
+                              Text(name, style: const TextStyle(fontSize: 14)),
                           dense: true,
                           onTap: () {
                             controller.setVitalSignsField(
@@ -1285,8 +1344,8 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                 Text(
                   'By clicking proceed, ${appointment.type} will be marked done for all the students and you can not undo this action',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF6B7280)),
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 24),
                 Obx(() => CheckboxListTile(
@@ -1328,8 +1387,8 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                             for (final student
                                 in appointment.selectedStudents) {
                               final key = _key(student);
-                              final data =
-                                  controller.getVitalSignsData(key) ?? VitalSignsData();
+                              final data = controller.getVitalSignsData(key) ??
+                                  VitalSignsData();
                               if (!data.isDone(appointment.disease)) {
                                 data.patientStatus = 'checked';
                                 controller.vitalSignsData.refresh();
@@ -1396,7 +1455,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
       const Color(0xFFEC4899),
       const Color(0xFFF59E0B),
       const Color(0xFF10B981),
-      const Color(0xFF3B82F6),
+      const Color(0xFF1339FF),
     ];
     return colors[className.hashCode.abs() % colors.length];
   }

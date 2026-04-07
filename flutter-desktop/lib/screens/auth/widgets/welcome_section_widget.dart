@@ -9,6 +9,15 @@ class WelcomeSectionWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Center(
+          child: Image.asset(
+            "assets/images/logo.png",
+            width: 400,
+          ),
+        ),
+        SizedBox(
+          height: 30,
+        ),
         Text(
           'welcome_title'.tr,
           style: const TextStyle(

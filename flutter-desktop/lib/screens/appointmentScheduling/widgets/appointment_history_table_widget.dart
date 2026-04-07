@@ -180,7 +180,7 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
   Widget _buildNameCell(AppointmentHistory appointment) {
     // Generate color from class name hash
     final colors = [
-      const Color(0xFF3B82F6),
+      const Color(0xFF1339FF),
       const Color(0xFF10B981),
       const Color(0xFF8B5CF6),
       const Color(0xFFEF4444),
@@ -319,18 +319,20 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
                 final student = Student(
                   id: appointment.onePatientAid!,
                   name: appointment.fullName ?? '',
-                  avatarColor: const Color(0xFF3B82F6),
+                  avatarColor: const Color(0xFF1339FF),
                   aid: appointment.onePatientAid,
                   grade: appointment.gradeName,
                   className: appointment.className,
                   classId: appointment.classId,
                 );
                 final homeController = Get.find<HomeController>();
-                final isFulfilled = appointment.appointmentStatus.toLowerCase() == 'fulfilled';
+                final isFulfilled =
+                    appointment.appointmentStatus.toLowerCase() == 'fulfilled';
                 if (isFulfilled) {
                   homeController.currentStudent.value = student;
                   homeController.currentAppointmentHistory.value = appointment;
-                  homeController.changeContent(ContentType.checkedOutWalkInSummary);
+                  homeController
+                      .changeContent(ContentType.checkedOutWalkInSummary);
                 } else {
                   homeController.navigateToAppointmentStudentProfile(
                     student,

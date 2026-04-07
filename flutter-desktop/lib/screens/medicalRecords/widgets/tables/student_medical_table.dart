@@ -101,7 +101,7 @@ class StudentMedicalTable extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF3B82F6),
+              color: Color(0xFF1339FF),
             ),
           ),
         ),
@@ -128,7 +128,7 @@ class StudentMedicalTable extends StatelessWidget {
   Color _getAvatarColor(String id) {
     final hash = id.hashCode;
     final colors = [
-      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF1339FF), // Blue
       const Color(0xFF059669), // Green
       const Color(0xFF7C3AED), // Purple
       const Color(0xFFDC2626), // Red

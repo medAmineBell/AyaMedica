@@ -271,10 +271,16 @@ class AppointmentFiltersWidget extends StatelessWidget {
 
   int _getActiveFiltersCount(AppointmentSchedulingController controller) {
     int count = 0;
+    final now = DateTime.now();
+    final selected = controller.selectedDate.value;
+    if (selected.year != now.year ||
+        selected.month != now.month ||
+        selected.day != now.day) {
+      count++;
+    }
     if (controller.selectedStatusFilter.value != AppointmentStatus.notDone)
       count++;
     if (controller.searchQuery.value.isNotEmpty) count++;
-    // Add more filter conditions as needed
     return count;
   }
 }

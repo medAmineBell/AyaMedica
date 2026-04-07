@@ -31,16 +31,18 @@ class PrimaryButton extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    
+
     // Get colors based on variant and theme
     final buttonColors = _getButtonColors(context, variant);
-    
+
     // Use theme colors with fallbacks
-    final buttonBackgroundColor = backgroundColor ?? buttonColors.backgroundColor;
+    final buttonBackgroundColor =
+        backgroundColor ?? buttonColors.backgroundColor;
     final buttonTextColor = textColor ?? buttonColors.textColor;
     final buttonFontSize = fontSize ?? textTheme.labelLarge?.fontSize ?? 16;
-    final buttonFontWeight = fontWeight ?? textTheme.labelLarge?.fontWeight ?? FontWeight.w600;
-    
+    final buttonFontWeight =
+        fontWeight ?? textTheme.labelLarge?.fontWeight ?? FontWeight.w600;
+
     return SizedBox(
       width: width,
       height: height,
@@ -68,11 +70,13 @@ class PrimaryButton extends StatelessWidget {
                   fontWeight: buttonFontWeight,
                 ),
               ),
-              style: _getButtonStyle(context, buttonBackgroundColor, buttonTextColor, buttonColors),
+              style: _getButtonStyle(context, buttonBackgroundColor,
+                  buttonTextColor, buttonColors),
             )
           : ElevatedButton(
               onPressed: onPressed,
-              style: _getButtonStyle(context, buttonBackgroundColor, buttonTextColor, buttonColors),
+              style: _getButtonStyle(context, buttonBackgroundColor,
+                  buttonTextColor, buttonColors),
               child: Text(
                 text,
                 style: TextStyle(
@@ -85,16 +89,18 @@ class PrimaryButton extends StatelessWidget {
     );
   }
 
-  ButtonStyle _getButtonStyle(BuildContext context, Color backgroundColor, Color textColor, _ButtonColors buttonColors) {
+  ButtonStyle _getButtonStyle(BuildContext context, Color backgroundColor,
+      Color textColor, _ButtonColors buttonColors) {
     final theme = Theme.of(context);
-    
+
     return ElevatedButton.styleFrom(
       backgroundColor: backgroundColor,
       foregroundColor: textColor,
       elevation: 0,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12), // Using 12px instead of theme's 28px for table buttons
+        borderRadius: BorderRadius.circular(
+            12), // Using 12px instead of theme's 28px for table buttons
       ),
       minimumSize: Size.zero,
       disabledBackgroundColor: _getNeutralColor(context, '40'),
@@ -166,7 +172,7 @@ class PrimaryButton extends StatelessWidget {
   Color _getInfoColor(BuildContext context, String shade) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const infoColors = {
-      'main': Color(0xFF0D6EFD),
+      'main': Color(0xFF1339FF),
       'surface': Color(0xFFD0E1FF),
       'border': Color(0xFFA7CAFF),
       'hover': Color(0xFF0B5ED7),

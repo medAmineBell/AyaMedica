@@ -129,17 +129,32 @@ class _AssessmentViewState extends State<AssessmentView> {
     });
   }
 
+  // Tracks which vital fields have been blurred for validation
+  final Set<String> _blurredVitalFields = {};
+
+  String? _validateVitalRange(String value, double min, double max, String label) {
+    if (value.isEmpty) return null;
+    final parsed = double.tryParse(value);
+    if (parsed == null) return 'Invalid $label';
+    if (parsed < min) return '$label must be at least ${min.toStringAsFixed(min == min.roundToDouble() ? 0 : 1)}';
+    if (parsed > max) return '$label must be at most ${max.toStringAsFixed(max == max.roundToDouble() ? 0 : 1)}';
+    return null;
+  }
+
   Widget _buildEditableVitals() {
     return Row(
       children: [
         _buildSingleVitalCard('Temperature', 'assets/svg/blood_pressure_01.svg',
-            controller.temperatureController),
+            controller.temperatureController,
+            min: 30, max: 45, validationKey: 'temperature'),
         const SizedBox(width: 8),
         _buildSingleVitalCard('Heart Rate', 'assets/svg/heart_rate_01.svg',
-            controller.heartRateController),
+            controller.heartRateController,
+            min: 20, max: 300, validationKey: 'heartRate'),
         const SizedBox(width: 8),
         _buildSingleVitalCard('Respiratory Rate', 'assets/svg/lungs.svg',
-            controller.respiratoryRateController),
+            controller.respiratoryRateController,
+            min: 5, max: 80, validationKey: 'respiratoryRate'),
         const SizedBox(width: 8),
         _buildSingleVitalCard('Blood Pressure', 'assets/svg/blood_pressure_02.svg',
             controller.bloodPressureController),
@@ -147,10 +162,11 @@ class _AssessmentViewState extends State<AssessmentView> {
         _buildSingleVitalCard(
             'Oxygen Saturation', 'assets/svg/Heading.svg',
             controller.oxygenSaturationController,
-            suffix: '%'),
+            suffix: '%', min: 50, max: 100, validationKey: 'oxygenSaturation'),
         const SizedBox(width: 8),
         _buildSingleVitalCard('Blood Glucose', 'assets/svg/blood_glucose.svg',
-            controller.bloodGlucoseController),
+            controller.bloodGlucoseController,
+            min: 10, max: 800, validationKey: 'bloodGlucose'),
         const SizedBox(width: 8),
         _buildDualVitalCard(
           'Height & weight',
@@ -167,6 +183,9 @@ class _AssessmentViewState extends State<AssessmentView> {
     String svgPath,
     TextEditingController textController, {
     String? suffix,
+    double? min,
+    double? max,
+    String? validationKey,
   }) {
     return Expanded(
       child: Container(
@@ -192,7 +211,8 @@ class _AssessmentViewState extends State<AssessmentView> {
                     fontSize: 10,
                     fontWeight: FontWeight.w700)),
             const Spacer(),
-            _buildVitalInput(textController, suffix: suffix),
+            _buildVitalInput(textController,
+                suffix: suffix, min: min, max: max, validationKey: validationKey, label: title),
           ],
         ),
       ),
@@ -231,9 +251,11 @@ class _AssessmentViewState extends State<AssessmentView> {
             const Spacer(),
             Row(
               children: [
-                Expanded(child: _buildVitalInput(controller1)),
+                Expanded(child: _buildVitalInput(controller1,
+                    min: 30, max: 250, validationKey: 'height', label: 'Height')),
                 const SizedBox(width: 4),
-                Expanded(child: _buildVitalInput(controller2)),
+                Expanded(child: _buildVitalInput(controller2,
+                    min: 1, max: 300, validationKey: 'weight', label: 'Weight')),
               ],
             ),
           ],
@@ -243,37 +265,72 @@ class _AssessmentViewState extends State<AssessmentView> {
   }
 
   Widget _buildVitalInput(TextEditingController textController,
-      {String? suffix}) {
-    return SizedBox(
-      height: 30,
-      child: TextField(
-        controller: textController,
-        textAlign: TextAlign.center,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[\d./]')),
-        ],
-        style: const TextStyle(
-            color: Color(0xFF6B7280), fontSize: 12, fontWeight: FontWeight.w500),
-        decoration: InputDecoration(
-          suffixText: suffix,
-          suffixStyle: const TextStyle(
-              color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
-          filled: true,
-          fillColor: const Color(0xFFFBFCFD),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(width: 0.5, color: Color(0xFFE4E9ED)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(width: 0.5, color: Color(0xFFE4E9ED)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(width: 1, color: Color(0xFF1339FF)),
+      {String? suffix, double? min, double? max, String? validationKey, String? label}) {
+    final hasValidation = min != null || max != null;
+    final key = validationKey ?? label ?? '';
+    final isBlurred = _blurredVitalFields.contains(key);
+
+    String? errorText;
+    if (hasValidation && isBlurred) {
+      errorText = _validateVitalRange(textController.text, min ?? 0, max ?? double.infinity, label ?? key);
+    }
+    final isError = errorText != null;
+
+    return Tooltip(
+      message: errorText ?? '',
+      child: SizedBox(
+        height: 30,
+        child: Focus(
+          onFocusChange: (hasFocus) {
+            if (!hasFocus && hasValidation) {
+              setState(() {
+                _blurredVitalFields.add(key);
+              });
+            }
+          },
+          child: TextField(
+            controller: textController,
+            textAlign: TextAlign.center,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d./]')),
+            ],
+            onChanged: (_) {
+              if (isBlurred && hasValidation) {
+                setState(() {});
+              }
+            },
+            style: TextStyle(
+                color: isError ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
+                fontSize: 12,
+                fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              suffixText: suffix,
+              suffixStyle: const TextStyle(
+                  color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+              filled: true,
+              fillColor: isError ? const Color(0xFFFEF2F2) : const Color(0xFFFBFCFD),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              isDense: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(width: 0.5, color: Color(0xFFE4E9ED)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  width: isError ? 1 : 0.5,
+                  color: isError ? const Color(0xFFDC2626) : const Color(0xFFE4E9ED),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(
+                  width: 1,
+                  color: isError ? const Color(0xFFDC2626) : const Color(0xFF1339FF),
+                ),
+              ),
+            ),
           ),
         ),
       ),

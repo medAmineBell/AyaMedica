@@ -58,7 +58,7 @@ class BranchManagementScreen extends StatelessWidget {
                         icon: const Icon(Icons.refresh),
                         label: const Text('Retry'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: const Color(0xFF1339FF),
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -143,7 +143,7 @@ class BranchManagementScreen extends StatelessWidget {
                 icon: const Icon(Icons.add, size: 20),
                 label: const Text('Add new branch'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: const Color(0xFF1339FF),
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -181,7 +181,7 @@ class BranchManagementScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF3B82F6),
+                  color: Color(0xFF1339FF),
                 ),
               ),
             ],

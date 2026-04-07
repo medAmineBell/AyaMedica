@@ -31,25 +31,28 @@ class LeftSidebar extends GetView<HomeController> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildIconButton(
-            svgPath: 'assets/svg/dashboard.svg',
-            index: 0,
-          ),
-          Obx(() {
-            if (controller.isRestrictedRole) return const SizedBox.shrink();
-            return Column(
-              children: [
-                const SizedBox(height: 16),
-                _buildIconButton(
-                  svgPath: 'assets/svg/setting-3.svg',
-                  index: 1,
-                ),
-              ],
-            );
-          }),
+          Obx(() => _buildIconButton(
+                svgPath: controller.userRole.value == 'SchoolAdmin'
+                    ? 'assets/svg/user-octagon.svg'
+                    : 'assets/svg/stethoscope.svg',
+                index: 0,
+              )),
+          // Obx(() {
+          //   if (!controller.isRoleLoaded.value || controller.isRestrictedRole)
+          //     return const SizedBox.shrink();
+          //   return Column(
+          //     children: [
+          //       const SizedBox(height: 16),
+          //       _buildIconButton(
+          //         svgPath: 'assets/svg/mobile.svg',
+          //         index: 1,
+          //       ),
+          //     ],
+          //   );
+          // }),
           const SizedBox(height: 16),
           _buildIconButton(
-            svgPath: 'assets/svg/credit-card.svg',
+            svgPath: 'assets/svg/headphone.svg',
             index: 2,
           ),
         ],
@@ -89,7 +92,8 @@ class _SidebarIconButtonState extends State<_SidebarIconButton> {
             widget.controller.changeSideIndex(widget.index);
             if (widget.index == 0) {
               widget.controller.isSecondSidebarVisible.value = true;
-              widget.controller.changeContent(ContentType.dashboard);
+              widget.controller
+                  .changeContent(ContentType.appointmentScheduling);
             } else if (widget.index == 1) {
               widget.controller.isSecondSidebarVisible.value = false;
               widget.controller.changeContent(ContentType.settings);
@@ -99,6 +103,8 @@ class _SidebarIconButtonState extends State<_SidebarIconButton> {
             }
           },
           child: Container(
+            height: 48,
+            width: 48,
             padding: const EdgeInsets.all(12),
             decoration: ShapeDecoration(
               color: isActive

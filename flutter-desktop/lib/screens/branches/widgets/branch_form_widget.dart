@@ -223,7 +223,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: branchController.isSaving.value
                     ? Colors.grey
-                    : const Color(0xFF3B82F6),
+                    : const Color(0xFF1339FF),
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -322,8 +322,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           _buildQuickInfoItem(
             icon: Icons.location_on_outlined,
             label: 'Location',
-            value:
-                '${_selectedCity ?? '-'}, ${_selectedGovernorate ?? '-'}',
+            value: '${_selectedCity ?? '-'}, ${_selectedGovernorate ?? '-'}',
           ),
         ],
       ),
@@ -400,7 +399,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6),
+                    color: const Color(0xFF1339FF),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 3),
                   ),
@@ -509,7 +508,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               onChanged: (value) {
                 setState(() => _isHeadquarters = value ?? false);
               },
-              activeColor: const Color(0xFF3B82F6),
+              activeColor: const Color(0xFF1339FF),
             ),
             const Text(
               'This branch is representing the headquarters',
@@ -711,7 +710,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF1339FF)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -771,9 +770,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF3B82F6).withOpacity(0.1),
+        color: const Color(0xFF1339FF).withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF1339FF).withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -782,7 +781,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
             grade,
             style: const TextStyle(
               fontSize: 13,
-              color: Color(0xFF3B82F6),
+              color: Color(0xFF1339FF),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -931,7 +930,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                  borderSide: const BorderSide(color: Color(0xFF1339FF)),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -970,8 +969,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                       _customGradeControllers[index].selection =
                           TextSelection.fromPosition(
                         TextPosition(
-                            offset:
-                                _customGradeControllers[index].text.length),
+                            offset: _customGradeControllers[index].text.length),
                       );
                     });
                   },
@@ -987,7 +985,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                     });
                   },
                   icon: const Icon(Icons.add_circle_outline, size: 20),
-                  color: const Color(0xFF3B82F6),
+                  color: const Color(0xFF1339FF),
                   tooltip: 'Add below',
                 ),
               ],
@@ -1178,7 +1176,7 @@ class CustomTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: Color(0xFF1339FF)),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -1255,7 +1253,7 @@ class CustomDropdownField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: Color(0xFF1339FF)),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

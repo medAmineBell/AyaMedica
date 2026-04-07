@@ -13,7 +13,7 @@ class SidebarNavigationMenu extends StatelessWidget {
       {'icon': Icons.person_outline, 'label': 'Profile'},
       {'icon': Icons.medical_services_outlined, 'label': 'Medical history'},
       {'icon': Icons.assignment_outlined, 'label': 'Medical records'},
-      {'icon': Icons.monitor_heart_outlined, 'label': 'Monitoring signs'},
+      // {'icon': Icons.monitor_heart_outlined, 'label': 'Monitoring signs'},
       {'icon': Icons.assessment_outlined, 'label': 'Assessment'},
       {'icon': Icons.event_note_outlined, 'label': 'Plans'},
     ];

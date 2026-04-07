@@ -75,10 +75,12 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                                 color: Color(0xFF595A5B),
                               ),
                             ),
-                              Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: const Color(0xFF6B7280),
-                  ),
+                            Icon(
+                              _isExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              color: const Color(0xFF6B7280),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -111,12 +113,13 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                               ],
                             ),
                             Spacer(),
-                                if (widget.isSynchronized) ...[
+                            if (widget.isSynchronized) ...[
                               const SizedBox(width: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF3B82F6),
+                                  color: const Color(0xFF1339FF),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Row(
@@ -140,13 +143,11 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                                 ),
                               ),
                             ],
-                        
                           ],
                         ),
                       ],
                     ),
                   ),
-                
                 ],
               ),
             ),
@@ -182,7 +183,7 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Note Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -206,7 +207,7 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Uploaded File
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -251,7 +252,8 @@ class _MedicalRecordCardState extends State<MedicalRecordCard> {
                           },
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(0xFF4B5563),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
                           child: const Text(
                             'View file',

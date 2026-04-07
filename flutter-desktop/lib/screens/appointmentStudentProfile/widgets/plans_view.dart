@@ -52,18 +52,11 @@ class _PlansViewState extends State<PlansView> {
   ];
 
   // Tags for frequency
-  List<String> _selectedTags = ['After dinner', 'After Lunch'];
+  List<String> _selectedTags = [];
 
   @override
   void initState() {
     super.initState();
-    // Set default values
-    _relationToFood = 'After dinner';
-    _administrationForm = 'Sublingual';
-    _selectedDate = DateTime.now();
-    _numberOfDaysController.text = '8';
-    _everyHoursController.text = '4';
-    _sickLeaveDaysController.text = '8';
   }
 
   @override
@@ -488,11 +481,11 @@ class _PlansViewState extends State<PlansView> {
                     const Icon(Icons.calendar_today, size: 20, color: Color(0xFFA6A9AC)),
                     const SizedBox(width: 8),
                     Text(
-                      _selectedDate != null 
+                      _selectedDate != null
                         ? '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}'
-                        : '23/07/2025',
-                      style: const TextStyle(
-                        color: Color(0xFF2D2E2E),
+                        : 'Select date',
+                      style: TextStyle(
+                        color: _selectedDate != null ? const Color(0xFF2D2E2E) : const Color(0xFFA6A9AC),
                         fontSize: 14,
                       ),
                     ),
@@ -676,7 +669,7 @@ class _PlansViewState extends State<PlansView> {
             children: [
               _buildPillTag(_activeIngredientController.text.isNotEmpty ? _activeIngredientController.text : 'Active ingredient'),
               const SizedBox(width: 8),
-              _buildPillTag(_administrationForm ?? 'Oral'),
+              _buildPillTag(_administrationForm ?? '-'),
             ],
           ),
           const SizedBox(height: 16),
@@ -695,7 +688,7 @@ class _PlansViewState extends State<PlansView> {
                     ),
                   ),
                   Text(
-                    _relationToFood ?? 'After Dinner',
+                    _relationToFood ?? '-',
                     style: const TextStyle(
                       color: Color(0xFF747677),
                       fontSize: 10,
@@ -707,7 +700,7 @@ class _PlansViewState extends State<PlansView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${_numberOfDaysController.text.isNotEmpty ? _numberOfDaysController.text : '4'} days',
+                    '${_numberOfDaysController.text.isNotEmpty ? _numberOfDaysController.text : '-'} days',
                     style: const TextStyle(
                       color: Color(0xFF595A5B),
                       fontSize: 12,
@@ -715,7 +708,7 @@ class _PlansViewState extends State<PlansView> {
                     ),
                   ),
                   Text(
-                    'Every ${_everyHoursController.text.isNotEmpty ? _everyHoursController.text : '24'} hours',
+                    'Every ${_everyHoursController.text.isNotEmpty ? _everyHoursController.text : '-'} hours',
                     style: const TextStyle(
                       color: Color(0xFF747677),
                       fontSize: 10,
@@ -748,7 +741,7 @@ class _PlansViewState extends State<PlansView> {
                     Text(
                       _selectedDate != null 
                         ? '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}'
-                        : '27/07/2025',
+                        : '--/--/----',
                       style: const TextStyle(
                         color: Color(0xFF1339FF),
                         fontSize: 12,
@@ -773,7 +766,7 @@ class _PlansViewState extends State<PlansView> {
                             final endDate = _selectedDate!.add(Duration(days: int.tryParse(_numberOfDaysController.text) ?? 4));
                             return '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}';
                           })()
-                        : '31/07/2025',
+                        : '--/--/----',
                       style: const TextStyle(
                         color: Color(0xFF1339FF),
                         fontSize: 12,

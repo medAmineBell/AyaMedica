@@ -330,7 +330,7 @@ void _showFiltersModal() {
                     Get.back();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
+                    backgroundColor: const Color(0xFF1339FF),
                   ),
                   child: const Text('Apply'),
                 ),

@@ -59,7 +59,7 @@ class LocationPermissionScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: controller.requestLocationPermission,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D6EFD),
+                    backgroundColor: const Color(0xFF1339FF),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

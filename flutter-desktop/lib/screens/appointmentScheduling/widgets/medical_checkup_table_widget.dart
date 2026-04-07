@@ -65,9 +65,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
   }
 
   int _getDoneCount() {
-    return appointment.selectedStudents
-        .where((s) => _isStudentDone(s))
-        .length;
+    return appointment.selectedStudents.where((s) => _isStudentDone(s)).length;
   }
 
   int _getNotDoneCount() {
@@ -169,8 +167,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
                 const SizedBox(height: 4),
                 Text(
                   '${appointment.type} | ${appointment.disease}',
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF6B7280)),
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
               ],
             ),
@@ -296,11 +294,11 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
     return Table(
       columnWidths: const {
         0: FlexColumnWidth(2.5), // Student
-        1: FlexColumnWidth(2),   // Hair
-        2: FlexColumnWidth(2),   // Ears
-        3: FlexColumnWidth(2),   // Nails
-        4: FlexColumnWidth(2),   // Teeth
-        5: FlexColumnWidth(2),   // Uniform
+        1: FlexColumnWidth(2), // Hair
+        2: FlexColumnWidth(2), // Ears
+        3: FlexColumnWidth(2), // Nails
+        4: FlexColumnWidth(2), // Teeth
+        5: FlexColumnWidth(2), // Uniform
       },
       children: [
         _buildHeaderRow(),
@@ -343,8 +341,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
       ),
       children: [
         _buildStudentCell(student),
-        ..._categories
-            .map((cat) => _buildHealthCell(cat, student)),
+        ..._categories.map((cat) => _buildHealthCell(cat, student)),
       ],
     );
   }
@@ -426,8 +423,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: status == null
             ? (isDone
-                ? const Text('--',
-                    style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? const Text('--', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : _buildSelector(category, student))
             : _buildStatusChip(status, category, student, readOnly: isDone),
       );
@@ -467,8 +463,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
               style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
         ),
         GestureDetector(
-          onTapDown: (d) =>
-              _showIssueMenu(category, student, d.globalPosition),
+          onTapDown: (d) => _showIssueMenu(category, student, d.globalPosition),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -510,13 +505,11 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color:
-                  isGood ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+              color: isGood ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isGood
-                    ? const Color(0xFF86EFAC)
-                    : const Color(0xFFFCA5A5),
+                color:
+                    isGood ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
               ),
             ),
             child: Row(
@@ -532,9 +525,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    isGood
-                        ? 'Good - done'
-                        : status.issueDescription ?? '',
+                    isGood ? 'Good - done' : status.issueDescription ?? '',
                     style: TextStyle(
                       color: isGood
                           ? const Color(0xFF15803D)
@@ -596,11 +587,9 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
 
   // ─── ISSUE MENU ───────────────────────────────────────────────────────
 
-  void _showIssueMenu(
-      String category, Student student, Offset tapPosition) {
+  void _showIssueMenu(String category, Student student, Offset tapPosition) {
     final options = categoryIssueOptions[category] ?? [];
-    final overlay =
-        Get.overlayContext!.findRenderObject() as RenderBox;
+    final overlay = Get.overlayContext!.findRenderObject() as RenderBox;
     final position = RelativeRect.fromRect(
       Rect.fromPoints(tapPosition, tapPosition.translate(1, 1)),
       Offset.zero & overlay.size,
@@ -618,7 +607,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
           // Mark ALL categories as Absent for this student
           for (final cat in _categories) {
             final k = '${appointment.id}_${student.id}_$cat';
-            controller.setHealthStatusWithIssue(k, HealthStatus.issue, 'Absent');
+            controller.setHealthStatusWithIssue(
+                k, HealthStatus.issue, 'Absent');
           }
         } else {
           final key = '${appointment.id}_${student.id}_$category';
@@ -658,8 +648,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
                 Text(
                   'By clicking proceed, ${appointment.type} will be marked done for all the students and you can not undo this action',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF6B7280)),
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 24),
                 Obx(() => CheckboxListTile(
@@ -698,7 +688,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
 
                           // If checkbox is checked, mark all unchecked hygiene categories as good and sync
                           if (markAllDone.value) {
-                            for (final student in appointment.selectedStudents) {
+                            for (final student
+                                in appointment.selectedStudents) {
                               bool changed = false;
                               for (final cat in _categories) {
                                 final key =
@@ -722,7 +713,8 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
                           final success = await controller
                               .checkoutAppointmentSession(appointment.id!);
                           if (success) {
-                            if (Get.isRegistered<AppointmentHistoryController>()) {
+                            if (Get.isRegistered<
+                                AppointmentHistoryController>()) {
                               Get.find<AppointmentHistoryController>()
                                   .refreshAppointments();
                             }
@@ -771,7 +763,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
       const Color(0xFFEC4899),
       const Color(0xFFF59E0B),
       const Color(0xFF10B981),
-      const Color(0xFF3B82F6),
+      const Color(0xFF1339FF),
     ];
     return colors[className.hashCode.abs() % colors.length];
   }

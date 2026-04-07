@@ -61,7 +61,8 @@ class CompleteWalkInDialog extends StatelessWidget {
                     height: 1.5,
                   ),
                   children: [
-                    const TextSpan(text: 'You are about to complete the walkin for '),
+                    const TextSpan(
+                        text: 'You are about to complete the walkin for '),
                     TextSpan(
                       text: studentName,
                       style: const TextStyle(
@@ -69,7 +70,8 @@ class CompleteWalkInDialog extends StatelessWidget {
                         color: Color(0xFF374151), // Dark grey for student name
                       ),
                     ),
-                    const TextSpan(text: ', would you like to notify the parents'),
+                    const TextSpan(
+                        text: ', would you like to notify the parents'),
                   ],
                 ),
               ),
@@ -129,10 +131,10 @@ class CompleteWalkInDialog extends StatelessWidget {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary ? const Color(0xFF3B82F6) : Colors.white,
+        backgroundColor: isPrimary ? const Color(0xFF1339FF) : Colors.white,
         foregroundColor: isPrimary ? Colors.white : const Color(0xFF374151),
         side: BorderSide(
-          color: isPrimary ? const Color(0xFF3B82F6) : const Color(0xFFD1D5DB),
+          color: isPrimary ? const Color(0xFF1339FF) : const Color(0xFFD1D5DB),
           width: 1,
         ),
         padding: const EdgeInsets.symmetric(vertical: 10),

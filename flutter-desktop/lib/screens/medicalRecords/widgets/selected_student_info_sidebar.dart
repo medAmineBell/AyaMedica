@@ -106,17 +106,17 @@ class SelectedStudentInfoSidebar extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6).withOpacity(0.1),
+                      color: const Color(0xFF1339FF).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFF3B82F6).withOpacity(0.3),
+                        color: const Color(0xFF1339FF).withOpacity(0.3),
                       ),
                     ),
                     child: Text(
                       'AID: ${studentDetails.studentId}',
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF3B82F6),
+                        color: Color(0xFF1339FF),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -217,7 +217,7 @@ class SelectedStudentInfoSidebar extends StatelessWidget {
     final hash = id.hashCode;
     final colors = [
       const Color(0xFFEF4444), // Red
-      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF1339FF), // Blue
       const Color(0xFF10B981), // Green
       const Color(0xFF8B5CF6), // Purple
       const Color(0xFFF59E0B), // Orange

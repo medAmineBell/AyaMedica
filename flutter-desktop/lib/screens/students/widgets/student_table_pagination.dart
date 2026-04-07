@@ -128,7 +128,8 @@ class StudentTablePagination extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF3B82F6) : Colors.transparent,
+                  color:
+                      isActive ? const Color(0xFF1339FF) : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(

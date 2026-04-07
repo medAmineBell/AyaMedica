@@ -5,15 +5,14 @@ import 'package:get/get.dart';
 class LoginMethodTabsWidget extends StatelessWidget {
   final AuthController authController; // Receive AuthController
 
-  const LoginMethodTabsWidget({Key? key, required this.authController}) : super(key: key);
+  const LoginMethodTabsWidget({Key? key, required this.authController})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final methods = [
-      'aid',
-      'phone', 
+      'phone',
       'email',
-      'nid_ppn',
     ];
 
     // We need LayoutBuilder here to handle responsiveness as in the original code
@@ -31,7 +30,8 @@ class LoginMethodTabsWidget extends StatelessWidget {
             : Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                children: methods.map((method) => _buildMethodTab(method)).toList(),
+                children:
+                    methods.map((method) => _buildMethodTab(method)).toList(),
               );
       },
     );
@@ -42,11 +42,14 @@ class LoginMethodTabsWidget extends StatelessWidget {
     return Obx(() {
       bool isSelected = method == authController.selectedLoginMethod.value;
       return GestureDetector(
-        onTap: () => authController.selectLoginMethod(method), // Call controller method
+        onTap: () =>
+            authController.selectLoginMethod(method), // Call controller method
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: ShapeDecoration(
-            color: isSelected ? const Color(0xFF1339FF) : const Color(0xFFE4E9ED), // primaryColor vs Not selected
+            color: isSelected
+                ? const Color(0xFF1339FF)
+                : const Color(0xFFE4E9ED), // primaryColor vs Not selected
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(50),
             ),
@@ -54,7 +57,9 @@ class LoginMethodTabsWidget extends StatelessWidget {
           child: Text(
             _getMethodDisplayName(method),
             style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF595A5B), // White vs textSecondary
+              color: isSelected
+                  ? Colors.white
+                  : const Color(0xFF595A5B), // White vs textSecondary
               fontSize: 14,
               fontFamily: 'IBM Plex Sans Arabic',
               fontWeight: FontWeight.w500,
@@ -69,14 +74,11 @@ class LoginMethodTabsWidget extends StatelessWidget {
 
   String _getMethodDisplayName(String method) {
     switch (method) {
-      case 'aid':
-        return 'aid'.tr;
       case 'phone':
         return 'phone'.tr;
       case 'email':
         return 'email'.tr;
-      case 'nid_ppn':
-        return 'nid_ppn'.tr;
+
       default:
         return method;
     }

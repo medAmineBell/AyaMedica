@@ -90,7 +90,7 @@ class CreateAppointmentController extends GetxController {
     
     // Initialize lists
     _appointmentTypes = _buildAppointmentTypes();
-    _loadDoctorsFromApi();
+    _loadDoctorsFromHome();
     fetchDiseases('');
     fetchVaccinations('');
 
@@ -150,19 +150,35 @@ class CreateAppointmentController extends GetxController {
   void updateSelectedClass(String? className) {
     selectedClass.value = className;
     selectedStudents.clear();
-    // Auto-select all students of this class for non-walk-in types
-    if (className != null && selectedType.value != 'Walk-In') {
+    walkInSelectedStudent.value = null;
+    // Clear search field
+    aidController.clear();
+    searchResults.clear();
+
+    if (className != null) {
       _loadStudentsFromApi(
         grade: selectedGrade.value,
         studentClass: className,
       ).then((_) {
-        selectedStudents.assignAll(_students);
+        if (selectedType.value != 'Walk-In') {
+          selectedStudents.assignAll(_students);
+        }
+        filteredStudentsForWalkIn.assignAll(_students);
       });
+    } else {
+      filteredStudentsForWalkIn.clear();
     }
   }
 
   void updateSelectedGrade(String? grade) {
     selectedGrade.value = grade;
+    // Reset class and student when grade changes
+    selectedClass.value = null;
+    walkInSelectedStudent.value = null;
+    filteredStudentsForWalkIn.clear();
+    // Clear search field
+    aidController.clear();
+    searchResults.clear();
   }
 
   void updateSelectedDisease(String? disease) {
@@ -238,22 +254,42 @@ class CreateAppointmentController extends GetxController {
     _isSelectingStudent = false;
   }
 
+  // Search results shown under the search field
+  final RxList<Student> searchResults = <Student>[].obs;
+  final RxBool isSearching = false.obs;
+
   void searchByName(String name) {
     if (_isSelectingStudent) return;
     if (name.isEmpty) {
+      searchResults.clear();
+      isSearching.value = false;
       walkInSelectedStudent.value = null;
-      _loadStudentsFromApi().then((_) {
-        filteredStudentsForWalkIn.assignAll(_students);
-      });
       return;
     }
 
     if (name.length < 2) return;
 
+    // Reset grade/class when searching by name
+    selectedGrade.value = null;
+    selectedClass.value = null;
+    filteredStudentsForWalkIn.clear();
+
+    isSearching.value = true;
     _loadStudentsFromApi(search: name).then((_) {
       walkInSelectedStudent.value = null;
-      filteredStudentsForWalkIn.assignAll(_students);
+      searchResults.assignAll(_students);
+      isSearching.value = false;
     });
+  }
+
+  void selectStudentFromSearch(Student student) {
+    _isSelectingStudent = true;
+    walkInSelectedStudent.value = student;
+    aidController.text = student.name;
+    searchResults.clear();
+    filteredStudentsForWalkIn.assignAll([student]);
+    _autoSelectGradeAndClass(student);
+    _isSelectingStudent = false;
   }
 
   void removeWalkInSelectedStudent() {
@@ -680,28 +716,47 @@ class CreateAppointmentController extends GetxController {
       Get.back();
       Get.delete<CreatingAppointmentController>();
 
-      // Refresh appointment history list in background
+      // Refresh appointment history list and wait for it to complete
       if (Get.isRegistered<AppointmentHistoryController>()) {
-        Get.find<AppointmentHistoryController>().refreshAppointments();
+        await Get.find<AppointmentHistoryController>().fetchAppointmentHistory();
       }
 
       // Navigate to appointment student profile for walk-in
       final homeController = Get.find<HomeController>();
       final responseData = jsonDecode(response.body);
-      final appointmentData = responseData['data'] as Map<String, dynamic>?;
+      final data = responseData['data'] as Map<String, dynamic>?;
+      final appointmentId = data?['appointmentId'] as String? ?? '';
+      final medicalRecordId = data?['medicalRecordId'] as String?;
 
-      if (appointmentData != null) {
-        final appointment = AppointmentHistory.fromJson(appointmentData);
-        homeController.navigateToAppointmentStudentProfile(
-          student,
-          appointment,
-        );
-      } else {
-        homeController.navigateToStudentProfile(
-          student,
-          appointmentType: selectedType.value,
-        );
-      }
+      final appointment = AppointmentHistory(
+        id: appointmentId,
+        country: country,
+        branchId: branchId,
+        createdByAid: '',
+        createdAt: DateTime.now(),
+        appointmentDate: DateTime.now(),
+        updatedAt: DateTime.now(),
+        appointmentType: 'walkin',
+        allPatientsChecked: false,
+        checkedPatientsCount: 0,
+        uncheckedPatientsCount: 1,
+        includesOnePatient: true,
+        gradeName: selectedGrade.value ?? '',
+        gradeId: selectedGrade.value ?? '',
+        className: selectedClass.value ?? '',
+        classId: student.classId ?? '',
+        totalPatientsCount: 1,
+        onePatientAid: student.aid,
+        enableNotification: true,
+        appointmentStatus: 'booked',
+        fullName: student.name,
+        medicalRecordId: medicalRecordId,
+      );
+
+      homeController.navigateToAppointmentStudentProfile(
+        student,
+        appointment,
+      );
 
       Get.snackbar(
         'Success',
@@ -810,37 +865,31 @@ class CreateAppointmentController extends GetxController {
         },
       ];
 
-  Future<void> _loadDoctorsFromApi() async {
-    try {
-      final branchData = _storageService.getSelectedBranchData();
-      final branchId = branchData?['id'];
-      if (branchId == null) return;
+  void _loadDoctorsFromHome() {
+    final homeController = Get.find<HomeController>();
 
-      final accessToken = _storageService.getAccessToken();
-      if (accessToken == null) return;
-
-      final response = await http.get(
-        Uri.parse('${AppConfig.newBackendUrl}/api/school-admin/branches/$branchId/doctors'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['success'] == true) {
-          final staff = jsonData['data']['staff'] as List;
-          _doctors.assignAll(staff.map((d) {
-            final name = d['name'];
-            return name is Map
-                ? ((name['full'] as String?) ?? '${name['given']} ${name['family']}').trim()
-                : d['name'].toString();
-          }).toList());
+    void applyDoctors() {
+      _doctors.assignAll(homeController.doctors);
+      // Auto-select the logged-in user as doctor if found
+      if (selectedDoctor.value == null && _doctors.isNotEmpty) {
+        final currentUserName = homeController.userName.value.trim().toLowerCase();
+        if (currentUserName.isNotEmpty) {
+          final match = _doctors.firstWhereOrNull(
+            (d) => d.trim().toLowerCase() == currentUserName,
+          );
+          if (match != null) {
+            selectedDoctor.value = match;
+          }
         }
       }
-    } catch (e) {
-      print('Error loading doctors: $e');
+    }
+
+    if (homeController.isDoctorsLoaded.value) {
+      applyDoctors();
+    } else {
+      ever<bool>(homeController.isDoctorsLoaded, (loaded) {
+        if (loaded) applyDoctors();
+      });
     }
   }
 

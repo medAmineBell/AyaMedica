@@ -63,9 +63,15 @@ class AppointmentHistoryScreen extends StatelessWidget {
                       );
                     }
                     // Show vital signs table for Diabetes, Blood pressure, Cardiovascular, BMI
-                    const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
+                    const vitalSignsDiseases = [
+                      'diabetes',
+                      'blood pressure',
+                      'cardiovascular',
+                      'bmi'
+                    ];
                     if (appt.type.toLowerCase().contains('checkup') &&
-                        vitalSignsDiseases.contains(appt.disease.toLowerCase())) {
+                        vitalSignsDiseases
+                            .contains(appt.disease.toLowerCase())) {
                       return VitalSignsTableWidget(
                         appointment: appt,
                         onBack: controller.backToList,
@@ -201,8 +207,8 @@ class AppointmentHistoryScreen extends StatelessWidget {
           Obx(() => _buildStatusTabs(controller)),
           const Spacer(),
           // Download button
-          _buildDownloadButton(),
-          const SizedBox(width: 12),
+          // _buildDownloadButton(),
+          // const SizedBox(width: 12),
           // Search field
           _buildSearchField(controller),
           const SizedBox(width: 12),
@@ -441,91 +447,175 @@ class AppointmentHistoryScreen extends StatelessWidget {
 
   void _showFiltersDialog(AppointmentHistoryController controller) {
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Filter Appointments',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+      _FiltersDialogContent(controller: controller),
+      barrierDismissible: true,
+    );
+  }
+}
+
+class _FiltersDialogContent extends StatefulWidget {
+  final AppointmentHistoryController controller;
+  const _FiltersDialogContent({required this.controller});
+
+  @override
+  State<_FiltersDialogContent> createState() => _FiltersDialogContentState();
+}
+
+class _FiltersDialogContentState extends State<_FiltersDialogContent> {
+  late DateTime _startDate;
+  late DateTime _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDate = widget.controller.startDate.value;
+    _endDate = widget.controller.endDate.value;
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Filter Appointments',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Start date
+            const Text(
+              'Start date',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildDateField(
+                _startDate, () => _pickDate(context, isStart: true)),
+
+            const SizedBox(height: 16),
+
+            // End date
+            const Text(
+              'End date',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildDateField(_endDate, () => _pickDate(context, isStart: false)),
+
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _startDate = DateTime.now();
+                      _endDate = DateTime.now();
+                    });
+                  },
+                  child: const Text('Clear'),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Status',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                    widget.controller.changeDateRange(_startDate, _endDate);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1339FF),
+                  ),
+                  child: const Text('Apply',
+                      style: TextStyle(color: Colors.white)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Obx(() => Wrap(
-                    spacing: 8,
-                    children: [
-                      _buildFilterChip('All', 'all', controller),
-                      _buildFilterChip('Booked', 'booked', controller),
-                      _buildFilterChip('Fulfilled', 'fulfilled', controller),
-                      _buildFilterChip('Cancelled', 'cancelled', controller),
-                    ],
-                  )),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      controller.filterByStatus('all');
-                      Get.back();
-                    },
-                    child: const Text('Clear'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => Get.back(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                    ),
-                    child: const Text('Apply'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFilterChip(
-    String label,
-    String value,
-    AppointmentHistoryController controller,
-  ) {
-    final isSelected = controller.selectedFilter.value == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        controller.filterByStatus(value);
-      },
-      backgroundColor: Colors.white,
-      selectedColor: const Color(0xFF3B82F6).withOpacity(0.1),
-      checkmarkColor: const Color(0xFF3B82F6),
-      labelStyle: TextStyle(
-        color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade700,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-      ),
-      side: BorderSide(
-        color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade300,
+  Widget _buildDateField(DateTime date, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFD1D5DB)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today,
+                color: Color(0xFF1339FF), size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _formatDate(date),
+                style: const TextStyle(color: Color(0xFF111827), fontSize: 14),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down,
+                color: Color(0xFF6B7280), size: 20),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _pickDate(BuildContext context, {required bool isStart}) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStart ? _startDate : _endDate,
+      firstDate: isStart ? DateTime(2020) : _startDate,
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1339FF),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF111827),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = picked;
+          if (_endDate.isBefore(_startDate)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
   }
 }

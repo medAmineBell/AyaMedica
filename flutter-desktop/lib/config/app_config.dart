@@ -30,6 +30,9 @@ class AppConfig {
 
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';
+  static const String forgotPasswordUrl = '$newBackendUrl/api/auth/forgot-password';
+  static const String verifyResetOtpUrl = '$newBackendUrl/api/auth/verify-reset-otp';
+  static const String resetPasswordUrl = '$newBackendUrl/api/auth/reset-password';
 
   // Original Medplum API Configuration (keep for backwards compatibility)
   static const String baseUrl = 'https://api.ayamedica.online';

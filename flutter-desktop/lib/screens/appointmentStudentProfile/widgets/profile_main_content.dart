@@ -3,7 +3,7 @@ import 'package:flutter_getx_app/models/appointment_history_model.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'assessment_view.dart';
 import 'package:flutter_getx_app/screens/studentProfile/widgets/plans_view.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/monitoring_signs_view.dart';
+// import 'package:flutter_getx_app/screens/studentProfile/widgets/monitoring_signs_view.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/home_controller.dart';
 import 'medical_history_view.dart';
@@ -35,9 +35,9 @@ class ProfileMainContent extends StatelessWidget {
         return MedicalRecordsView(student: activeStudent);
       } else if (controller.selectedProfileMenuItem.value == 'Assessment') {
         return AssessmentView(appointment: appointment);
-      } else if (controller.selectedProfileMenuItem.value ==
-          'Monitoring signs') {
-        return MonitoringSignsView(student: activeStudent);
+      // } else if (controller.selectedProfileMenuItem.value ==
+      //     'Monitoring signs') {
+      //   return MonitoringSignsView(student: activeStudent);
       } else if (controller.selectedProfileMenuItem.value == 'Plans') {
         return const PlansView();
       }

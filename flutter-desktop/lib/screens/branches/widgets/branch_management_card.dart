@@ -188,13 +188,15 @@ class BranchManagementCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (branch.address != null) _buildInfoRow(Icons.location_on, branch.address!),
+        if (branch.address != null)
+          _buildInfoRow(Icons.location_on, branch.address!),
         if (branch.address != null) const SizedBox(height: 8),
         if (branch.phone != null) _buildInfoRow(Icons.phone, branch.phone!),
         if (branch.phone != null) const SizedBox(height: 8),
         if (branch.email != null) _buildInfoRow(Icons.email, branch.email!),
         if (branch.email != null) const SizedBox(height: 8),
-        if (branch.principalName != null) _buildInfoRow(Icons.person, 'Principal: ${branch.principalName}'),
+        if (branch.principalName != null)
+          _buildInfoRow(Icons.person, 'Principal: ${branch.principalName}'),
       ],
     );
   }
@@ -233,7 +235,7 @@ class BranchManagementCard extends StatelessWidget {
               'Students',
               branch.studentCount.toString(),
               Icons.people,
-              const Color(0xFF3B82F6),
+              const Color(0xFF1339FF),
             ),
           ),
         if (branch.studentCount != null && branch.teacherCount != null)
@@ -251,7 +253,8 @@ class BranchManagementCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -315,4 +318,4 @@ class BranchManagementCard extends StatelessWidget {
       ],
     );
   }
-} 
+}

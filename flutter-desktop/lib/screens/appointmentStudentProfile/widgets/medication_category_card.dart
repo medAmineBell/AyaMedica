@@ -141,7 +141,7 @@ class MedicationCategoryCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF3B82F6), // Blue
+                        color: Color(0xFF1339FF), // Blue
                       ),
                     ),
                   ],
@@ -164,7 +164,7 @@ class MedicationCategoryCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF3B82F6), // Blue
+                        color: Color(0xFF1339FF), // Blue
                       ),
                     ),
                   ],

@@ -39,7 +39,7 @@ class ProfileSummaryContent extends StatelessWidget {
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [Color(0xFF9333EA), Color(0xFF3B82F6)],
+                    colors: [Color(0xFF9333EA), Color(0xFF1339FF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),

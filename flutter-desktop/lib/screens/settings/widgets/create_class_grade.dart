@@ -57,8 +57,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   }
 
   void _loadGradesForBranch(String branchId) {
-    final branch = branchController.branches
-        .firstWhereOrNull((b) => b.id == branchId);
+    final branch =
+        branchController.branches.firstWhereOrNull((b) => b.id == branchId);
     if (branch != null && branch.grades != null) {
       setState(() {
         availableGrades = List.from(branch.grades!);
@@ -277,8 +277,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
       children: [
         const Row(
           children: [
-            Text('Branch name',
-                style: TextStyle(fontWeight: FontWeight.w500)),
+            Text('Branch name', style: TextStyle(fontWeight: FontWeight.w500)),
             Text('*', style: TextStyle(color: Colors.red)),
           ],
         ),
@@ -292,14 +291,14 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             value: selectedBranchId,
             decoration: InputDecoration(
               hintText: 'Branch name',
-              prefixIcon: Icon(Icons.search,
-                  size: 20, color: Colors.grey.shade400),
+              prefixIcon:
+                  Icon(Icons.search, size: 20, color: Colors.grey.shade400),
               border: const OutlineInputBorder(),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: BorderSide(color: Color(0xFF1339FF)),
               ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -352,7 +351,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: BorderSide(color: Color(0xFF1339FF)),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -384,10 +383,10 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.1),
+                  color: const Color(0xFF1339FF).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: const Color(0xFF3B82F6).withOpacity(0.3)),
+                      color: const Color(0xFF1339FF).withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -396,7 +395,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                       grade,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF3B82F6),
+                        color: Color(0xFF1339FF),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -449,7 +448,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: BorderSide(color: Color(0xFF1339FF)),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -509,7 +508,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: BorderSide(color: Color(0xFF1339FF)),
               ),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 14),

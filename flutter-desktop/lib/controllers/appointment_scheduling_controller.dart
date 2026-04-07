@@ -31,6 +31,9 @@ class AppointmentSchedulingController extends GetxController {
   final RxString organizationId = ''.obs;
   final RxString branchId = ''.obs;
 
+  // Date filter - defaults to today
+  final Rx<DateTime> selectedDate = DateTime.now().obs;
+
   /// Get authorization headers for API requests
   Map<String, String> _getHeaders(String accessToken) {
     return {
@@ -675,8 +678,15 @@ class AppointmentSchedulingController extends GetxController {
 
       // Build API URL using appointment-sessions endpoint
       var urlString = '$_baseUrl/api/appointment-sessions?country=$country&branchId=${branchId.value}';
-      if (startDate != null) urlString += '&startDate=$startDate';
-      if (endDate != null) urlString += '&endDate=$endDate';
+
+      // Use provided dates or default to selectedDate (today)
+      if (startDate != null && endDate != null) {
+        urlString += '&startAfter=$startDate&startBefore=$endDate';
+      } else {
+        final date = selectedDate.value;
+        final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        urlString += '&startAfter=${dateStr}T00:00:00Z&startBefore=${dateStr}T23:59:59Z';
+      }
 
       final url = Uri.parse(urlString);
       print('📡 Request URL: $url');
@@ -834,6 +844,12 @@ class AppointmentSchedulingController extends GetxController {
       startDate: startDate,
       endDate: endDate,
     );
+  }
+
+  // Change selected date and reload appointments
+  Future<void> changeDate(DateTime date) async {
+    selectedDate.value = date;
+    await loadAppointments();
   }
 
   // Chronic disease methods

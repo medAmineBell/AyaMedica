@@ -55,10 +55,10 @@ class AppointmentHistoryStatusTabsWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : Colors.white,
+          color: isSelected ? const Color(0xFF1339FF) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade300,
+            color: isSelected ? const Color(0xFF1339FF) : Colors.grey.shade300,
           ),
         ),
         child: Row(
@@ -85,7 +85,7 @@ class AppointmentHistoryStatusTabsWidget extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: isSelected
-                      ? const Color(0xFF3B82F6)
+                      ? const Color(0xFF1339FF)
                       : Colors.red.shade700,
                 ),
               ),

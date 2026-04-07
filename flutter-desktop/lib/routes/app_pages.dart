@@ -1,5 +1,7 @@
 
 import 'package:flutter_getx_app/screens/auth/login_screen.dart';
+import 'package:flutter_getx_app/screens/auth/forgot_password_screen.dart';
+import 'package:flutter_getx_app/controllers/auth/forgot_password_controller.dart';
 import 'package:flutter_getx_app/screens/organisation/branch_selection_screen.dart';
 import 'package:flutter_getx_app/screens/organisation/create_organization_screen.dart';
 import 'package:get/get.dart';
@@ -40,6 +42,14 @@ class AppPages {
     GetPage(
       name: Routes.LOGIN,
       page: () => LoginScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.FORGOT_PASSWORD,
+      page: () => ForgotPasswordScreen(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut(() => ForgotPasswordController());
+      }),
       transition: Transition.rightToLeft,
     ),
 

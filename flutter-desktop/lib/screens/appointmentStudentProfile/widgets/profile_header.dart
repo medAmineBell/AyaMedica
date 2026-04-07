@@ -85,8 +85,9 @@ class ProfileHeader extends StatelessWidget {
 
           final showCompleteWalkIn =
               (isAssessmentTab && isFilled) || isPlansTab;
-          final buttonText =
-              (isAssessmentTab || isPlansTab) ? 'Complete Walk in' : 'Assessment';
+          final buttonText = (isAssessmentTab || isPlansTab)
+              ? 'Complete Walk in'
+              : 'Assessment';
 
           return ElevatedButton(
             onPressed: () {
@@ -115,8 +116,7 @@ class ProfileHeader extends StatelessWidget {
                       ),
                     );
 
-                    final success =
-                        await assessmentController.completeWalkIn();
+                    final success = await assessmentController.completeWalkIn();
 
                     // Close loading
                     if (!context.mounted) return;
@@ -141,7 +141,7 @@ class ProfileHeader extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D6EFD),
+              backgroundColor: const Color(0xFF1339FF),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(

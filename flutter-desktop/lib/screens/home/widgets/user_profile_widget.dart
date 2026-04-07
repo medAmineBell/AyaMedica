@@ -26,8 +26,8 @@ class _UserProfileWidgetState extends State<UserProfileWidget> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => isHovered = true),
-      onExit: (_) => setState(() => isHovered = false),
+      // onEnter: (_) => setState(() => isHovered = true),
+      // onExit: (_) => setState(() => isHovered = false),
       child: Container(
         padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
         decoration: BoxDecoration(

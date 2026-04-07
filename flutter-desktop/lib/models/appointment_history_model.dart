@@ -68,14 +68,20 @@ class AppointmentHistory {
 
   factory AppointmentHistory.fromJson(Map<String, dynamic> json) {
     return AppointmentHistory(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? '',
       country: json['country'] as String? ?? '',
       branchId: json['branchId'] as String? ?? '',
       createdByAid: json['createdByAID'] as String? ?? '',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      appointmentDate: DateTime.parse(json['appointmentDate'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      appointmentDate: json['appointmentDate'] != null
+          ? DateTime.parse(json['appointmentDate'] as String)
+          : DateTime.now(),
       updatedByAid: json['updatedByAID'] as String?,
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
       checkedOutByAid: json['checkedOutByAID'] as String?,
       checkOutDate: json['checkOutDate'] != null
           ? DateTime.parse(json['checkOutDate'] as String)

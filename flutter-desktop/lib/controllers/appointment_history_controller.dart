@@ -32,6 +32,10 @@ class AppointmentHistoryController extends GetxController {
   final RxString country = ''.obs;
   final RxString branchId = ''.obs;
 
+  // Date filter - defaults to today
+  final Rx<DateTime> startDate = DateTime.now().obs;
+  final Rx<DateTime> endDate = DateTime.now().obs;
+
   // Status counts
   final RxInt checkedInCount = 0.obs;
   final RxInt checkedOutCount = 0.obs;
@@ -73,8 +77,12 @@ class AppointmentHistoryController extends GetxController {
         throw Exception('No access token found');
       }
 
+      final sd = startDate.value;
+      final ed = endDate.value;
+      final startStr = '${sd.year}-${sd.month.toString().padLeft(2, '0')}-${sd.day.toString().padLeft(2, '0')}';
+      final endStr = '${ed.year}-${ed.month.toString().padLeft(2, '0')}-${ed.day.toString().padLeft(2, '0')}';
       final url = Uri.parse(
-        '${AppConfig.newBackendUrl}/api/appointment-sessions?country=${country.value}&branchId=${branchId.value}',
+        '${AppConfig.newBackendUrl}/api/appointment-sessions?country=${country.value}&branchId=${branchId.value}&startAfter=${startStr}T00:00:00Z&startBefore=${endStr}T23:59:59Z',
       );
 
       final response = await http.get(
@@ -282,6 +290,13 @@ class AppointmentHistoryController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  /// Change date range and reload appointments
+  Future<void> changeDateRange(DateTime start, DateTime end) async {
+    startDate.value = start;
+    endDate.value = end;
+    await fetchAppointmentHistory();
   }
 
   /// Refresh appointments

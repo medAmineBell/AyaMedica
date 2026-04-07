@@ -137,9 +137,10 @@ class SecondSidebar extends GetView<HomeController> {
                               _buildSubMenuItem('Grades setting',
                                   onTap: () => controller
                                       .changeContent(ContentType.gradesSettings)),
-                              _buildSubMenuItem('School & year calendar',
-                                  onTap: () => controller
-                                      .changeContent(ContentType.schoolYear)),
+                              // TODO: Re-enable when School & year calendar is ready
+                              // _buildSubMenuItem('School & year calendar',
+                              //     onTap: () => controller
+                              //         .changeContent(ContentType.schoolYear)),
                               _buildSubMenuItem('users',
                                   onTap: () =>
                                       controller.changeContent(ContentType.users),
