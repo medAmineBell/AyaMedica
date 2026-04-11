@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/medical_card.dart';
+import 'medical_card.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/home_controller.dart';
 import 'profile_field.dart';

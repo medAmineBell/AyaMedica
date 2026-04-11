@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
 import 'package:flutter_getx_app/models/health_status.dart';
+import 'package:flutter_getx_app/models/vital_signs_data.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/controllers/appointment_scheduling_controller.dart';
 import 'package:get/get.dart';
@@ -243,6 +244,56 @@ class AppointmentHistoryController extends GetxController {
     }
   }
 
+  /// Update an appointment session via API
+  Future<bool> updateAppointment(
+      String id, Map<String, dynamic> body) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/appointment-sessions/$id',
+      );
+
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          'Success',
+          'Appointment updated successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchAppointmentHistory();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update appointment: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
   /// Cancel an appointment session via API
   Future<bool> cancelAppointment(String id, String reason) async {
     try {
@@ -408,7 +459,14 @@ class AppointmentHistoryController extends GetxController {
             }
           }
         }
+
+        // Restore vital signs data
+        schedulingController.vitalSignsData[key] = VitalSignsData.fromJson(patient);
       }
+
+      schedulingController.vitalSignsData.refresh();
+      schedulingController.healthStatuses.refresh();
+      schedulingController.appointmentStatuses.refresh();
 
       // Map appointment type for display
       String displayType;

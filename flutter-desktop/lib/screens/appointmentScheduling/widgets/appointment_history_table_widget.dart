@@ -6,6 +6,7 @@ import '../../../controllers/home_controller.dart';
 import '../../../models/appointment_history_model.dart';
 import '../../../models/student.dart';
 import 'delete_appointment_dialog.dart';
+import 'edit_appointment_dialog.dart';
 
 class AppointmentHistoryTableWidget extends StatelessWidget {
   const AppointmentHistoryTableWidget({super.key});
@@ -36,46 +37,48 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
         );
       }
 
-      return SingleChildScrollView(
-        child: Column(
-          children: [
-            // Table Header
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade200),
-                ),
+      return Column(
+        children: [
+          // Fixed Table Header
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
               ),
+            ),
+            child: Table(
+              columnWidths: _columnWidths,
+              children: [
+                TableRow(
+                  children: [
+                    _buildHeaderCell('Name'),
+                    _buildHeaderCellWithIcon('Appointment type'),
+                    _buildHeaderCellWithIcon('Reason'),
+                    _buildHeaderCell('Cases'),
+                    _buildHeaderCellWithSort('Date & time'),
+                    _buildHeaderCell(
+                        isCancelled ? 'Cancellation reason' : 'Actions'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Scrollable Table Rows
+          Expanded(
+            child: SingleChildScrollView(
               child: Table(
                 columnWidths: _columnWidths,
-                children: [
-                  TableRow(
-                    children: [
-                      _buildHeaderCell('Name'),
-                      _buildHeaderCellWithIcon('Appointment type'),
-                      _buildHeaderCellWithIcon('Reason'),
-                      _buildHeaderCell('Cases'),
-                      _buildHeaderCellWithSort('Date & time'),
-                      _buildHeaderCell(
-                          isCancelled ? 'Cancellation reason' : 'Actions'),
-                    ],
-                  ),
-                ],
+                children: appointments
+                    .asMap()
+                    .entries
+                    .map((entry) =>
+                        _buildTableRow(entry.value, entry.key, isCancelled))
+                    .toList(),
               ),
             ),
-            // Table Rows
-            Table(
-              columnWidths: _columnWidths,
-              children: appointments
-                  .asMap()
-                  .entries
-                  .map((entry) =>
-                      _buildTableRow(entry.value, entry.key, isCancelled))
-                  .toList(),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     });
   }
@@ -154,6 +157,47 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
     );
   }
 
+  void _onViewAppointment(AppointmentHistory appointment) {
+    if (appointment.isWalkIn && appointment.onePatientAid != null) {
+      final student = Student(
+        id: appointment.onePatientAid!,
+        name: appointment.fullName ?? '',
+        avatarColor: const Color(0xFF1339FF),
+        aid: appointment.onePatientAid,
+        grade: appointment.gradeName,
+        className: appointment.className,
+        classId: appointment.classId,
+      );
+      final homeController = Get.find<HomeController>();
+      final isFulfilled =
+          appointment.appointmentStatus.toLowerCase() == 'fulfilled';
+      if (isFulfilled) {
+        homeController.currentStudent.value = student;
+        homeController.currentAppointmentHistory.value = appointment;
+        homeController.changeContent(ContentType.checkedOutWalkInSummary);
+      } else {
+        homeController.navigateToAppointmentStudentProfile(
+          student,
+          appointment,
+        );
+      }
+    } else {
+      final historyController = Get.find<AppointmentHistoryController>();
+      historyController.viewAppointmentStudents(appointment);
+    }
+  }
+
+  Widget _wrapClickable(AppointmentHistory appointment, Widget child) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _onViewAppointment(appointment),
+        behavior: HitTestBehavior.opaque,
+        child: child,
+      ),
+    );
+  }
+
   TableRow _buildTableRow(
       AppointmentHistory appointment, int index, bool isCancelled) {
     return TableRow(
@@ -164,13 +208,14 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
         ),
       ),
       children: [
-        _buildNameCell(appointment),
-        _buildTextCell(appointment.formattedType),
-        _buildTextCell(appointment.typeDisplay),
-        _buildTextCell(appointment.casesDisplay),
-        _buildDateTimeCell(appointment),
+        _wrapClickable(appointment, _buildNameCell(appointment)),
+        _wrapClickable(appointment, _buildTextCell(appointment.formattedType)),
+        _wrapClickable(appointment, _buildTextCell(appointment.typeDisplay)),
+        _wrapClickable(appointment, _buildTextCell(appointment.casesDisplay)),
+        _wrapClickable(appointment, _buildDateTimeCell(appointment)),
         if (isCancelled)
-          _buildTextCell(appointment.cancelReason ?? '--')
+          _wrapClickable(
+              appointment, _buildTextCell(appointment.cancelReason ?? '--'))
         else
           _buildActionsCell(appointment),
       ],
@@ -198,7 +243,11 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: avatarColor,
-            child: const Icon(Icons.person, color: Colors.white, size: 22),
+            child: Icon(
+              appointment.isWalkIn ? Icons.person : Icons.groups,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           // Name and subtitle
@@ -294,7 +343,11 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
             // Edit
             IconButton(
               onPressed: () {
-                // TODO: implement edit
+                showDialog(
+                  context: Get.context!,
+                  builder: (_) =>
+                      EditAppointmentDialog(appointment: appointment),
+                );
               },
               icon: SvgPicture.asset(
                 'assets/svg/edit-2.svg',
@@ -314,38 +367,7 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
           ],
           // View
           IconButton(
-            onPressed: () {
-              if (appointment.isWalkIn && appointment.onePatientAid != null) {
-                final student = Student(
-                  id: appointment.onePatientAid!,
-                  name: appointment.fullName ?? '',
-                  avatarColor: const Color(0xFF1339FF),
-                  aid: appointment.onePatientAid,
-                  grade: appointment.gradeName,
-                  className: appointment.className,
-                  classId: appointment.classId,
-                );
-                final homeController = Get.find<HomeController>();
-                final isFulfilled =
-                    appointment.appointmentStatus.toLowerCase() == 'fulfilled';
-                if (isFulfilled) {
-                  homeController.currentStudent.value = student;
-                  homeController.currentAppointmentHistory.value = appointment;
-                  homeController
-                      .changeContent(ContentType.checkedOutWalkInSummary);
-                } else {
-                  homeController.navigateToAppointmentStudentProfile(
-                    student,
-                    appointment,
-                  );
-                }
-              } else {
-                // For checkup, follow-up, vaccination — show students table
-                final historyController =
-                    Get.find<AppointmentHistoryController>();
-                historyController.viewAppointmentStudents(appointment);
-              }
-            },
+            onPressed: () => _onViewAppointment(appointment),
             icon: SvgPicture.asset(
               'assets/svg/view.svg',
               width: 18,

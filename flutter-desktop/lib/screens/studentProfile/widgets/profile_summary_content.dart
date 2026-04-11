@@ -62,7 +62,7 @@ class ProfileSummaryContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${student.name} is a ${age != null ? '$age-year-old' : 'young'} $nationality $gender currently in 6th grade. He lives in ${student.street ?? 'unknown street'}, ${student.city ?? 'unknown city'}, ${student.province ?? ''} (zip: ${student.zipCode ?? '-'}) and can be contacted via guardian at ${student.phoneNumber ?? '-'}. Blood type is ${student.bloodType ?? '-'}, height is ${student.heightCm?.toStringAsFixed(0) ?? '-'} cm, and weight is ${student.weightKg?.toStringAsFixed(1) ?? '-'} kg.",
+                      "${student.name} is a ${age != null ? '$age-year-old' : 'young'} $nationality $gender currently in 6th grade. He lives in ${student.street ?? 'unknown street'}, ${student.city ?? 'unknown city'}, ${student.province ?? ''} (zip: ${student.zipCode ?? '-'}) and can be contacted via guardian at ${student.phoneNumber ?? '-'}. Height is ${student.heightCm?.toStringAsFixed(0) ?? '-'} cm, and weight is ${student.weightKg?.toStringAsFixed(1) ?? '-'} kg.",
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.6,

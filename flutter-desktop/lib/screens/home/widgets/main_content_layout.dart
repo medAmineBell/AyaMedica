@@ -53,7 +53,6 @@ class MainContentLayout extends GetView<HomeController> {
         if (controller.currentStudent.value != null) {
           return StudentProfileScreen(
             student: controller.currentStudent.value!,
-            appointmentType: controller.currentAppointmentType.value,
           );
         }
         // Fallback to Appointments if no student selected

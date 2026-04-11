@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/student.dart';
@@ -17,6 +18,7 @@ class StudentController extends GetxController {
   final RxList<Student> _allStudents = <Student>[].obs;
   final RxList<Student> filteredStudents = <Student>[].obs;
   final RxString searchQuery = ''.obs;
+  final TextEditingController searchTextController = TextEditingController();
   final RxString selectedFilter = 'All'.obs;
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
@@ -28,36 +30,83 @@ class StudentController extends GetxController {
       <Map<String, dynamic>>[].obs;
   final RxBool hasDefectiveRecords = false.obs;
 
-  // Filter state
-  final RxSet<String> selectedGrades = <String>{}.obs;
-  final RxSet<String> selectedClasses = <String>{}.obs;
+  // Filter state (single selection)
+  final Rx<String?> selectedGrade = Rx<String?>(null);
+  final Rx<String?> selectedClass = Rx<String?>(null);
+  final RxList<String> availableGrades = <String>[].obs;
   final RxList<String> availableClasses = <String>[].obs;
 
-  static const List<String> allGrades = [
-    'G1', 'G2', 'G3', 'G4', 'G5', 'G6',
-    'G7', 'G8', 'G9', 'G10', 'G11', 'G12',
-  ];
-
-  int get activeFilterCount => selectedGrades.length + selectedClasses.length;
+  int get activeFilterCount => (selectedGrade.value != null ? 1 : 0) + (selectedClass.value != null ? 1 : 0);
 
   // Branch ID from storage
   final RxString selectedBranchId = ''.obs;
+
+  // Debounce timer for search
+  Timer? _searchDebounce;
 
   @override
   void onInit() {
     super.onInit();
     _loadBranchId();
+    _loadClassesFromApi();
     loadStudents();
   }
 
-  // Load branch ID from storage
+  @override
+  void onClose() {
+    _searchDebounce?.cancel();
+    searchTextController.dispose();
+    super.onClose();
+  }
+
+  // Load branch ID and grades from storage
   void _loadBranchId() {
     final branchData = _storageService.getSelectedBranchData();
     if (branchData != null) {
       selectedBranchId.value = branchData['id'] ?? '';
-      print('📍 Loaded branch ID: ${selectedBranchId.value}');
-    } else {
-      print('⚠️ No branch data found in storage');
+      // Load grades from branch data
+      if (branchData['grades'] is List && (branchData['grades'] as List).isNotEmpty) {
+        availableGrades.assignAll(
+          (branchData['grades'] as List).map((g) => g.toString()).toList(),
+        );
+      }
+    }
+  }
+
+  // Load classes from API
+  Future<void> _loadClassesFromApi() async {
+    if (selectedBranchId.value.isEmpty) return;
+    try {
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=${selectedBranchId.value}&page=1&limit=100',
+      );
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final students = jsonData['data']['students'] as List;
+          final classNames = <String>{};
+          for (final s in students) {
+            final classes = s['classes'] as List? ?? [];
+            for (final c in classes) {
+              final name = c['name'] as String?;
+              if (name != null && name.isNotEmpty) {
+                classNames.add(name);
+              }
+            }
+          }
+          availableClasses.assignAll(classNames.toList()..sort());
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading classes: $e');
     }
   }
 
@@ -449,6 +498,9 @@ class StudentController extends GetxController {
         phoneNumber: json['phone'],
         nationalId: json['nationalId'],
         passportIdNumber: json['passportNumber'],
+        documentType: json['documentType'] as String?,
+        documentNumber: json['documentNumber'] as String?,
+        imageUrl: json['photo'] as String?,
         studentId: json['studentId'],
         aid: json['aid'],
         grade: grade ?? json['grade'],
@@ -483,107 +535,82 @@ class StudentController extends GetxController {
     }
   }
 
-  // SEARCH with real-time filtering
+  // SEARCH with debounced API call
   void searchStudents(String query) {
-    print('🔍 Searching for: "$query"');
     searchQuery.value = query;
-    applyFilters();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      _reloadWithFilters();
+    });
   }
 
-  // Filter by gender
-  void filterByGender(String filter) {
-    print('🔍 Filtering by gender: $filter');
-    selectedFilter.value = filter;
-    applyFilters();
+  // Filter methods (single selection)
+  void selectGrade(String? grade) {
+    selectedGrade.value = grade;
+    selectedClass.value = null; // reset class when grade changes
+    _reloadWithFilters();
   }
 
-  // Filter methods
-  void toggleGrade(String grade) {
-    if (selectedGrades.contains(grade)) {
-      selectedGrades.remove(grade);
-    } else {
-      selectedGrades.add(grade);
-    }
-    applyFilters();
-  }
-
-  void toggleClass(String className) {
-    if (selectedClasses.contains(className)) {
-      selectedClasses.remove(className);
-    } else {
-      selectedClasses.add(className);
-    }
-    applyFilters();
+  void selectClass(String? className) {
+    selectedClass.value = className;
+    _reloadWithFilters();
   }
 
   void clearFilters() {
-    selectedGrades.clear();
-    selectedClasses.clear();
-    applyFilters();
+    selectedGrade.value = null;
+    selectedClass.value = null;
+    _reloadWithFilters();
   }
 
-  // Apply filters
-  void applyFilters() {
-    filteredStudents.value = _allStudents.where((student) {
-      // Search filter
-      final matchesSearch = searchQuery.value.isEmpty ||
-          student.name
-              .toLowerCase()
-              .contains(searchQuery.value.toLowerCase()) ||
-          student.id.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-          (student.aid
-                  ?.toLowerCase()
-                  .contains(searchQuery.value.toLowerCase()) ??
-              false) ||
-          (student.nationalId
-                  ?.toLowerCase()
-                  .contains(searchQuery.value.toLowerCase()) ??
-              false) ||
-          (student.email
-                  ?.toLowerCase()
-                  .contains(searchQuery.value.toLowerCase()) ??
-              false);
-
-      // Gender filter
-      final matchesFilter = selectedFilter.value == 'All' ||
-          student.gender == selectedFilter.value;
-
-      // Grade filter
-      final matchesGrade = selectedGrades.isEmpty ||
-          (student.grade != null && selectedGrades.contains(student.grade));
-
-      // Class filter
-      final matchesClass = selectedClasses.isEmpty ||
-          (student.className != null && selectedClasses.contains(student.className));
-
-      return matchesSearch && matchesFilter && matchesGrade && matchesClass;
-    }).toList();
-
-    print('✅ Filters applied: ${filteredStudents.length} students found');
+  // Reload students from API with current search + filter params
+  void _reloadWithFilters() {
+    final search = searchQuery.value.isNotEmpty ? searchQuery.value : null;
+    loadStudents(
+      page: 1,
+      search: search,
+      grade: selectedGrade.value,
+      studentClass: selectedClass.value,
+    );
   }
 
-  // Refresh students
+  // Refresh table data (keeps current search & filters)
   void refreshStudents() {
-    loadStudents(page: currentPage.value);
+    final search = searchQuery.value.isNotEmpty ? searchQuery.value : null;
+    loadStudents(
+      page: currentPage.value,
+      search: search,
+      grade: selectedGrade.value,
+      studentClass: selectedClass.value,
+    );
   }
 
-  // Pagination
+  // Pagination with current filters
   void goToPage(int page) {
     if (page >= 1 && page <= totalPages.value) {
-      loadStudents(page: page);
+      _loadPageWithFilters(page);
     }
   }
 
   void previousPage() {
     if (currentPage.value > 1) {
-      loadStudents(page: currentPage.value - 1);
+      _loadPageWithFilters(currentPage.value - 1);
     }
   }
 
   void nextPage() {
     if (currentPage.value < totalPages.value) {
-      loadStudents(page: currentPage.value + 1);
+      _loadPageWithFilters(currentPage.value + 1);
     }
+  }
+
+  void _loadPageWithFilters(int page) {
+    final search = searchQuery.value.isNotEmpty ? searchQuery.value : null;
+    loadStudents(
+      page: page,
+      search: search,
+      grade: selectedGrade.value,
+      studentClass: selectedClass.value,
+    );
   }
 
   // View student details

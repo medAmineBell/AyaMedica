@@ -857,7 +857,11 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
           height: 40,
           child: Focus(
             onFocusChange: (hasFocus) {
-              if (!hasFocus && hasValidation) {
+              if (hasFocus && hasValidation) {
+                setState(() {
+                  _blurredFields.remove(blurKey);
+                });
+              } else if (!hasFocus && hasValidation) {
                 setState(() {
                   _blurredFields.add(blurKey);
                 });

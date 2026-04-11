@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/assessment_view.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/plans_view.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/monitoring_signs_view.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/home_controller.dart';
 import 'medical_history_view.dart';
@@ -28,13 +25,6 @@ class ProfileMainContent extends StatelessWidget {
       } else if (controller.selectedProfileMenuItem.value ==
           'Medical records') {
         return MedicalRecordsView(student: student);
-      } else if (controller.selectedProfileMenuItem.value == 'Assessment') {
-        return AssessmentView();
-      } else if (controller.selectedProfileMenuItem.value ==
-          'Monitoring signs') {
-        return MonitoringSignsView(student: student);
-      } else if (controller.selectedProfileMenuItem.value == 'Plans') {
-        return const PlansView();
       }
 
       return controller.isSummaryMode.value

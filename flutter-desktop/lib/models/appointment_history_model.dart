@@ -123,7 +123,7 @@ class AppointmentHistory {
     if (isWalkIn && fullName != null && fullName!.isNotEmpty) {
       return fullName!;
     }
-    return '$className Class | $gradeName';
+    return '$gradeName | $className Class';
   }
 
   /// Subtitle: onePatientAid for walk-in, "X students" otherwise

@@ -13,9 +13,6 @@ class SidebarNavigationMenu extends StatelessWidget {
       {'icon': Icons.person_outline, 'label': 'Profile'},
       {'icon': Icons.medical_services_outlined, 'label': 'Medical history'},
       {'icon': Icons.assignment_outlined, 'label': 'Medical records'},
-      {'icon': Icons.monitor_heart_outlined, 'label': 'Monitoring signs'},
-      {'icon': Icons.assessment_outlined, 'label': 'Assessment'},
-      {'icon': Icons.event_note_outlined, 'label': 'Plans'},
     ];
 
     return Obx(() {
@@ -69,12 +66,19 @@ class SidebarNavigationMenu extends StatelessWidget {
                   homeController.isMedicalHistoryView.value = true;
                 } else if (item['label'] == 'Medical records') {
                   homeController.isMedicalRecordsView.value = true;
-                } else if (item['label'] == 'Assessment') {
-                  homeController.isAssessmentView.value = true;
-                } else if (item['label'] == 'Monitoring signs') {
-                  homeController.isMonitoringSignsView.value = true;
-                } else if (item['label'] == 'Plans') {
-                  homeController.isPlansView.value = true;
+                }
+
+                // Fetch medical data when switching to medical tabs
+                if (item['label'] == 'Medical history' ||
+                    item['label'] == 'Medical records') {
+                  final studentId =
+                      homeController.currentStudent.value?.id;
+                  if (studentId != null &&
+                      homeController.patientMedicalRecords.isEmpty &&
+                      homeController.patientMedicalHistory.isEmpty &&
+                      !homeController.isLoadingPatientRecords.value) {
+                    homeController.fetchStudentMedicalData(studentId);
+                  }
                 }
               },
             ),

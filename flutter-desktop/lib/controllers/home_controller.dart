@@ -122,6 +122,9 @@ class HomeController extends GetxController {
       {String appointmentType = 'Walk-In'}) {
     currentStudent.value = student;
     currentAppointmentType.value = appointmentType;
+    selectedProfileMenuItem.value = 'Profile';
+    patientMedicalRecords.clear();
+    patientMedicalHistory.clear();
     currentContent.value = ContentType.studentProfile;
   }
 
@@ -188,6 +191,7 @@ class HomeController extends GetxController {
     print('[HomeController] Guardian data - first: ${firstGuardian?['fullName']}, phone: ${firstGuardian?['phone']}, email: ${firstGuardian?['email']}');
     print('[HomeController] Guardian data - second: ${secondGuardian?['fullName']}, phone: ${secondGuardian?['phone']}, email: ${secondGuardian?['email']}');
     currentStudent.value = current.copyWith(
+      imageUrl: s['photo'] as String? ?? current.imageUrl,
       name: fullName,
       dateOfBirth: s['dateOfBirth'] != null
           ? DateTime.tryParse(s['dateOfBirth'].toString())
@@ -257,6 +261,60 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       print('[HomeController] Error fetching patient records: $e');
+    } finally {
+      isLoadingPatientRecords.value = false;
+    }
+  }
+
+  /// Fetch medical records & history for a student profile (not appointment-based)
+  Future<void> fetchStudentMedicalData(String studentId) async {
+    try {
+      isLoadingPatientRecords.value = true;
+      patientMedicalRecords.clear();
+      patientMedicalHistory.clear();
+
+      final storageService = Get.find<StorageService>();
+      final accessToken = storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final branchId = getBranchId();
+      if (branchId == null) return;
+
+      final url =
+          '${AppConfig.newBackendUrl}/api/school-admin/medical-records/students/$studentId?organizationId=$branchId&page=1&limit=20';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'] as Map<String, dynamic>;
+
+          if (data['medicalRecords'] is List) {
+            patientMedicalRecords.assignAll(
+              (data['medicalRecords'] as List)
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList(),
+            );
+          }
+
+          if (data['medicalHistory'] is List) {
+            patientMedicalHistory.assignAll(
+              (data['medicalHistory'] as List)
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList(),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('[HomeController] Error fetching student medical data: $e');
     } finally {
       isLoadingPatientRecords.value = false;
     }
@@ -353,6 +411,7 @@ class HomeController extends GetxController {
 
     // Refresh from API in background
     final result = await apiService.fetchUserProfile();
+    print('[HomeController] Profile API response: $result');
     if (result['success'] == true) {
       final data = result['data'] as Map<String, dynamic>;
       _applyProfileData(data);

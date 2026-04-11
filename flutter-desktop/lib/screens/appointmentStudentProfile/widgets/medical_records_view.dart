@@ -79,6 +79,16 @@ class MedicalRecordsView extends StatelessWidget {
                         SizedBox(width: 16),
                         Expanded(
                             flex: 2,
+                            child: Text('Suspected disease',
+                                style: _headerStyle)),
+                        SizedBox(width: 16),
+                        Expanded(
+                            flex: 2,
+                            child: Text('Recommendations',
+                                style: _headerStyle)),
+                        SizedBox(width: 16),
+                        Expanded(
+                            flex: 2,
                             child: Text('Drugs',
                                 style: _headerStyle)),
                         SizedBox(width: 16),
@@ -118,6 +128,17 @@ class MedicalRecordsView extends StatelessWidget {
     final complaintText = complaints != null && complaints.isNotEmpty
         ? complaints.join(', ')
         : '-';
+
+    final suspectedDiseases = assessment?['suspected_diseases'] as List?;
+    final suspectedText = suspectedDiseases != null && suspectedDiseases.isNotEmpty
+        ? suspectedDiseases.join(', ')
+        : '-';
+
+    final recommendationList = assessment?['recommendation'] as List?;
+    final recommendationText =
+        recommendationList != null && recommendationList.isNotEmpty
+            ? recommendationList.join(', ')
+            : '-';
 
     final drugs = record['drugs'] as List?;
     final drugNames = <String>[];
@@ -173,6 +194,36 @@ class MedicalRecordsView extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF111827),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Suspected disease
+            Expanded(
+              flex: 2,
+              child: Text(
+                suspectedText,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Recommendations
+            Expanded(
+              flex: 2,
+              child: Text(
+                recommendationText,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

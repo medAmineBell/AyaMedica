@@ -227,17 +227,6 @@ class SecondSidebar extends GetView<HomeController> {
         //   },
         // ),
 
-        /*_buildSectionTitle(title: "Communication"),
-        MenuItemWidget(
-          icon: 'assets/svg/direct-notification.svg',
-          title: 'Communication',
-          isActive: controller.selectedIndex.value == 2,
-          onTap: () {
-            controller.changeIndex(2);
-            controller.changeContent(ContentType.communication);
-          },
-        ),*/
-
         _buildSectionTitle(title: "Appointments management"),
         MenuItemWidget(
           icon: 'assets/svg/calendar.svg',
@@ -249,6 +238,19 @@ class SecondSidebar extends GetView<HomeController> {
           },
           // badge: '1',
         ),
+
+        if (controller.isRoleLoaded.value && controller.isRestrictedRole) ...[
+          _buildSectionTitle(title: "Communication"),
+          MenuItemWidget(
+            icon: 'assets/svg/direct-notification.svg',
+            title: 'Communication',
+            isActive: controller.selectedIndex.value == 2,
+            onTap: () {
+              controller.changeIndex(2);
+              controller.changeContent(ContentType.communication);
+            },
+          ),
+        ],
 
         // School-specific items
         if (isSchool) ...[
@@ -271,6 +273,9 @@ class SecondSidebar extends GetView<HomeController> {
             onTap: () {
               controller.changeIndex(3);
               controller.changeContent(ContentType.studentsList);
+              if (!controller.expandedMenuItems.contains(3)) {
+                controller.toggleMenuExpansion(3);
+              }
             },
             onExpandTap: () => controller.toggleMenuExpansion(3),
             children: [

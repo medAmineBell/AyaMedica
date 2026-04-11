@@ -18,7 +18,6 @@ class StudentDataTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 700,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -30,35 +29,34 @@ class StudentDataTable extends StatelessWidget {
           ),
         ],
       ),
-      child: Obx(() {
-        if (controller.isLoading.value) {
-          return Center(
-            child: CircularProgressIndicator(
-              color: Colors.blue.shade600,
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: DefectiveRecordsNotification(controller: controller),
-            ),
-            StudentTableHeader(
-              controller: controller,
-              onAddStudent: _showAddStudentDialog,
-            ),
-            Expanded(
-              child: StudentTable(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DefectiveRecordsNotification(controller: controller),
+          ),
+          StudentTableHeader(
+            controller: controller,
+            onAddStudent: _showAddStudentDialog,
+          ),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.blue.shade600,
+                  ),
+                );
+              }
+              return StudentTable(
                 controller: controller,
                 onStudentTap: _showStudentDetails,
-              ),
-            ),
-            StudentTablePagination(controller: controller),
-          ],
-        );
-      }),
+              );
+            }),
+          ),
+          StudentTablePagination(controller: controller),
+        ],
+      ),
     );
   }
 

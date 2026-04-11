@@ -22,14 +22,12 @@ class AppointmentTableWidget extends StatelessWidget {
           controller.selectedAppointmentForStudents.value != null) {
         final appt = controller.selectedAppointmentForStudents.value!;
         // Show hygiene table when disease is Hygiene
-        if (appt.type.toLowerCase().contains('checkup') &&
-            appt.disease.toLowerCase() == 'hygiene') {
+        if (appt.disease.toLowerCase() == 'hygiene') {
           return MedicalCheckupTableWidget(appointment: appt);
         }
         // Show vital signs table for Diabetes, Blood pressure, Cardiovascular, BMI
         const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
-        if (appt.type.toLowerCase().contains('checkup') &&
-            vitalSignsDiseases.contains(appt.disease.toLowerCase())) {
+        if (vitalSignsDiseases.contains(appt.disease.toLowerCase())) {
           return VitalSignsTableWidget(appointment: appt);
         }
         return StudentTableWidget(appointment: appt);

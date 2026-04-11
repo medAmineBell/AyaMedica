@@ -53,7 +53,7 @@ class _PlansViewState extends State<PlansView> {
     'Anal',
   ];
 
-  List<String> _selectedTags = ['After dinner', 'After Lunch'];
+  final List<String> _selectedTags = [];
 
   // Track which search field is active
   String _activeSearchField = '';
@@ -62,18 +62,6 @@ class _PlansViewState extends State<PlansView> {
   void initState() {
     super.initState();
     _controller = Get.find<AssessmentController>();
-    _relationToFood = 'After dinner';
-    _administrationForm = 'Sublingual';
-    _selectedDate = DateTime.now();
-    _sickLeaveDate = DateTime.now();
-    _numberOfDaysController.text = '8';
-    _everyHoursController.text = '4';
-    _controller.sickLeaveDaysController.text =
-        _controller.sickLeaveDaysController.text.isEmpty
-            ? '8'
-            : _controller.sickLeaveDaysController.text;
-    _controller.sickLeaveStartDate ??= DateTime.now();
-    _sickLeaveDate = _controller.sickLeaveStartDate;
   }
 
   @override
@@ -406,6 +394,9 @@ class _PlansViewState extends State<PlansView> {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
+              hint: Text('Select $label',
+                  style: const TextStyle(
+                      color: Color(0xFFA6A9AC), fontSize: 14)),
               onChanged: onChanged,
               items: options
                   .map((o) => DropdownMenuItem(

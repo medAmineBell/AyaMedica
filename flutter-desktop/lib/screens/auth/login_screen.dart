@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:get/get.dart'; // Import Get package
+import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/auth_controller.dart'; // Import the AuthController with relative path
 import 'widgets/language_dropdown_widget.dart'; // Import the new widget
 import 'widgets/welcome_section_widget.dart'; // Import the new widget
@@ -51,9 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 WelcomeSectionWidget(), // Use the new widget
                 const SizedBox(height: 32),
                 // Country Selection Placeholder
-                CountrySelectionWidget(
-                    authController:
-                        authController), // Use the new widget and pass the controller
+                // CountrySelectionWidget(
+                //     authController:
+                //         authController), // Use the new widget and pass the controller
                 const SizedBox(height: 32),
                 // Login Method Tabs Placeholder
                 LoginMethodTabsWidget(
@@ -69,19 +70,42 @@ class _LoginScreenState extends State<LoginScreen> {
                 PasswordFieldWidget(authController: authController),
                 const SizedBox(height: 16),
                 // Forgot Password Link
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => Get.toNamed('/forgot-password'),
-                    child: Text(
-                      'forgot_password'.tr,
-                      style: const TextStyle(
-                          color: Color(0xFF1339FF),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500), // primaryColor
+                Row(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => Get.toNamed('/forgot-password'),
+                        child: Text(
+                          'forgot_password'.tr,
+                          style: const TextStyle(
+                              color: Color(0xFF1339FF),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500), // primaryColor
+                        ),
+                      ),
                     ),
-                  ),
+                    Spacer(),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => launchUrl(
+                          Uri.parse('https://wa.me/+201091808186'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        child: Text(
+                          'contact_support'.tr,
+                          style: const TextStyle(
+                            color: Color(0xFF1339FF),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+
                 const SizedBox(height: 32),
                 // Login Button
                 LoginButtonWidget(authController: authController),

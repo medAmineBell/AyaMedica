@@ -27,8 +27,8 @@ class AdditionalInformationSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: ProfileField(
-                    label: 'Passport ID Number',
-                    value: student.passportIdNumber,
+                    label: 'Document Type',
+                    value: student.documentType,
                   ),
                 ),
                 const SizedBox(width: 24),
@@ -45,8 +45,8 @@ class AdditionalInformationSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: ProfileField(
-                    label: 'National ID',
-                    value: student.nationalId,
+                    label: 'Document Number',
+                    value: student.documentNumber,
                   ),
                 ),
                 const SizedBox(width: 24),
@@ -54,24 +54,6 @@ class AdditionalInformationSection extends StatelessWidget {
                   child: ProfileField(
                     label: 'Gender',
                     value: student.gender,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ProfileField(
-                    label: 'Phone Number',
-                    value: student.phoneNumber,
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: ProfileField(
-                    label: 'Email',
-                    value: student.email,
                   ),
                 ),
               ],

@@ -600,11 +600,9 @@ void _showDeleteConfirmation(Appointment appointment) {
     } else {
       // Route to appropriate table based on disease type
       const vitalSignsDiseases = ['diabetes', 'blood pressure', 'cardiovascular', 'bmi'];
-      if (appointment.type.toLowerCase().contains('checkup') &&
-          appointment.disease.toLowerCase() == 'hygiene') {
+      if (appointment.disease.toLowerCase() == 'hygiene') {
         controller.showMedicalCheckupView(appointment);
-      } else if (appointment.type.toLowerCase().contains('checkup') &&
-          vitalSignsDiseases.contains(appointment.disease.toLowerCase())) {
+      } else if (vitalSignsDiseases.contains(appointment.disease.toLowerCase())) {
         controller.showVitalSignsView(appointment);
       } else {
         controller.showStudentsForAppointment(appointment);

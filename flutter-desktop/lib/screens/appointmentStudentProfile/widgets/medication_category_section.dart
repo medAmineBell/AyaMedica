@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/medication_category_card.dart';
+import 'medication_category_card.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/home_controller.dart';
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/appointment_history_model.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'assessment_view.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/plans_view.dart';
+import 'plans_view.dart';
 // import 'package:flutter_getx_app/screens/studentProfile/widgets/monitoring_signs_view.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/home_controller.dart';

@@ -154,11 +154,16 @@ class AppointmentSchedulingController extends GetxController {
         }
       }
 
+      print('[PATCH Hygiene] URL: $url');
+      print('[PATCH Hygiene] Body: ${jsonEncode(body)}');
+
       final response = await http.patch(
         url,
         headers: _getHeaders(accessToken),
         body: jsonEncode(body),
       );
+
+      print('[PATCH Hygiene] Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
@@ -191,14 +196,20 @@ class AppointmentSchedulingController extends GetxController {
       final url = Uri.parse(
           '$_baseUrl/api/appointment-sessions/$sessionId/patients/$patientAid');
 
+      final statusBody = {
+          'patientNote': patientNote,
+          'patientStatus': patientStatus,
+        };
+      print('[PATCH Status] URL: $url');
+      print('[PATCH Status] Body: ${jsonEncode(statusBody)}');
+
       final response = await http.patch(
         url,
         headers: _getHeaders(accessToken),
-        body: jsonEncode({
-          'patientNote': patientNote,
-          'patientStatus': patientStatus,
-        }),
+        body: jsonEncode(statusBody),
       );
+
+      print('[PATCH Status] Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         switch (patientStatus) {
@@ -240,10 +251,14 @@ class AppointmentSchedulingController extends GetxController {
       final url =
           Uri.parse('$_baseUrl/api/appointment-sessions/$sessionId/checkout');
 
+      print('[POST Checkout] URL: $url');
+
       final response = await http.post(
         url,
         headers: _getHeaders(accessToken),
       );
+
+      print('[POST Checkout] Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         markAppointmentAsCompleted(sessionId);
@@ -1123,11 +1138,16 @@ class AppointmentSchedulingController extends GetxController {
         'bmiResult': data.bmiResult,
       };
 
+      print('[PATCH VitalSigns] URL: $url');
+      print('[PATCH VitalSigns] Body: ${jsonEncode(body)}');
+
       final response = await http.patch(
         url,
         headers: _getHeaders(accessToken),
         body: jsonEncode(body),
       );
+
+      print('[PATCH VitalSigns] Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');

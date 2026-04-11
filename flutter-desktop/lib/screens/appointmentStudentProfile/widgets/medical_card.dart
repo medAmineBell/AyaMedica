@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/screens/studentProfile/widgets/medical_record_dialog.dart';
+import 'medical_record_dialog.dart';
 
 class MedicalCard extends StatelessWidget {
   const MedicalCard({super.key});

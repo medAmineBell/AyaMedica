@@ -6,7 +6,7 @@ import 'package:flutter_getx_app/screens/communication/add_message_dialog.dart';
 import 'package:flutter_getx_app/screens/communication/communication_datatable.dart';
 import 'package:flutter_getx_app/screens/communication/comunication_filter_widget.dart';
 import 'package:flutter_getx_app/screens/communication/emptydata.dart';
-import 'package:flutter_getx_app/screens/communication/message_detail_page.dart';
+import 'package:flutter_getx_app/screens/communication/received_record_detail_page.dart';
 import 'package:flutter_getx_app/screens/users/assign_role_screen.dart';
 import 'package:flutter_getx_app/shared/widgets/primary_button.dart';
 import 'package:flutter_svg/svg.dart';
@@ -19,6 +19,9 @@ class CommunicationScreen extends GetView<CommunicationController> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchReceivedRecords();
+    });
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
@@ -33,7 +36,7 @@ class CommunicationScreen extends GetView<CommunicationController> {
               // BOUND the table/detail area with Expanded
               Expanded(
                 child: Obx(() {
-                  if (controller.messages.isEmpty) {
+                  if (!controller.isLoading.value && controller.messages.isEmpty) {
                     return CommunicationEmpty();
                   }
                   final selected = controller.selectedMessage.value;
@@ -43,7 +46,7 @@ class CommunicationScreen extends GetView<CommunicationController> {
                     switchOutCurve: Curves.easeIn,
                     child: selected == null
                         ? const _UserTableBlock()
-                        : MessageDetailPage(),
+                        : const ReceivedRecordDetailPage(),
                   );
                 }),
               ),
@@ -83,18 +86,18 @@ class _Header extends StatelessWidget {
             ),
           ],
         ),
-        PrimaryButton(
-          text: 'New message',
-          icon: Icons.add,
-          variant: ButtonVariant.primary,
-          backgroundColor: const Color(0xFF1339FF),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) => AddMessageDialog(),
-            );
-          },
-        )
+        // PrimaryButton(
+        //   text: 'New message',
+        //   icon: Icons.add,
+        //   variant: ButtonVariant.primary,
+        //   backgroundColor: const Color(0xFF1339FF),
+        //   onPressed: () {
+        //     showDialog(
+        //       context: context,
+        //       builder: (context) => AddMessageDialog(),
+        //     );
+        //   },
+        // )
       ],
     );
   }

@@ -518,6 +518,7 @@ class CreateAppointmentController extends GetxController {
       // Parse appointmentId from API response
       final responseData = jsonDecode(response.body);
       final createdAppointmentId = responseData['data']?['appointmentId'] as String?;
+      appointment.id = createdAppointmentId;
 
       // Capture startNow flag before dialogs close
       final isStartNow = selectedDateTimeOption.value == 'startNow';
@@ -602,6 +603,8 @@ class CreateAppointmentController extends GetxController {
   }
 
   Future<void> _notifyParents(Appointment appointment) async {
+    if (appointment.id == null) return;
+
     // Show loading indicator
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
@@ -609,7 +612,46 @@ class CreateAppointmentController extends GetxController {
     );
 
     try {
-      // Call your notification service here
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) {
+        Get.back();
+        return;
+      }
+
+      final typeLabel = appointment.type == 'Follow-Up'
+          ? 'Follow-up'
+          : appointment.type == 'Checkup'
+              ? 'Check-up'
+              : appointment.type;
+
+      final dateFormatted =
+          DateFormat('yyyy-MM-dd').format(appointment.date);
+      final timeFormatted = appointment.time;
+
+      final title = '$typeLabel Appointment created';
+      final body =
+          'appointment has been created on $dateFormatted at $timeFormatted for ${appointment.disease}.';
+
+      final url = Uri.parse(
+          '${AppConfig.newBackendUrl}/api/appointment-sessions/${appointment.id}/notify-guardians');
+
+      await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'title': title,
+          'body': body,
+          'data': {
+            'appointmentId': appointment.id,
+            'appointmentType':
+                appointment.type == 'Follow-Up' ? 'followup' : 'checkup',
+            'reason': appointment.disease,
+          },
+        }),
+      );
 
       Get.back(); // Close loading
       Get.snackbar(

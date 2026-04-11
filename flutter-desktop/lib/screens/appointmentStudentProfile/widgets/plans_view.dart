@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../../controllers/assessment_controller.dart';
 
 class PlansView extends StatefulWidget {
   const PlansView({super.key});
@@ -8,23 +12,24 @@ class PlansView extends StatefulWidget {
 }
 
 class _PlansViewState extends State<PlansView> {
-  // Controllers for text fields
-  final TextEditingController _activeIngredientController = TextEditingController();
+  late final AssessmentController _controller;
+
+  // Local form controllers
+  final TextEditingController _activeIngredientController =
+      TextEditingController();
   final TextEditingController _drugNameController = TextEditingController();
   final TextEditingController _numberOfDaysController = TextEditingController();
   final TextEditingController _everyHoursController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _sickLeaveNotesController = TextEditingController();
-  final TextEditingController _sickLeaveDaysController = TextEditingController();
 
   // Dropdown values
   String? _relationToFood;
   String? _administrationForm;
-  
-  // Date picker
+  String? _dozeType;
+  final TextEditingController _dozeController = TextEditingController();
   DateTime? _selectedDate;
-  
-  // Dropdown options
+  DateTime? _sickLeaveDate;
+
   final List<String> _relationToFoodOptions = [
     'After dinner',
     'Before dinner',
@@ -35,7 +40,7 @@ class _PlansViewState extends State<PlansView> {
     'With food',
     'Without food',
   ];
-  
+
   final List<String> _administrationFormOptions = [
     'Sublingual',
     'Oral',
@@ -51,12 +56,27 @@ class _PlansViewState extends State<PlansView> {
     'Anal',
   ];
 
-  // Tags for frequency
-  List<String> _selectedTags = [];
+  final List<String> _dozeTypeOptions = [
+    'Spoon',
+    'Tablet',
+    'Capsule',
+    'Drop',
+    'Puff',
+    'Injection',
+    'Sachet',
+    'Suppository',
+    'Patch',
+  ];
+
+  final List<String> _selectedTags = [];
+
+  // Track which search field is active
+  String _activeSearchField = '';
 
   @override
   void initState() {
     super.initState();
+    _controller = Get.find<AssessmentController>();
   }
 
   @override
@@ -65,9 +85,8 @@ class _PlansViewState extends State<PlansView> {
     _drugNameController.dispose();
     _numberOfDaysController.dispose();
     _everyHoursController.dispose();
+    _dozeController.dispose();
     _notesController.dispose();
-    _sickLeaveNotesController.dispose();
-    _sickLeaveDaysController.dispose();
     super.dispose();
   }
 
@@ -83,58 +102,25 @@ class _PlansViewState extends State<PlansView> {
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        child: Column(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add plans',
-                    style: TextStyle(
-                      color: Color(0xFF2D2E2E),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      height: 1.56,
-                      letterSpacing: 0.09,
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: _summarizeProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1339FF),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14, 
-                        vertical: 8
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: const Row(
-                      children: [
-                        Text(
-                          'Summarize profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.summarize, size: 20, color: Colors.white),
-                      ],
-                    ),
-                  ),
-                ],
+              child: const Text(
+                'Add plans',
+                style: TextStyle(
+                  color: Color(0xFF2D2E2E),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1.56,
+                  letterSpacing: 0.09,
+                ),
               ),
             ),
-
             const Text(
               'Add prescriptions and plan details here',
               style: TextStyle(
@@ -143,15 +129,9 @@ class _PlansViewState extends State<PlansView> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Input Fields Section
             _buildInputSection(),
-            
             const SizedBox(height: 32),
-
-            // Frequency Section
             const Text(
               'Frequency',
               style: TextStyle(
@@ -160,25 +140,26 @@ class _PlansViewState extends State<PlansView> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            
             const SizedBox(height: 16),
             _buildFrequencySection(),
-            
             const SizedBox(height: 24),
             _buildTagSection(),
-            
             const SizedBox(height: 32),
             _buildDateSection(),
-            
             const SizedBox(height: 32),
-            _buildNotesField('Notes', 95, _notesController),
-            
+            _buildNotesField('Drug\'s Information Notes', 95, _notesController),
             const SizedBox(height: 16),
             _buildAddDrugButton(),
-            
             const SizedBox(height: 32),
-            _buildDrugCard(),
-            
+            // Drug cards from controller
+            Obx(() => _controller.addedDrugs.isNotEmpty
+                ? Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: List.generate(_controller.addedDrugs.length,
+                        (index) => _buildDrugCard(index)),
+                  )
+                : const SizedBox.shrink()),
             const SizedBox(height: 32),
             const Text(
               'Sick leave & notes',
@@ -188,139 +169,241 @@ class _PlansViewState extends State<PlansView> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            
             const SizedBox(height: 16),
             _buildSickLeaveSection(),
-            
             const SizedBox(height: 24),
-            _buildNotesField('Notes', 95, _sickLeaveNotesController),
+            _buildNotesField(
+                'Notes', 95, _controller.sickLeaveNotesController),
           ],
+        ),
         ),
       ),
     );
   }
 
-  void _summarizeProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile summarized!')),
+  // --- Drug Search Fields ---
+
+  Widget _buildInputSection() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildDrugSearchField(
+            'Active ingredient',
+            true,
+            _activeIngredientController,
+            'ingredient',
+          ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: _buildDrugSearchField(
+            'Drug name',
+            true,
+            _drugNameController,
+            'drugName',
+          ),
+        ),
+      ],
     );
   }
 
-  // Helper Widgets
-  Widget _buildInputRow(String label, bool isRequired, TextEditingController controller) {
+  Widget _buildDrugSearchField(
+    String label,
+    bool isRequired,
+    TextEditingController textController,
+    String fieldId,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF595A5B),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF595A5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
             if (isRequired)
-            const Text(
-              '*',
-              style: TextStyle(
-                color: Color(0xFFED1F4F),
-                fontSize: 14,
-              ),
-            ),
+              const Text('*',
+                  style: TextStyle(color: Color(0xFFED1F4F), fontSize: 14)),
           ],
         ),
         const SizedBox(height: 6),
-        Container(
-          // padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFBFCFD),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE9E9E9)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0C101828),
-                blurRadius: 2,
-                offset: Offset(0, 1),
+        Focus(
+          onFocusChange: (hasFocus) {
+            if (hasFocus) {
+              setState(() => _activeSearchField = fieldId);
+              _controller.onDrugSearchChanged(textController.text);
+            } else {
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (mounted) {
+                  setState(() {
+                    if (_activeSearchField == fieldId) {
+                      _activeSearchField = '';
+                      _controller.drugResults.clear();
+                    }
+                  });
+                }
+              });
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBFCFD),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE9E9E9)),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x0C101828),
+                    blurRadius: 2,
+                    offset: Offset(0, 1)),
+              ],
+            ),
+            child: TextField(
+              controller: textController,
+              onChanged: (value) {
+                setState(() => _activeSearchField = fieldId);
+                _controller.onDrugSearchChanged(value);
+              },
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'search',
+                hintStyle:
+                    TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: Color(0xFFA6A9AC)),
               ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'search',
-              hintStyle: TextStyle(
-                color: Color(0xFFA6A9AC),
-                fontSize: 14,
-              ),
-              prefixIcon: Icon(Icons.search, color: Color(0xFFA6A9AC)),
             ),
           ),
         ),
+        // Dropdown results
+        if (_activeSearchField == fieldId)
+          Obx(() {
+            if (_controller.isLoadingDrugs.value) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                    child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+              );
+            }
+            if (_controller.drugResults.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return Container(
+              margin: const EdgeInsets.only(top: 4),
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE9E9E9)),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _controller.drugResults.length,
+                itemBuilder: (context, index) {
+                  final drug = _controller.drugResults[index];
+                  final drugName = drug['drug_name']?.toString() ?? '';
+                  final ingredients = drug['ingredients']?.toString() ?? '';
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _drugNameController.text = drugName;
+                        _activeIngredientController.text = ingredients;
+                        _activeSearchField = '';
+                        _controller.drugResults.clear();
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(drugName,
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                          if (ingredients.isNotEmpty)
+                            Text(ingredients,
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF6B7280)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          }),
       ],
     );
   }
 
-  Widget _buildInputSection() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildInputRow('Active ingredient', true, _activeIngredientController),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: _buildInputRow('Drug name', true, _drugNameController),
-        ),
-      ],
-    );
-  }
+  // --- Frequency ---
 
   Widget _buildFrequencySection() {
     return Row(
       children: [
         Expanded(
-          child: _buildDropdownField('Relation to food', true, _relationToFood, _relationToFoodOptions, (value) {
+          child: _buildDropdownField(
+              'Relation to food', true, _relationToFood, _relationToFoodOptions,
+              (value) {
             setState(() {
               _relationToFood = value;
+              if (value != null && !_selectedTags.contains(value)) {
+                _selectedTags.add(value);
+              }
             });
           }),
         ),
         const SizedBox(width: 24),
         Expanded(
-          child: _buildDropdownField('Administration form', true, _administrationForm, _administrationFormOptions, (value) {
-            setState(() {
-              _administrationForm = value;
-            });
+          child: _buildDropdownField('Administration form', true,
+              _administrationForm, _administrationFormOptions, (value) {
+            setState(() => _administrationForm = value);
           }),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: _buildDropdownField(
+              'Doze type', true, _dozeType, _dozeTypeOptions, (value) {
+            setState(() => _dozeType = value);
+          }),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: _buildNumberField('Doze', true, _dozeController),
         ),
       ],
     );
   }
 
-  Widget _buildDropdownField(String label, bool isRequired, String? value, List<String> options, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownField(String label, bool isRequired, String? value,
+      List<String> options, ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF595A5B),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF595A5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
             if (isRequired)
-            const Text(
-              '*',
-              style: TextStyle(
-                color: Color(0xFFED1F4F),
-                fontSize: 14,
-              ),
-            ),
+              const Text('*',
+                  style: TextStyle(color: Color(0xFFED1F4F), fontSize: 14)),
           ],
         ),
         const SizedBox(height: 6),
@@ -332,29 +415,26 @@ class _PlansViewState extends State<PlansView> {
             border: Border.all(color: const Color(0xFFE9E9E9)),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0C101828),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
+                  color: Color(0x0C101828),
+                  blurRadius: 2,
+                  offset: Offset(0, 1)),
             ],
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
+              hint: Text('Select $label',
+                  style: const TextStyle(
+                      color: Color(0xFFA6A9AC), fontSize: 14)),
               onChanged: onChanged,
-              items: options.map((String option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(
-                    option,
-                    style: const TextStyle(
-                      color: Color(0xFF2D2E2E),
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              }).toList(),
+              items: options
+                  .map((o) => DropdownMenuItem(
+                      value: o,
+                      child: Text(o,
+                          style: const TextStyle(
+                              color: Color(0xFF2D2E2E), fontSize: 14))))
+                  .toList(),
             ),
           ),
         ),
@@ -379,98 +459,83 @@ class _PlansViewState extends State<PlansView> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            text,
-            style: const TextStyle(
-              color: Color(0xFF2D2E2E),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(text,
+              style: const TextStyle(
+                  color: Color(0xFF2D2E2E),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(width: 4),
           GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedTags.remove(text);
-              });
-            },
-            child: const Icon(Icons.close, size: 16, color: Color(0xFF595A5B)),
+            onTap: () => setState(() => _selectedTags.remove(text)),
+            child:
+                const Icon(Icons.close, size: 16, color: Color(0xFF595A5B)),
           ),
         ],
       ),
     );
   }
 
+  // --- Date Section ---
+
   Widget _buildDateSection() {
     return Row(
       children: [
         Expanded(
-          flex: 2,
-          child: _buildDateField('Starting date', true),
-        ),
+            flex: 2,
+            child: _buildDateField('Starting date', true, _selectedDate,
+                (d) => setState(() => _selectedDate = d))),
         const SizedBox(width: 24),
         Expanded(
-          child: _buildNumberField('Number of day', true, _numberOfDaysController),
-        ),
+            child: _buildNumberField(
+                'Number of day', true, _numberOfDaysController)),
         const SizedBox(width: 24),
         Expanded(
-          child: _buildNumberField('Every (hours)', true, _everyHoursController),
-        ),
+            child: _buildNumberField(
+                'Every (hours)', true, _everyHoursController)),
       ],
     );
   }
 
-  Widget _buildDateField(String label, bool isRequired) {
+  Widget _buildDateField(String label, bool isRequired, DateTime? date,
+      ValueChanged<DateTime> onPicked) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF595A5B),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF595A5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
             if (isRequired)
-            const Text(
-              '*',
-              style: TextStyle(
-                color: Color(0xFFED1F4F),
-                fontSize: 14,
-              ),
-            ),
+              const Text('*',
+                  style: TextStyle(color: Color(0xFFED1F4F), fontSize: 14)),
           ],
         ),
         const SizedBox(height: 6),
         InkWell(
           onTap: () async {
-            final DateTime? picked = await showDatePicker(
+            final picked = await showDatePicker(
               context: context,
-              initialDate: _selectedDate ?? DateTime.now(),
+              initialDate: date ?? DateTime.now(),
               firstDate: DateTime.now().subtract(const Duration(days: 365)),
               lastDate: DateTime.now().add(const Duration(days: 365)),
             );
-            if (picked != null && picked != _selectedDate) {
-              setState(() {
-                _selectedDate = picked;
-              });
-            }
+            if (picked != null) onPicked(picked);
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: const Color(0xFFFBFCFD),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE9E9E9)),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0C101828),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
+                    color: Color(0x0C101828),
+                    blurRadius: 2,
+                    offset: Offset(0, 1)),
               ],
             ),
             child: Row(
@@ -478,16 +543,18 @@ class _PlansViewState extends State<PlansView> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 20, color: Color(0xFFA6A9AC)),
+                    const Icon(Icons.calendar_today,
+                        size: 20, color: Color(0xFFA6A9AC)),
                     const SizedBox(width: 8),
                     Text(
-                      _selectedDate != null
-                        ? '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}'
-                        : 'Select date',
+                      date != null
+                          ? DateFormat('dd/MM/yyyy').format(date)
+                          : 'Select date',
                       style: TextStyle(
-                        color: _selectedDate != null ? const Color(0xFF2D2E2E) : const Color(0xFFA6A9AC),
-                        fontSize: 14,
-                      ),
+                          color: date != null
+                              ? const Color(0xFF2D2E2E)
+                              : const Color(0xFFA6A9AC),
+                          fontSize: 14),
                     ),
                   ],
                 ),
@@ -500,28 +567,21 @@ class _PlansViewState extends State<PlansView> {
     );
   }
 
-  Widget _buildNumberField(String label, bool isRequired, TextEditingController controller) {
+  Widget _buildNumberField(
+      String label, bool isRequired, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF595A5B),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF595A5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
             if (isRequired)
-            const Text(
-              '*',
-              style: TextStyle(
-                color: Color(0xFFED1F4F),
-                fontSize: 14,
-              ),
-            ),
+              const Text('*',
+                  style: TextStyle(color: Color(0xFFED1F4F), fontSize: 14)),
           ],
         ),
         const SizedBox(height: 6),
@@ -532,21 +592,19 @@ class _PlansViewState extends State<PlansView> {
             border: Border.all(color: const Color(0xFFE9E9E9)),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0C101828),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
+                  color: Color(0x0C101828),
+                  blurRadius: 2,
+                  offset: Offset(0, 1)),
             ],
           ),
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
               border: InputBorder.none,
-              hintStyle: TextStyle(
-                color: Color(0xFFA6A9AC),
-                fontSize: 14,
-              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 14),
+              hintStyle: TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
             ),
           ),
         ),
@@ -554,7 +612,8 @@ class _PlansViewState extends State<PlansView> {
     );
   }
 
-  Widget _buildNotesField(String hint, double height, TextEditingController controller) {
+  Widget _buildNotesField(
+      String hint, double height, TextEditingController controller) {
     return Container(
       height: height,
       decoration: BoxDecoration(
@@ -563,10 +622,9 @@ class _PlansViewState extends State<PlansView> {
         border: Border.all(color: const Color(0xFFE9E9E9)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0C101828),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
+              color: Color(0x0C101828),
+              blurRadius: 2,
+              offset: Offset(0, 1)),
         ],
       ),
       child: TextField(
@@ -574,15 +632,15 @@ class _PlansViewState extends State<PlansView> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xFFA6A9AC),
-            fontSize: 14,
-          ),
+          contentPadding: const EdgeInsets.all(14),
+          hintStyle: const TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
         ),
         maxLines: null,
       ),
     );
   }
+
+  // --- Add Drug ---
 
   Widget _buildAddDrugButton() {
     return OutlinedButton(
@@ -591,41 +649,81 @@ class _PlansViewState extends State<PlansView> {
         backgroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 12),
         side: const BorderSide(color: Color(0xFFA6A9AC)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.add, color: Color(0xFF747677)),
           SizedBox(width: 8),
-          Text(
-            'Add Drug',
-            style: TextStyle(
-              color: Color(0xFF747677),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text('Add Drug',
+              style: TextStyle(
+                  color: Color(0xFF747677),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
   void _addDrug() {
-    if (_drugNameController.text.isNotEmpty && _activeIngredientController.text.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Drug added successfully!')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in required fields')),
-      );
+    if (_drugNameController.text.isEmpty ||
+        _activeIngredientController.text.isEmpty) {
+      Get.snackbar('Error', 'Please fill in required fields',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade100);
+      return;
     }
+
+    final days = int.tryParse(_numberOfDaysController.text) ?? 0;
+    final startDate = _selectedDate ?? DateTime.now();
+    final endDate = startDate.add(Duration(days: days));
+
+    final drug = <String, dynamic>{
+      'drug_name': _drugNameController.text,
+      'drug_active_ingredient': _activeIngredientController.text,
+      'dose': _dozeController.text,
+      'dose_type': _dozeType ?? '',
+      'drug_relation_to_food': _selectedTags.toList(),
+      'drug_administration_form': _administrationForm ?? 'Oral',
+      'drug_hours': _everyHoursController.text,
+      'drug_days': _numberOfDaysController.text,
+      'drug_start_date': DateFormat('yyyy-MM-dd').format(startDate),
+      'drug_end_date': DateFormat('yyyy-MM-dd').format(endDate),
+      'drug_note': _notesController.text,
+    };
+
+    _controller.addDrug(drug);
+
+    // Clear form
+    _drugNameController.clear();
+    _activeIngredientController.clear();
+    _dozeController.clear();
+    _notesController.clear();
+    setState(() {
+      _dozeType = null;
+    });
+
+    Get.snackbar('Success', 'Drug added successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100);
   }
 
-  Widget _buildDrugCard() {
+  Widget _buildDrugCard(int index) {
+    final drug = _controller.addedDrugs[index];
+    final name = drug['drug_name'] as String? ?? '{Drug name}';
+    final ingredient = drug['drug_active_ingredient'] as String? ?? '';
+    final dose = drug['dose']?.toString() ?? '';
+    final doseType = drug['dose_type']?.toString() ?? '';
+    final form = drug['drug_administration_form'] as String? ?? 'Oral';
+    final foodRelation = drug['drug_relation_to_food'];
+    final timing =
+        foodRelation is List ? foodRelation.join(', ') : foodRelation?.toString() ?? '';
+    final days = drug['drug_days']?.toString() ?? '';
+    final hours = drug['drug_hours']?.toString() ?? '';
+    final startDate = drug['drug_start_date']?.toString() ?? '';
+    final endDate = drug['drug_end_date']?.toString() ?? '';
+
     return Container(
       width: 265,
       padding: const EdgeInsets.all(16),
@@ -633,11 +731,7 @@ class _PlansViewState extends State<PlansView> {
         color: const Color(0xFFFBFCFD),
         borderRadius: BorderRadius.circular(8),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 8,
-            offset: Offset(0, 0),
-          ),
+          BoxShadow(color: Color(0x14000000), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -646,30 +740,27 @@ class _PlansViewState extends State<PlansView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _drugNameController.text.isNotEmpty ? _drugNameController.text : '{Drug name}',
-                style: const TextStyle(
-                  color: Color(0xFF2D2E2E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+              Expanded(
+                child: Text(name,
+                    style: const TextStyle(
+                        color: Color(0xFF2D2E2E),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
               ),
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Drug card removed')),
-                  );
-                },
+                onPressed: () => _controller.removeDrug(index),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildPillTag(_activeIngredientController.text.isNotEmpty ? _activeIngredientController.text : 'Active ingredient'),
+              _buildPillTag(ingredient.isNotEmpty ? ingredient : 'Active ingredient'),
               const SizedBox(width: 8),
-              _buildPillTag(_administrationForm ?? '-'),
+              _buildPillTag(form),
             ],
           ),
           const SizedBox(height: 16),
@@ -679,41 +770,27 @@ class _PlansViewState extends State<PlansView> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'x2',
-                    style: TextStyle(
-                      color: Color(0xFF595A5B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    _relationToFood ?? '-',
-                    style: const TextStyle(
-                      color: Color(0xFF747677),
-                      fontSize: 10,
-                    ),
-                  ),
+                  Text(dose.isNotEmpty ? '$dose $doseType' : '-',
+                      style: const TextStyle(
+                          color: Color(0xFF595A5B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                  Text(timing,
+                      style: const TextStyle(
+                          color: Color(0xFF747677), fontSize: 10)),
                 ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_numberOfDaysController.text.isNotEmpty ? _numberOfDaysController.text : '-'} days',
-                    style: const TextStyle(
-                      color: Color(0xFF595A5B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    'Every ${_everyHoursController.text.isNotEmpty ? _everyHoursController.text : '-'} hours',
-                    style: const TextStyle(
-                      color: Color(0xFF747677),
-                      fontSize: 10,
-                    ),
-                  ),
+                  Text('$days days',
+                      style: const TextStyle(
+                          color: Color(0xFF595A5B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                  Text('Every $hours hours',
+                      style: const TextStyle(
+                          color: Color(0xFF747677), fontSize: 10)),
                 ],
               ),
             ],
@@ -728,53 +805,8 @@ class _PlansViewState extends State<PlansView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Starting date',
-                      style: TextStyle(
-                        color: Color(0xFF747677),
-                        fontSize: 10,
-                      ),
-                    ),
-                    Text(
-                      _selectedDate != null 
-                        ? '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}'
-                        : '--/--/----',
-                      style: const TextStyle(
-                        color: Color(0xFF1339FF),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'End date',
-                      style: TextStyle(
-                        color: Color(0xFF747677),
-                        fontSize: 10,
-                      ),
-                    ),
-                    Text(
-                      _selectedDate != null && _numberOfDaysController.text.isNotEmpty
-                        ? (() {
-                            final endDate = _selectedDate!.add(Duration(days: int.tryParse(_numberOfDaysController.text) ?? 4));
-                            return '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}';
-                          })()
-                        : '--/--/----',
-                      style: const TextStyle(
-                        color: Color(0xFF1339FF),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                _buildDateInfo('Starting date', _formatDisplayDate(startDate)),
+                _buildDateInfo('End date', _formatDisplayDate(endDate)),
               ],
             ),
           ),
@@ -784,64 +816,108 @@ class _PlansViewState extends State<PlansView> {
   }
 
   Widget _buildPillTag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEDF1F5),
-        borderRadius: BorderRadius.circular(64),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF595A5B),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF1F5),
+          borderRadius: BorderRadius.circular(64),
         ),
+        child: Text(text,
+            style: const TextStyle(
+                color: Color(0xFF595A5B),
+                fontSize: 12,
+                fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
       ),
     );
   }
 
+  Widget _buildDateInfo(String title, String date) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(color: Color(0xFF747677), fontSize: 10)),
+        Text(date,
+            style: const TextStyle(
+                color: Color(0xFF1339FF),
+                fontSize: 12,
+                fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  String _formatDisplayDate(String dateStr) {
+    if (dateStr.isEmpty) return '-';
+    try {
+      final d = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy').format(d);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  // --- Sick Leave ---
+
   Widget _buildSickLeaveSection() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Text(
-            'Requires sick leave for (number of days)',
-            style: TextStyle(
-              color: Color(0xFF595A5B),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        SizedBox(
-          width: 280,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFBFCFD),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE9E9E9)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0C101828),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _sickLeaveDaysController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintStyle: TextStyle(
-                  color: Color(0xFFA6A9AC),
+        // Days input
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Requires sick leave for (number of days)',
+              style: TextStyle(
+                  color: Color(0xFF595A5B),
                   fontSize: 14,
+                  fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 280,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBFCFD),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE9E9E9)),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x0C101828),
+                        blurRadius: 2,
+                        offset: Offset(0, 1)),
+                  ],
+                ),
+                child: TextField(
+                  controller: _controller.sickLeaveDaysController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                        color: Color(0xFFA6A9AC), fontSize: 14),
+                  ),
                 ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(width: 24),
+        // Start date
+        SizedBox(
+          width: 280,
+          child: _buildDateField(
+            'Start date',
+            false,
+            _sickLeaveDate,
+            (d) {
+              setState(() => _sickLeaveDate = d);
+              _controller.sickLeaveStartDate = d;
+            },
           ),
         ),
       ],

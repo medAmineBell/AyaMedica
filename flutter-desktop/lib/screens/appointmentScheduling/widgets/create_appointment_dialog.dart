@@ -7,13 +7,153 @@ import 'appointment_type_card_widget.dart';
 import 'custom_dropdown.dart';
 import 'date_time_picker_row_widget.dart';
 
-class CreateAppointmentDialog extends StatelessWidget {
+class CreateAppointmentDialog extends StatefulWidget {
   const CreateAppointmentDialog({super.key});
+
+  @override
+  State<CreateAppointmentDialog> createState() =>
+      _CreateAppointmentDialogState();
+}
+
+class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
+  final LayerLink _searchLayerLink = LayerLink();
+  OverlayEntry? _searchOverlayEntry;
+
+  @override
+  void dispose() {
+    _searchWorker?.dispose();
+    _removeSearchOverlay();
+    super.dispose();
+  }
+
+  void _removeSearchOverlay() {
+    _searchOverlayEntry?.remove();
+    _searchOverlayEntry = null;
+  }
+
+  void _updateSearchOverlay(CreateAppointmentController controller) {
+    _removeSearchOverlay();
+    if (controller.searchResults.isEmpty) return;
+
+    _searchOverlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Full-screen tap catcher to dismiss
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _removeSearchOverlay,
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Positioned(
+        width: _searchLayerLink.leaderSize?.width ?? 0,
+        child: CompositedTransformFollower(
+          link: _searchLayerLink,
+          offset: const Offset(0, 56),
+          showWhenUnlinked: false,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: controller.searchResults.length,
+                itemBuilder: (context, index) {
+                  final student = controller.searchResults[index];
+                  return InkWell(
+                    onTap: () {
+                      controller.selectStudentFromSearch(student);
+                      _removeSearchOverlay();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        border: index < controller.searchResults.length - 1
+                            ? const Border(
+                                bottom:
+                                    BorderSide(color: Color(0xFFF3F4F6)))
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: student.avatarColor,
+                            child: Text(
+                              _getInitials(student.name),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  student.name,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                                if (student.aid != null &&
+                                    student.aid!.isNotEmpty)
+                                  Text(
+                                    student.aid!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF9CA3AF),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_searchOverlayEntry!);
+  }
+
+  Worker? _searchWorker;
+
+  void _setupSearchListener(CreateAppointmentController controller) {
+    _searchWorker?.dispose();
+    _searchWorker = ever(controller.searchResults, (_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateSearchOverlay(controller);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     Get.delete<CreateAppointmentController>(force: true);
     final controller = Get.put(CreateAppointmentController());
+    _setupSearchListener(controller);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -580,116 +720,34 @@ class CreateAppointmentDialog extends StatelessWidget {
           children: [
             _buildFieldLabel('Student name'),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: controller.aidController,
-              decoration: InputDecoration(
-                hintText: 'Search by name',
-                hintStyle: const TextStyle(
-                  color: Color(0xFF9CA3AF),
-                  fontSize: 16,
+            CompositedTransformTarget(
+              link: _searchLayerLink,
+              child: TextFormField(
+                controller: controller.aidController,
+                decoration: InputDecoration(
+                  hintText: 'Search by name',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 16,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFFBFCFD),
                 ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Color(0xFF9CA3AF),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
-                ),
-                filled: true,
-                fillColor: const Color(0xFFFBFCFD),
+                onChanged: controller.searchByName,
               ),
-              onChanged: controller.searchByName,
             ),
-            // Search results list
-            Obx(() {
-              if (controller.searchResults.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return Container(
-                constraints: const BoxConstraints(maxHeight: 200),
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.zero,
-                  itemCount: controller.searchResults.length,
-                  itemBuilder: (context, index) {
-                    final student = controller.searchResults[index];
-                    return InkWell(
-                      onTap: () => controller.selectStudentFromSearch(student),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          border: index < controller.searchResults.length - 1
-                              ? const Border(
-                                  bottom: BorderSide(
-                                      color: Color(0xFFF3F4F6)))
-                              : null,
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: student.avatarColor,
-                              child: Text(
-                                _getInitials(student.name),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    student.name,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF374151),
-                                    ),
-                                  ),
-                                  if (student.aid != null &&
-                                      student.aid!.isNotEmpty)
-                                    Text(
-                                      student.aid!,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF9CA3AF),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }),
           ],
         ),
 

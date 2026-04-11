@@ -125,7 +125,7 @@ class SelectedStudentInfoSidebar extends StatelessWidget {
 
                   // Grade and Class
                   Text(
-                    '${studentDetails.grade} ${studentDetails.className}',
+                    '${studentDetails.grade ?? '-'} ${studentDetails.className ?? '-'}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -157,11 +157,11 @@ class SelectedStudentInfoSidebar extends StatelessWidget {
                     // Medical Information
                     _buildSectionHeader('Medical Information'),
                     const SizedBox(height: 12),
-                    _buildInfoRow('Blood Type', studentDetails.bloodType),
+                    _buildInfoRow('Blood Type', studentDetails.bloodType ?? '-'),
                     const SizedBox(height: 12),
-                    _buildInfoRow('Height (Cm)', '${studentDetails.height}'),
+                    _buildInfoRow('Height (Cm)', studentDetails.height != null ? '${studentDetails.height}' : '-'),
                     const SizedBox(height: 12),
-                    _buildInfoRow('Weight (Kg)', '${studentDetails.weight}'),
+                    _buildInfoRow('Weight (Kg)', studentDetails.weight != null ? '${studentDetails.weight}' : '-'),
                   ],
                 ),
               ),

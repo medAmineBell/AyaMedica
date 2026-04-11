@@ -33,145 +33,120 @@ class CommunicationFiltersWidget extends StatelessWidget {
           Obx(() {
             return Wrap(
               children: [
-                _buildFilterChip(
-                  label: 'Inbox',
-                  status: 'Inbox',
-                  controller: controller,
-                  badgeCount: 0,
-                  borderRadius: radiusStart,
-                ),
-                _buildFilterChip(
-                  label: 'Sent',
-                  status: 'Sent',
-                  controller: controller,
-                  badgeCount: 0,
-                  borderRadius: radiusMiddle,
-                ),
+                // _buildFilterChip(
+                //   label: 'Inbox',
+                //   status: 'Inbox',
+                //   controller: controller,
+                //   badgeCount: 0,
+                //   borderRadius: radiusStart,
+                // ),
+                // _buildFilterChip(
+                //   label: 'Sent',
+                //   status: 'Sent',
+                //   controller: controller,
+                //   badgeCount: 0,
+                //   borderRadius: radiusMiddle,
+                // ),
                 _buildFilterChip(
                   label: 'Received records',
                   status: 'Received records',
                   controller: controller,
                   badgeCount: 0,
-                  borderRadius: radiusMiddle,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                _buildFilterChip(
-                  label: 'Vaccination requests',
-                  status: 'Vaccination requests',
-                  controller: controller,
-                  badgeCount: 0,
-                  borderRadius: radiusEnd,
-                ),
+                // _buildFilterChip(
+                //   label: 'Vaccination requests',
+                //   status: 'Vaccination requests',
+                //   controller: controller,
+                //   badgeCount: 0,
+                //   borderRadius: radiusEnd,
+                // ),
               ],
             );
           }),
 
-          Spacer(),
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: IconButton(
-              onPressed: () {
-                // Handle download functionality
-                _handleDownload();
-              },
-              icon: const Icon(
-                Icons.download_outlined,
-                color: Color(0xFF6B7280),
-                size: 20,
-              ),
-              tooltip: 'Download',
-            ),
-          ),
-          // search bar
-          Container(
-            width: 400,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Color(0xFFE5E7EB)),
-            ),
-            child: TextField(
-              onChanged: controller.updateSearchQuery,
-              decoration: InputDecoration(
-                hintText: 'Search',
-                prefixIcon: Icon(Icons.search, color: Color(0xFF9CA3AF)),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Filters Button
-          Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: InkWell(
-                onTap: () {
-                  // Handle filters functionality
-                  _showFiltersModal();
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  children: [
-                    Container(
-                      height: 44,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.tune,
-                            color: Color(0xFF6B7280),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Filters',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Filter count badge
-                    // if (_getActiveFiltersCount(controller) > 0)
-                    //   Positioned(
-                    //     right: -4,
-                    //     top: 6,
-                    //     child: Container(
-                    //       width: 20,
-                    //       height: 20,
-                    //       decoration: const BoxDecoration(
-                    //         color: Color(0xFFEF4444),
-                    //         shape: BoxShape.circle,
-                    //       ),
-                    //       child: Center(
-                    //         child: Text(
-                    //           '',
-                    //           style: const TextStyle(
-                    //             color: Colors.white,
-                    //             fontSize: 11,
-                    //             fontWeight: FontWeight.w600,
-                    //           ),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ),
-                  ],
-                ),
-              )),
+          // Spacer(),
+          // // download button
+          // Container(
+          //   height: 44,
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(color: const Color(0xFFE5E7EB)),
+          //   ),
+          //   child: IconButton(
+          //     onPressed: () {
+          //       _handleDownload();
+          //     },
+          //     icon: const Icon(
+          //       Icons.download_outlined,
+          //       color: Color(0xFF6B7280),
+          //       size: 20,
+          //     ),
+          //     tooltip: 'Download',
+          //   ),
+          // ),
+          // // search bar
+          // Container(
+          //   width: 400,
+          //   height: 44,
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(color: Color(0xFFE5E7EB)),
+          //   ),
+          //   child: TextField(
+          //     onChanged: controller.updateSearchQuery,
+          //     decoration: InputDecoration(
+          //       hintText: 'Search',
+          //       prefixIcon: Icon(Icons.search, color: Color(0xFF9CA3AF)),
+          //       border: InputBorder.none,
+          //       contentPadding: EdgeInsets.symmetric(horizontal: 16),
+          //     ),
+          //   ),
+          // ),
+          // const SizedBox(width: 12),
+          // // Filters Button
+          // Container(
+          //     height: 44,
+          //     padding: const EdgeInsets.symmetric(horizontal: 16),
+          //     decoration: BoxDecoration(
+          //       color: Colors.white,
+          //       borderRadius: BorderRadius.circular(12),
+          //       border: Border.all(color: const Color(0xFFE5E7EB)),
+          //     ),
+          //     child: InkWell(
+          //       onTap: () {
+          //         _showFiltersModal();
+          //       },
+          //       borderRadius: BorderRadius.circular(12),
+          //       child: Stack(
+          //         children: [
+          //           Container(
+          //             height: 44,
+          //             child: Row(
+          //               mainAxisSize: MainAxisSize.min,
+          //               children: [
+          //                 const Icon(
+          //                   Icons.tune,
+          //                   color: Color(0xFF6B7280),
+          //                   size: 20,
+          //                 ),
+          //                 const SizedBox(width: 8),
+          //                 const Text(
+          //                   'Filters',
+          //                   style: TextStyle(
+          //                     fontSize: 16,
+          //                     fontWeight: FontWeight.w400,
+          //                     color: Color(0xFF6B7280),
+          //                   ),
+          //                 ),
+          //               ],
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     )),
         ],
       ),
     );
@@ -192,9 +167,9 @@ class CommunicationFiltersWidget extends StatelessWidget {
         margin: EdgeInsets.only(right: 1),
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Color(0xFF274CD2) : Colors.white,
+          color: selected ? Color(0xFF1339FF) : Colors.white,
           border: Border.all(
-            color: selected ? Color(0xFF274CD2) : Color(0xFFE5E7EB),
+            color: selected ? Color(0xFF1339FF) : Color(0xFFE5E7EB),
           ),
           borderRadius: borderRadius,
         ),

@@ -31,11 +31,8 @@ class SplashController extends GetxController {
             title: const Text('Update Available'),
             content: const Text(
                 'A new version of Ayamedica is available. Would you like to update now?'),
+            actionsAlignment: MainAxisAlignment.center,
             actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('Later'),
-              ),
               ElevatedButton(
                 onPressed: () => Get.back(result: true),
                 child: const Text('Update Now'),

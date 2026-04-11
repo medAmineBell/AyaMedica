@@ -28,15 +28,16 @@ class ProfileHeader extends StatelessWidget {
         InkWell(
           onTap: () {
             CancelExaminationDialog.show(context).then((result) {
+              if (result == null) return;
               if (result == 'back') {
                 // Just go back to appointments
                 onBackPressed();
-              } else if (result == 'cancel_appointment') {
-                // Call cancel API then go back
+              } else {
+                // Result is the cancellation reason text
                 final historyController =
                     Get.find<AppointmentHistoryController>();
                 historyController
-                    .cancelAppointment(appointmentId, 'Cancelled by doctor')
+                    .cancelAppointment(appointmentId, result)
                     .then((_) => onBackPressed());
               }
             });
@@ -123,6 +124,10 @@ class ProfileHeader extends StatelessWidget {
                     Navigator.of(context).pop();
 
                     if (success) {
+                      // Send guardian notification (fire-and-forget)
+                      assessmentController.notifyGuardians(
+                          result, studentName);
+
                       // Refresh appointments list
                       try {
                         final historyController =

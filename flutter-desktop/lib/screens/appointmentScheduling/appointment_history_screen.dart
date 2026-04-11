@@ -55,8 +55,7 @@ class AppointmentHistoryScreen extends StatelessWidget {
                   if (controller.viewingAppointment.value != null) {
                     final appt = controller.viewingAppointment.value!;
                     // Show hygiene table when disease is Hygiene
-                    if (appt.type.toLowerCase().contains('checkup') &&
-                        appt.disease.toLowerCase() == 'hygiene') {
+                    if (appt.disease.toLowerCase() == 'hygiene') {
                       return MedicalCheckupTableWidget(
                         appointment: appt,
                         onBack: controller.backToList,
@@ -69,8 +68,7 @@ class AppointmentHistoryScreen extends StatelessWidget {
                       'cardiovascular',
                       'bmi'
                     ];
-                    if (appt.type.toLowerCase().contains('checkup') &&
-                        vitalSignsDiseases
+                    if (vitalSignsDiseases
                             .contains(appt.disease.toLowerCase())) {
                       return VitalSignsTableWidget(
                         appointment: appt,

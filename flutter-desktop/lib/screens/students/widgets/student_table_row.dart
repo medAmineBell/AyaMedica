@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
 import 'package:get/get.dart';
@@ -38,18 +39,7 @@ class StudentTableRow extends StatelessWidget {
               flex: 3,
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: student.avatarColor,
-                    child: Text(
-                      student.initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
+                  _buildAvatar(),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -152,6 +142,33 @@ class StudentTableRow extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final imageUrl = student.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      final fullUrl = imageUrl.startsWith('http')
+          ? imageUrl
+          : '${AppConfig.newBackendUrl}$imageUrl';
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: student.avatarColor,
+        backgroundImage: NetworkImage(fullUrl),
+        onBackgroundImageError: (_, __) {},
+      );
+    }
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: student.avatarColor,
+      child: Text(
+        student.initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
         ),
       ),
     );

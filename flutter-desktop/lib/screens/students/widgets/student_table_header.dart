@@ -37,6 +37,7 @@ class StudentTableHeader extends StatelessWidget {
 
   Widget _buildSearchField() {
     return TextField(
+      controller: controller.searchTextController,
       onChanged: controller.searchStudents,
       decoration: InputDecoration(
         hintText: 'search',
@@ -62,59 +63,7 @@ class StudentTableHeader extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    return Row(
-      children: [
-        // Export button
-        _ActionButton(
-          icon: Icons.download_outlined,
-          onTap: _handleExport,
-        ),
-        const SizedBox(width: 12),
-        // Filters button with badge
-        _FiltersButton(controller: controller),
-      ],
-    );
-  }
-
-  void _handleExport() {
-    Get.snackbar(
-      'Export',
-      'Export functionality coming soon',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    Key? key,
-    required this.icon,
-    required this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 48,
-        width: 48,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-          color: Colors.white,
-        ),
-        child: Center(
-          child: Icon(icon, size: 20, color: Colors.grey.shade700),
-        ),
-      ),
-    );
+    return _FiltersButton(controller: controller);
   }
 }
 

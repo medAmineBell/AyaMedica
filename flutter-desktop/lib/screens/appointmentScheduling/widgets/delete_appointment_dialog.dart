@@ -20,10 +20,18 @@ class _DeleteAppointmentDialogState extends State<DeleteAppointmentDialog> {
   final _reasonController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _reasonController.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _reasonController.dispose();
     super.dispose();
   }
+
+  bool get _isReasonValid => _reasonController.text.trim().length >= 5;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +124,9 @@ class _DeleteAppointmentDialogState extends State<DeleteAppointmentDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleCancel,
+                    onPressed: _isLoading || !_isReasonValid
+                        ? null
+                        : _handleCancel,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
                       foregroundColor: Colors.white,

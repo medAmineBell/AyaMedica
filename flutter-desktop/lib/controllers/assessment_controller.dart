@@ -363,6 +363,55 @@ class AssessmentController extends GetxController {
     }
   }
 
+  /// Notify guardians after walk-in checkout
+  Future<void> notifyGuardians(String notificationType, String studentName) async {
+    final accessToken = _storageService.getAccessToken();
+    if (accessToken == null) return;
+
+    const title = 'Walk In visit';
+    String body;
+    switch (notificationType) {
+      case 'fine':
+        body = '$studentName is Fine, You can view the Medical Record.';
+        break;
+      case 'picked_up':
+        body =
+            'Due to health reasons, we need to pick up $studentName from school. You can view the Medical Record.';
+        break;
+      case 'recheck':
+        body =
+            '$studentName needs to have a specialized medical check-up after the school day ends. You can view the Medical Record.';
+        break;
+      default:
+        return;
+    }
+
+    try {
+      final url =
+          '${AppConfig.newBackendUrl}/api/appointment-sessions/$appointmentId/notify-guardians';
+      print('[AssessmentController] POST notify-guardians: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: _authHeaders(),
+        body: jsonEncode({
+          'title': title,
+          'body': body,
+          'data': {
+            'appointmentId': appointmentId,
+            'medicalRecordId': medicalRecordId,
+            'appointmentType': 'walkin',
+          },
+        }),
+      );
+
+      print(
+          '[AssessmentController] notify-guardians status: ${response.statusCode}');
+    } catch (e) {
+      print('[AssessmentController] Error notifying guardians: $e');
+    }
+  }
+
   // --- Complaints ---
 
   void onComplaintSearchChanged(String search) {

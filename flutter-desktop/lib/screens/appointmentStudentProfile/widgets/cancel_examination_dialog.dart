@@ -1,7 +1,37 @@
 import 'package:flutter/material.dart';
 
-class CancelExaminationDialog extends StatelessWidget {
+class CancelExaminationDialog extends StatefulWidget {
   const CancelExaminationDialog({Key? key}) : super(key: key);
+
+  @override
+  State<CancelExaminationDialog> createState() =>
+      _CancelExaminationDialogState();
+
+  static Future<String?> show(BuildContext context) {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const CancelExaminationDialog(),
+    );
+  }
+}
+
+class _CancelExaminationDialogState extends State<CancelExaminationDialog> {
+  final _reasonController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  bool get _isReasonValid => _reasonController.text.trim().length >= 5;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +86,33 @@ class CancelExaminationDialog extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+            const SizedBox(height: 20),
+
+            // Reason text field
+            TextField(
+              controller: _reasonController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Cancellation reason goes here',
+                hintStyle: const TextStyle(
+                  color: Color(0xFF9CA3AF),
+                  fontSize: 14,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB)),
+                ),
+                contentPadding: const EdgeInsets.all(16),
+              ),
+            ),
             const SizedBox(height: 28),
 
             // Buttons
@@ -86,7 +143,10 @@ class CancelExaminationDialog extends StatelessWidget {
                 // Cancel Appointment button
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop('cancel_appointment'),
+                    onPressed: _isReasonValid
+                        ? () => Navigator.of(context)
+                            .pop(_reasonController.text.trim())
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF43F5E),
                       foregroundColor: Colors.white,
@@ -108,14 +168,6 @@ class CancelExaminationDialog extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  static Future<String?> show(BuildContext context) {
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const CancelExaminationDialog(),
     );
   }
 }

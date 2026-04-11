@@ -10,8 +10,7 @@ class CommunicationPaginationWidget extends StatelessWidget {
     final controller = Get.find<CommunicationController>();
 
     return Obx(() {
-      final totalItems = controller.filteredMessages.length;
-      final totalPages = controller.totalPages;
+      final totalPages = controller.totalPages.value;
       final currentPage = controller.currentPage.value;
 
       if (totalPages <= 1) return SizedBox.shrink();

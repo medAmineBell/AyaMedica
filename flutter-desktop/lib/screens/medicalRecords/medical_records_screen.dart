@@ -23,7 +23,7 @@ class MedicalRecordsScreen extends StatelessWidget {
           _buildTitleSection(controller, branchController),
 
           // Search & actions header
-          _buildSearchHeader(controller),
+          //_buildSearchHeader(controller),
 
           // Table content
           Expanded(
@@ -55,9 +55,15 @@ class MedicalRecordsScreen extends StatelessWidget {
           ),
 
           // Pagination
-          Obx(() => controller.totalPages.value > 1
-              ? _buildPagination(controller)
-              : const SizedBox()),
+          Obx(() {
+            final isDetailView = controller.selectedStudent.value != null;
+            final totalPages = isDetailView
+                ? controller.studentRecordsTotalPages.value
+                : controller.totalPages.value;
+            return totalPages > 1
+                ? _buildPagination(controller, isDetailView)
+                : const SizedBox();
+          }),
         ],
       ),
     );
@@ -76,37 +82,37 @@ class MedicalRecordsScreen extends StatelessWidget {
             return Row(
               children: [
                 const Text(
-                  'Medical records,',
+                  'Medical records',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$count ${count != 1 ? 'branches' : 'branch'}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 24,
-                        color: Colors.blue.shade600,
-                      ),
-                    ],
-                  ),
-                ),
+                // const SizedBox(width: 6),
+                // InkWell(
+                //   onTap: () {},
+                //   borderRadius: BorderRadius.circular(4),
+                //   child: Row(
+                //     mainAxisSize: MainAxisSize.min,
+                //     children: [
+                //       Text(
+                //         '$count ${count != 1 ? 'branches' : 'branch'}',
+                //         style: TextStyle(
+                //           fontSize: 20,
+                //           fontWeight: FontWeight.w600,
+                //           color: Colors.blue.shade600,
+                //         ),
+                //       ),
+                //       const SizedBox(width: 4),
+                //       Icon(
+                //         Icons.keyboard_arrow_down,
+                //         size: 24,
+                //         color: Colors.blue.shade600,
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             );
           }),
@@ -372,10 +378,15 @@ class MedicalRecordsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPagination(MedicalRecordsController controller) {
+  Widget _buildPagination(MedicalRecordsController controller,
+      [bool isDetailView = false]) {
     return Obx(() {
-      final currentPage = controller.currentPage.value;
-      final totalPages = controller.totalPages.value;
+      final currentPage = isDetailView
+          ? controller.studentRecordsPage.value
+          : controller.currentPage.value;
+      final totalPages = isDetailView
+          ? controller.studentRecordsTotalPages.value
+          : controller.totalPages.value;
 
       if (totalPages <= 1) return const SizedBox.shrink();
 
@@ -393,18 +404,27 @@ class MedicalRecordsScreen extends StatelessWidget {
               label: 'Previous',
               isLeading: true,
               enabled: currentPage > 1,
-              onTap: controller.previousPage,
+              onTap: () => isDetailView
+                  ? controller.fetchStudentDetails(
+                      controller.selectedStudent.value!.id,
+                      page: currentPage - 1)
+                  : controller.previousPage(),
             ),
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: _buildPageNumbers(currentPage, totalPages, controller),
+              children: _buildPageNumbers(
+                  currentPage, totalPages, controller, isDetailView),
             ),
             _buildNavButton(
               icon: Icons.arrow_forward,
               label: 'Next',
               isLeading: false,
               enabled: currentPage < totalPages,
-              onTap: controller.nextPage,
+              onTap: () => isDetailView
+                  ? controller.fetchStudentDetails(
+                      controller.selectedStudent.value!.id,
+                      page: currentPage + 1)
+                  : controller.nextPage(),
             ),
           ],
         ),
@@ -452,7 +472,8 @@ class MedicalRecordsScreen extends StatelessWidget {
   }
 
   List<Widget> _buildPageNumbers(
-      int currentPage, int totalPages, MedicalRecordsController controller) {
+      int currentPage, int totalPages, MedicalRecordsController controller,
+      [bool isDetailView = false]) {
     final pageNumbers = _getVisiblePages(currentPage, totalPages);
     final pages = <Widget>[];
 
@@ -475,7 +496,11 @@ class MedicalRecordsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: InkWell(
-              onTap: () => controller.goToPage(page),
+              onTap: () => isDetailView
+                  ? controller.fetchStudentDetails(
+                      controller.selectedStudent.value!.id,
+                      page: page)
+                  : controller.goToPage(page),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 36,

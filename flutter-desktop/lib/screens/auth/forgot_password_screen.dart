@@ -122,7 +122,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   controller: controller.emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: 'tech@ayamedica.com',
+                    hintText: 'admin@example.com',
                     hintStyle: const TextStyle(
                       color: Color(0xFF9AA6AC),
                       fontSize: 14,
@@ -514,9 +514,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(
-                      obscure.value
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                      obscure.value ? Icons.visibility_off : Icons.visibility,
                       color: const Color(0xFF595A5B),
                     ),
                     onPressed: () => obscure.value = !obscure.value,

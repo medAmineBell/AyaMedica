@@ -282,7 +282,11 @@ class _AssessmentViewState extends State<AssessmentView> {
         height: 30,
         child: Focus(
           onFocusChange: (hasFocus) {
-            if (!hasFocus && hasValidation) {
+            if (hasFocus && hasValidation) {
+              setState(() {
+                _blurredVitalFields.remove(key);
+              });
+            } else if (!hasFocus && hasValidation) {
               setState(() {
                 _blurredVitalFields.add(key);
               });

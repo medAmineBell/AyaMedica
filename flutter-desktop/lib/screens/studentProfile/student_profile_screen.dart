@@ -8,12 +8,10 @@ import 'widgets/profile_main_content.dart';
 
 class StudentProfileScreen extends StatelessWidget {
   final Student student;
-  final String appointmentType;
 
   const StudentProfileScreen({
     Key? key,
     required this.student,
-    this.appointmentType = 'Walk-In',
   }) : super(key: key);
 
   @override
@@ -29,10 +27,8 @@ class StudentProfileScreen extends StatelessWidget {
           children: [
             // Header with Back Button
             ProfileHeader(
-              appointmentType: appointmentType,
-              studentName: student.name,
               onBackPressed: () {
-                homeController.changeContent(ContentType.appointmentScheduling);
+                homeController.changeContent(ContentType.studentsList);
               },
             ),
             const SizedBox(height: 24),
