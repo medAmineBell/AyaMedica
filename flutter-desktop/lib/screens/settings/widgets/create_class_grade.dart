@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
 import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:get/get.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class CreateClassScreen extends StatefulWidget {
   final Map<String, dynamic>? classToEdit;
@@ -68,19 +69,19 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
 
   bool _validateForm() {
     if (selectedBranchId == null) {
-      Get.snackbar('Error', 'Please select a branch',
+      appSnackbar('Error', 'Please select a branch',
           backgroundColor: Colors.red, colorText: Colors.white);
       return false;
     }
 
     if (selectedGrades.isEmpty) {
-      Get.snackbar('Error', 'Please select at least one grade',
+      appSnackbar('Error', 'Please select at least one grade',
           backgroundColor: Colors.red, colorText: Colors.white);
       return false;
     }
 
     if (classNameController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter a class name',
+      appSnackbar('Error', 'Please enter a class name',
           backgroundColor: Colors.red, colorText: Colors.white);
       return false;
     }

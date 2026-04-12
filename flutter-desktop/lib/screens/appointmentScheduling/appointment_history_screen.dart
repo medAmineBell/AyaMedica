@@ -6,6 +6,7 @@ import 'widgets/create_appointment_dialog.dart';
 import 'widgets/medical_checkup_table_widget.dart';
 import 'widgets/vital_signs_table_widget.dart';
 import 'widgets/student_table_widget.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AppointmentHistoryScreen extends StatelessWidget {
   const AppointmentHistoryScreen({super.key});
@@ -327,10 +328,9 @@ class AppointmentHistoryScreen extends StatelessWidget {
       ),
       child: IconButton(
         onPressed: () {
-          Get.snackbar(
+          appSnackbar(
             'Download',
             'Appointments data is being downloaded...',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: const Color(0xFF10B981),
             colorText: Colors.white,
             duration: const Duration(seconds: 2),

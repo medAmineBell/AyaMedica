@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../../controllers/assessment_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class PlansView extends StatefulWidget {
   const PlansView({super.key});
@@ -231,6 +232,7 @@ class _PlansViewState extends State<PlansView> {
         ),
         const SizedBox(height: 6),
         Focus(
+          skipTraversal: true,
           onFocusChange: (hasFocus) {
             if (hasFocus) {
               setState(() => _activeSearchField = fieldId);
@@ -669,8 +671,7 @@ class _PlansViewState extends State<PlansView> {
   void _addDrug() {
     if (_drugNameController.text.isEmpty ||
         _activeIngredientController.text.isEmpty) {
-      Get.snackbar('Error', 'Please fill in required fields',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Please fill in required fields',
           backgroundColor: Colors.red.shade100);
       return;
     }
@@ -704,8 +705,7 @@ class _PlansViewState extends State<PlansView> {
       _dozeType = null;
     });
 
-    Get.snackbar('Success', 'Drug added successfully!',
-        snackPosition: SnackPosition.BOTTOM,
+    appSnackbar('Success', 'Drug added successfully!',
         backgroundColor: Colors.green.shade100);
   }
 

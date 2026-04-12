@@ -5,6 +5,7 @@ import '../../../../controllers/assessment_controller.dart';
 import '../../../../controllers/home_controller.dart';
 import 'complete_walkin_dialog.dart';
 import 'cancel_examination_dialog.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class ProfileHeader extends StatelessWidget {
   final String appointmentType;
@@ -94,10 +95,9 @@ class ProfileHeader extends StatelessWidget {
             onPressed: () {
               if (isAssessmentTab && !isFilled) {
                 // Show popup to fill assessment data
-                Get.snackbar(
+                appSnackbar(
                   'Assessment Incomplete',
                   'Please fill in the required assessment fields (Chief complaint, Suspected diseases, Recommendations)',
-                  snackPosition: SnackPosition.TOP,
                   backgroundColor: const Color(0xFFFEF3C7),
                   colorText: const Color(0xFF92400E),
                   duration: const Duration(seconds: 3),

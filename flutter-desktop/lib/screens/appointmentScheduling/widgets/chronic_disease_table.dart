@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/models/chronic_disease.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/theme/app_theme.dart';
 import 'package:get/get.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class ChronicDiseaseTable extends StatelessWidget {
   final List<Student> students;
@@ -821,18 +822,16 @@ class ChronicDiseaseTable extends StatelessWidget {
   }
 
   void _editDisease(ChronicDisease disease, Student student) {
-    Get.snackbar(
+    appSnackbar(
       'Edit Disease',
       'Edit functionality will be implemented here',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
   void _showHistory(ChronicDisease disease, Student student) {
-    Get.snackbar(
+    appSnackbar(
       'Disease History',
       'History functionality will be implemented here',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
@@ -957,10 +956,9 @@ class ChronicDiseaseTable extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {
                           Get.back();
-                          Get.snackbar(
+                          appSnackbar(
                             'Success',
                             'Chronic Diseases checkup completed successfully!',
-                            snackPosition: SnackPosition.BOTTOM,
                             backgroundColor:
                                 AppTheme.colorPalette['success']!['main']!,
                             colorText: Colors.white,

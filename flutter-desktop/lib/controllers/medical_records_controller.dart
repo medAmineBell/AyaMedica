@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/medical_student.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum MedicalRecordsState { loading, success, error, empty }
 
@@ -105,10 +106,9 @@ class MedicalRecordsController extends GetxController {
       }
     } catch (e) {
       print('❌ Error fetching student details: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load student details: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -161,10 +161,9 @@ class MedicalRecordsController extends GetxController {
   Future<void> fetchRecords({int page = 1}) async {
     if (branchId.value.isEmpty) {
       print('❌ Cannot load medical records: No branch ID available');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select a branch first',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -250,10 +249,9 @@ class MedicalRecordsController extends GetxController {
       print('❌ Error fetching medical records: $e');
       state.value = MedicalRecordsState.error;
 
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load medical records: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -375,10 +373,9 @@ class MedicalRecordsController extends GetxController {
 
   /// Export records placeholder
   void exportRecords() {
-    Get.snackbar(
+    appSnackbar(
       'Export',
       'Export functionality coming soon',
-      snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.blue,
       colorText: Colors.white,
     );

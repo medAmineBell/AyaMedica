@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/theme/app_theme.dart';
 import 'package:get/get.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class MonitoringSignsView extends StatefulWidget {
   final Student student;
@@ -601,10 +602,9 @@ class _MonitoringSignsViewState extends State<MonitoringSignsView> {
                   ElevatedButton(
                     onPressed: () {
                       Get.back();
-                      Get.snackbar(
+                      appSnackbar(
                         'Print Report',
                         'Monitoring report is being prepared for printing...',
-                        snackPosition: SnackPosition.BOTTOM,
                         backgroundColor:
                             AppTheme.colorPalette['success']!['main']!,
                         colorText: Colors.white,

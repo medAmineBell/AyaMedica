@@ -6,6 +6,7 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:get/get.dart';
 import '../../../controllers/appointment_history_controller.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class StudentTableWidget extends StatefulWidget {
   final Appointment appointment;
@@ -996,10 +997,9 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
                             if (Get.isRegistered<AppointmentHistoryController>()) {
                               Get.find<AppointmentHistoryController>().refreshAppointments();
                             }
-                            Get.snackbar(
+                            appSnackbar(
                               'Success',
                               'Appointment completed successfully',
-                              snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: const Color(0xFF10B981),
                               colorText: Colors.white,
                             );

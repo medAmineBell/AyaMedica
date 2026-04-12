@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/controllers/communication_controller.dart';
 import 'package:get/get.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../../../models/appointment_models.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class CommunicationFiltersWidget extends StatelessWidget {
   const CommunicationFiltersWidget({Key? key}) : super(key: key);
@@ -211,10 +212,9 @@ class CommunicationFiltersWidget extends StatelessWidget {
 
 void _handleDownload() {
   // Handle download functionality
-  Get.snackbar(
+  appSnackbar(
     'Download',
     'Appointments data is being downloaded...',
-    snackPosition: SnackPosition.BOTTOM,
     backgroundColor: const Color(0xFF10B981),
     colorText: Colors.white,
     duration: const Duration(seconds: 2),

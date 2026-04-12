@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class ReportsController extends GetxController {
   final StorageService storageService = Get.find<StorageService>();
@@ -96,10 +97,9 @@ class ReportsController extends GetxController {
       }
     } catch (e) {
       print('Error loading templates: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load report templates: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -165,10 +165,9 @@ class ReportsController extends GetxController {
       }
     } catch (e) {
       print('Error loading reports: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load reports: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -222,10 +221,9 @@ class ReportsController extends GetxController {
             Get.back();
           }
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Report generated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
           );
@@ -245,10 +243,9 @@ class ReportsController extends GetxController {
         Get.back();
       }
 
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to generate report: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -279,10 +276,9 @@ class ReportsController extends GetxController {
       if (response.statusCode == 200 || response.statusCode == 204) {
         reports.removeWhere((report) => report.id == reportId);
         reports.refresh();
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Report deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -291,10 +287,9 @@ class ReportsController extends GetxController {
       throw Exception('Failed to delete report: ${response.statusCode}');
     } catch (e) {
       print('Error deleting report: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete report: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -313,10 +308,9 @@ class ReportsController extends GetxController {
       final uri = Uri.parse('$baseUrl/api/reports/$reportId/download')
           .replace(queryParameters: {'format': format.toLowerCase()});
 
-      Get.snackbar(
+      appSnackbar(
         'Downloading',
         'Downloading report as $format...',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.blue,
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
@@ -334,10 +328,9 @@ class ReportsController extends GetxController {
       if (response.statusCode == 200) {
         // Handle file download - you might want to use a package like path_provider
         // and save the file to device storage
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Report downloaded successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -346,10 +339,9 @@ class ReportsController extends GetxController {
       }
     } catch (e) {
       print('Error downloading report: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to download report: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

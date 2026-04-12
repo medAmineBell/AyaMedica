@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AssessmentController extends GetxController {
   final StorageService _storageService = Get.find<StorageService>();
@@ -21,7 +22,8 @@ class AssessmentController extends GetxController {
 
   // Vitals text controllers
   final heartRateController = TextEditingController();
-  final bloodPressureController = TextEditingController();
+  final systolicController = TextEditingController();
+  final diastolicController = TextEditingController();
   final temperatureController = TextEditingController();
   final respiratoryRateController = TextEditingController();
   final bloodGlucoseController = TextEditingController();
@@ -70,7 +72,8 @@ class AssessmentController extends GetxController {
     recommendationSearchController.dispose();
     examinationController.dispose();
     heartRateController.dispose();
-    bloodPressureController.dispose();
+    systolicController.dispose();
+    diastolicController.dispose();
     temperatureController.dispose();
     respiratoryRateController.dispose();
     bloodGlucoseController.dispose();
@@ -156,7 +159,14 @@ class AssessmentController extends GetxController {
       heartRateController.text = data['heart_rate'].toString();
     }
     if (data['blood_pressure'] != null) {
-      bloodPressureController.text = data['blood_pressure'].toString();
+      final bp = data['blood_pressure'].toString();
+      final parts = bp.split('/');
+      if (parts.length == 2) {
+        systolicController.text = parts[0].trim();
+        diastolicController.text = parts[1].trim();
+      } else {
+        systolicController.text = bp;
+      }
     }
     if (data['temperature'] != null) {
       temperatureController.text = data['temperature'].toString();
@@ -233,8 +243,8 @@ class AssessmentController extends GetxController {
       if (heartRateController.text.isNotEmpty) {
         request.fields['heart_rate'] = heartRateController.text;
       }
-      if (bloodPressureController.text.isNotEmpty) {
-        request.fields['blood_pressure'] = bloodPressureController.text;
+      if (systolicController.text.isNotEmpty || diastolicController.text.isNotEmpty) {
+        request.fields['blood_pressure'] = '${systolicController.text}/${diastolicController.text}';
       }
       if (temperatureController.text.isNotEmpty) {
         request.fields['temperature'] = temperatureController.text;
@@ -303,14 +313,12 @@ class AssessmentController extends GetxController {
           return true;
         }
       }
-      Get.snackbar('Error', 'Failed to save assessment',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Failed to save assessment',
           backgroundColor: Colors.red.shade100);
       return false;
     } catch (e) {
       print('[AssessmentController] Error saving medical record: $e');
-      Get.snackbar('Error', 'Failed to save assessment',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Failed to save assessment',
           backgroundColor: Colors.red.shade100);
       return false;
     } finally {
@@ -342,20 +350,17 @@ class AssessmentController extends GetxController {
       print('[AssessmentController] checkout status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        Get.snackbar('Success', 'Walk-in completed successfully',
-            snackPosition: SnackPosition.BOTTOM,
+        appSnackbar('Success', 'Walk-in completed successfully',
             backgroundColor: Colors.green.shade100);
         return true;
       } else {
-        Get.snackbar('Error', 'Failed to checkout appointment',
-            snackPosition: SnackPosition.BOTTOM,
+        appSnackbar('Error', 'Failed to checkout appointment',
             backgroundColor: Colors.red.shade100);
         return false;
       }
     } catch (e) {
       print('[AssessmentController] Error checking out: $e');
-      Get.snackbar('Error', 'Failed to checkout appointment',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Failed to checkout appointment',
           backgroundColor: Colors.red.shade100);
       return false;
     } finally {

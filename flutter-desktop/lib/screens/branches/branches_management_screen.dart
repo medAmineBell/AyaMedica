@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/screens/branches/widgets/branch_table_widget.da
 import 'package:get/get.dart';
 import '../../controllers/branch_management_controller.dart';
 import '../../controllers/home_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class BranchManagementScreen extends StatelessWidget {
   const BranchManagementScreen({Key? key}) : super(key: key);
@@ -228,8 +229,7 @@ class BranchManagementScreen extends StatelessWidget {
           // Download button
           InkWell(
             onTap: () {
-              Get.snackbar('Export', 'Export functionality coming soon',
-                  snackPosition: SnackPosition.BOTTOM,
+              appSnackbar('Export', 'Export functionality coming soon',
                   backgroundColor: Colors.blue,
                   colorText: Colors.white);
             },

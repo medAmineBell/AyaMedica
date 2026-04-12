@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/appointment_history_model.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum AppointmentHistoryState { loading, success, error, empty }
 
@@ -120,10 +121,9 @@ class AppointmentHistoryController extends GetxController {
       }
     } catch (e) {
       state.value = AppointmentHistoryState.error;
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load appointments: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -217,10 +217,9 @@ class AppointmentHistoryController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Appointment deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -231,10 +230,9 @@ class AppointmentHistoryController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete appointment: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -267,10 +265,9 @@ class AppointmentHistoryController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Appointment updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -281,10 +278,9 @@ class AppointmentHistoryController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update appointment: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -316,10 +312,9 @@ class AppointmentHistoryController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Appointment cancelled successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -330,10 +325,9 @@ class AppointmentHistoryController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to cancel appointment: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -502,10 +496,9 @@ class AppointmentHistoryController extends GetxController {
             : AppointmentStatus.notDone,
       );
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load appointment students: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

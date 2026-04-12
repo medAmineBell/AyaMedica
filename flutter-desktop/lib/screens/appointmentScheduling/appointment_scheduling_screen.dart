@@ -13,6 +13,7 @@ import 'widgets/appointment_error_widget.dart';
 import 'widgets/appointment_loading_widget.dart';
 import 'widgets/appointment_success_widget.dart';
 import 'widgets/appointment_empty_widget.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AppointmentSchedulingScreen
     extends GetView<AppointmentSchedulingController> {
@@ -135,12 +136,11 @@ class AppointmentSchedulingScreen
                           controller.selectedAppointmentForStudents.value =
                               null;
                           Get.back(); // Close dialog
-                          Get.snackbar(
+                          appSnackbar(
                             'Completed',
                             'All checkups have been marked as done.',
                             backgroundColor: const Color(0xFF10B981),
                             colorText: Colors.white,
-                            snackPosition: SnackPosition.BOTTOM,
                           );
                         },
                         style: ElevatedButton.styleFrom(

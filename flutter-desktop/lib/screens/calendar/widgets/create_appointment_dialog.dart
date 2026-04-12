@@ -6,6 +6,7 @@ import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/custom_dr
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/custom_radio_option_widget.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class CreateAppointmentDialog extends StatefulWidget {
   const CreateAppointmentDialog({Key? key}) : super(key: key);
@@ -157,7 +158,7 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
         _selectedGrade == null ||
         _selectedClass == null ||
         _selectedDoctor == null) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please fill all required fields',
         backgroundColor: Colors.red,
@@ -182,7 +183,7 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
     );
 
     Get.back();
-    Get.snackbar(
+    appSnackbar(
       'Success',
       'Appointment created successfully',
       backgroundColor: Colors.green,

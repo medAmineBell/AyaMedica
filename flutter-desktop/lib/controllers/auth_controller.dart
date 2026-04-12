@@ -5,6 +5,7 @@ import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:flutter_getx_app/utils/country_service.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum LoginMethod { phone, email }
 
@@ -254,10 +255,9 @@ class AuthController extends GetxController {
       loginButtonState.value = LoginButtonState.disabled;
 
       // Show logout success message
-      Get.snackbar(
+      appSnackbar(
         'logout_success'.tr,
         'logged_out'.tr,
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
@@ -265,10 +265,9 @@ class AuthController extends GetxController {
       // Navigate to login screen and remove all previous routes
       Get.offAllNamed(Routes.LOGIN);
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'error_occurred'.tr,
         'logout_error'.tr + ': ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_getx_app/controllers/organization_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class OrganizationLogoSection extends StatelessWidget {
   final OrganizationController controller = Get.find();
@@ -107,10 +108,9 @@ class OrganizationLogoSection extends StatelessWidget {
             const maxSize = 10 * 1024 * 1024; // 10MB
             
             if (fileSize > maxSize) {
-              Get.snackbar(
+              appSnackbar(
                 'Error',
                 'File size too large. Please select an image smaller than 10MB.',
-                snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.red[100],
                 colorText: Colors.red[800],
               );
@@ -122,10 +122,9 @@ class OrganizationLogoSection extends StatelessWidget {
             final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
             
             if (!allowedExtensions.contains(extension)) {
-              Get.snackbar(
+              appSnackbar(
                 'Error',
                 'Invalid file format. Please select JPG, PNG, GIF, or WebP files.',
-                snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.red[100],
                 colorText: Colors.red[800],
               );
@@ -147,10 +146,9 @@ class OrganizationLogoSection extends StatelessWidget {
       }
       
       debugPrint('Error picking file: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to pick image. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
         duration: const Duration(seconds: 3),
@@ -168,10 +166,9 @@ class OrganizationLogoSection extends StatelessWidget {
       });
 
       // Show success message
-      Get.snackbar(
+      appSnackbar(
         'Success',
         'Logo updated successfully!',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green[100],
         colorText: Colors.green[800],
         duration: const Duration(seconds: 2),
@@ -182,10 +179,9 @@ class OrganizationLogoSection extends StatelessWidget {
       
     } catch (e) {
       debugPrint('Error handling picked file: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update logo. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
       );

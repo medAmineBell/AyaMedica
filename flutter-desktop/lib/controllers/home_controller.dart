@@ -65,6 +65,9 @@ class HomeController extends GetxController {
   final RxList<Map<String, dynamic>> patientMedicalHistory = <Map<String, dynamic>>[].obs;
   final RxBool isLoadingPatientRecords = false.obs;
 
+  // Multi-branch flag
+  final RxBool hasMultipleBranches = false.obs;
+
   // User profile data
   final RxString userName = ''.obs;
   final RxString userRole = ''.obs;
@@ -438,10 +441,16 @@ class HomeController extends GetxController {
     isRoleLoaded.value = true;
   }
 
+  void _checkMultipleBranches() {
+    final storageService = Get.find<StorageService>();
+    hasMultipleBranches.value = storageService.getHasMultipleBranches();
+  }
+
   @override
   void onInit() {
     super.onInit();
     loadSelectedBranchData();
+    _checkMultipleBranches();
     fetchAndCacheUserProfile();
     loadDoctors();
   }

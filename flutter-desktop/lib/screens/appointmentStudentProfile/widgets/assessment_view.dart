@@ -156,8 +156,14 @@ class _AssessmentViewState extends State<AssessmentView> {
             controller.respiratoryRateController,
             min: 5, max: 80, validationKey: 'respiratoryRate'),
         const SizedBox(width: 8),
-        _buildSingleVitalCard('Blood Pressure', 'assets/svg/blood_pressure_02.svg',
-            controller.bloodPressureController),
+        _buildDualVitalCard(
+          'Blood Pressure',
+          'assets/svg/blood_pressure_02.svg',
+          controller.systolicController,
+          controller.diastolicController,
+          min1: 50, max1: 250, validationKey1: 'systolic', label1: 'Systolic',
+          min2: 20, max2: 200, validationKey2: 'diastolic', label2: 'Diastolic',
+        ),
         const SizedBox(width: 8),
         _buildSingleVitalCard(
             'Oxygen Saturation', 'assets/svg/Heading.svg',
@@ -173,6 +179,8 @@ class _AssessmentViewState extends State<AssessmentView> {
           'assets/svg/weight.svg',
           controller.heightController,
           controller.weightController,
+          min1: 30, max1: 250, validationKey1: 'height', label1: 'Height',
+          min2: 1, max2: 300, validationKey2: 'weight', label2: 'Weight',
         ),
       ],
     );
@@ -223,8 +231,16 @@ class _AssessmentViewState extends State<AssessmentView> {
     String title,
     String svgPath,
     TextEditingController controller1,
-    TextEditingController controller2,
-  ) {
+    TextEditingController controller2, {
+    double? min1,
+    double? max1,
+    String? validationKey1,
+    String? label1,
+    double? min2,
+    double? max2,
+    String? validationKey2,
+    String? label2,
+  }) {
     return Expanded(
       child: Container(
         height: 110,
@@ -252,10 +268,10 @@ class _AssessmentViewState extends State<AssessmentView> {
             Row(
               children: [
                 Expanded(child: _buildVitalInput(controller1,
-                    min: 30, max: 250, validationKey: 'height', label: 'Height')),
+                    min: min1, max: max1, validationKey: validationKey1, label: label1)),
                 const SizedBox(width: 4),
                 Expanded(child: _buildVitalInput(controller2,
-                    min: 1, max: 300, validationKey: 'weight', label: 'Weight')),
+                    min: min2, max: max2, validationKey: validationKey2, label: label2)),
               ],
             ),
           ],
@@ -281,6 +297,7 @@ class _AssessmentViewState extends State<AssessmentView> {
       child: SizedBox(
         height: 30,
         child: Focus(
+          skipTraversal: true,
           onFocusChange: (hasFocus) {
             if (hasFocus && hasValidation) {
               setState(() {
@@ -366,6 +383,7 @@ class _AssessmentViewState extends State<AssessmentView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Focus(
+          skipTraversal: true,
           onFocusChange: (hasFocus) {
             if (hasFocus) {
               // Fetch results on focus (show dropdown even without typing)

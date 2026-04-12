@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum AppointmentScreenState { loading, error, success, empty }
 
@@ -170,10 +171,9 @@ class AppointmentSchedulingController extends GetxController {
       }
     } catch (e) {
       print('Error updating hygiene status: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update hygiene status: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -232,10 +232,9 @@ class AppointmentSchedulingController extends GetxController {
       }
     } catch (e) {
       print('Error updating patient status: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update status: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -267,10 +266,9 @@ class AppointmentSchedulingController extends GetxController {
       throw Exception('HTTP ${response.statusCode}: ${response.body}');
     } catch (e) {
       print('Error checking out appointment: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to complete appointment: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -1154,10 +1152,9 @@ class AppointmentSchedulingController extends GetxController {
       }
     } catch (e) {
       print('Error updating vital signs: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update vital signs: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );

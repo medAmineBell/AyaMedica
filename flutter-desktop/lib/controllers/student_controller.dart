@@ -9,6 +9,7 @@ import 'package:flutter_getx_app/screens/students/widgets/student_details_sheet_
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class StudentController extends GetxController {
   // Services
@@ -124,10 +125,9 @@ class StudentController extends GetxController {
 
   // Method to download defective records as Excel
   void downloadDefectiveRecords() {
-    Get.snackbar(
+    appSnackbar(
       'Download Started',
       'Defective records file is being downloaded...',
-      snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.blue,
       colorText: Colors.white,
     );
@@ -172,10 +172,9 @@ class StudentController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Student created successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Student added successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -195,10 +194,9 @@ class StudentController extends GetxController {
       }
     } catch (e) {
       print('❌ Error creating student: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to create student: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -244,10 +242,9 @@ class StudentController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Student updated successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Student updated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -267,10 +264,9 @@ class StudentController extends GetxController {
       }
     } catch (e) {
       print('❌ Error updating student: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update student: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -310,10 +306,9 @@ class StudentController extends GetxController {
       if (response.statusCode == 200 || response.statusCode == 204) {
         print('✅ Student deleted successfully');
 
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Student deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
           duration: const Duration(seconds: 2),
@@ -329,10 +324,9 @@ class StudentController extends GetxController {
       }
     } catch (e) {
       print('❌ Error deleting student: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete student: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -347,10 +341,9 @@ class StudentController extends GetxController {
   Future<void> loadStudents({int page = 1, String? search, String? grade, String? studentClass}) async {
     if (selectedBranchId.value.isEmpty) {
       print('❌ Cannot load students: No branch ID available');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select a branch first',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -425,10 +418,9 @@ class StudentController extends GetxController {
       }
     } catch (e) {
       print('❌ Error loading students: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load students: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),

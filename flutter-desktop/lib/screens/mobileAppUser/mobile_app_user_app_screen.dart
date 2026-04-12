@@ -4,6 +4,7 @@ import 'package:flutter_getx_app/shared/widgets/dynamic_table_widget.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../controllers/mobile_app_user_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class StatusColor {
   final Color bg;
@@ -74,8 +75,7 @@ class MobileAppUserAppScreen extends StatelessWidget {
   void _showEmailReminderDialog(
       BuildContext context, MobileAppUserController controller) {
     if (controller.users.isEmpty) {
-      Get.snackbar('No Users', 'There are no users to send reminders to.',
-          snackPosition: SnackPosition.BOTTOM);
+      appSnackbar('No Users', 'There are no users to send reminders to.');
       return;
     }
 

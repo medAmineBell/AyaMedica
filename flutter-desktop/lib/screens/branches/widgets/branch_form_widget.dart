@@ -5,6 +5,7 @@ import 'package:flutter_getx_app/utils/location_service.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/branch_management_controller.dart';
@@ -436,7 +437,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         final file = result.files.first;
 
         if (file.size > 5 * 1024 * 1024) {
-          Get.snackbar(
+          appSnackbar(
             'Error',
             'Image size must be less than 5MB',
             backgroundColor: Colors.red,
@@ -451,7 +452,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         });
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to pick image: ${e.toString()}',
         backgroundColor: Colors.red,
@@ -1005,10 +1006,9 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
 
       // Validate required fields
       if (_selectedGrades.isEmpty) {
-        Get.snackbar(
+        appSnackbar(
           'Error',
           'Please select at least one grade',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );

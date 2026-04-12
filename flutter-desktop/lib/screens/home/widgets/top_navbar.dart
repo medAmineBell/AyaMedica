@@ -3,6 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/notification_controller.dart';
+import '../../../routes/app_pages.dart';
 import 'action_item.dart';
 import 'user_profile_widget.dart';
 import 'branch_selection_widget.dart';
@@ -89,11 +90,16 @@ class TopNavbar extends GetView<HomeController> {
                     ? controller.userName.value
                     : '...',
                 role: controller.userRole.value,
-                // trailingIcon: const Icon(
-                //   Icons.arrow_drop_down_sharp,
-                //   color: Color(0xFF595A5B),
-                //   size: 20,
-                // ),
+                onTap: controller.hasMultipleBranches.value
+                    ? () => Get.toNamed(Routes.ORGANISATION)
+                    : null,
+                trailingIcon: controller.hasMultipleBranches.value
+                    ? const Icon(
+                        Icons.arrow_drop_down_sharp,
+                        color: Color(0xFF595A5B),
+                        size: 20,
+                      )
+                    : null,
               )),
           // const SizedBox(width: 12),
           // BranchSelectionWidget(

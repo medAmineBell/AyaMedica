@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/organization_model.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class OrganizationController extends GetxController {
   // Form key for validation
@@ -76,7 +77,7 @@ final List<String> areas = ['Nasr City', 'Maadi', 'Zamalek', 'Heliopolis', 'New 
   bool validateForm() {
     if (formKey.currentState?.validate() ?? false) {
       if (!(organization.value.acceptTerms)) {
-        Get.snackbar('Error', 'Please accept the terms and conditions');
+        appSnackbar('Error', 'Please accept the terms and conditions');
         return false;
       }
       return true;
@@ -96,10 +97,10 @@ final List<String> areas = ['Nasr City', 'Maadi', 'Zamalek', 'Heliopolis', 'New 
       await Future.delayed(const Duration(seconds: 2)); // Simulate API call
       
       // On success, navigate to success screen or dashboard
-      Get.snackbar('Success', 'Organization created successfully');
+      appSnackbar('Success', 'Organization created successfully');
     } catch (e) {
       errorMessage.value = 'Failed to create organization. Please try again.';
-      Get.snackbar('Error', errorMessage.value);
+      appSnackbar('Error', errorMessage.value);
     } finally {
       isLoading.value = false;
     }

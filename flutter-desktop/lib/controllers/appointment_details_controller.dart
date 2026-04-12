@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/controllers/calendar_controller.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:get/get.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum PresenceStatus { present, absent }
 
@@ -189,7 +190,7 @@ class AppointmentDetailsController extends GetxController {
     // TODO: Save appointment data and mark as complete
     final calendarController = Get.find<CalendarController>();
     calendarController.hideAppointmentDetails();
-    Get.snackbar(
+    appSnackbar(
       'Success',
       'Appointment completed successfully',
       backgroundColor: Colors.green,

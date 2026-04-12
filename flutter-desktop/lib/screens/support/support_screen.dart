@@ -9,6 +9,7 @@ import '../../controllers/update_controller.dart';
 import '../../utils/api_service.dart';
 import '../../utils/storage_service.dart';
 import '../../shared/widgets/breadcrumb_widget.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({Key? key}) : super(key: key);
@@ -154,10 +155,9 @@ class _SupportScreenState extends State<SupportScreen>
 
   Future<void> _submitSupportTicket() async {
     if (_emailController.text.trim().isEmpty) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please enter your email',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
       );
@@ -165,10 +165,9 @@ class _SupportScreenState extends State<SupportScreen>
     }
 
     if (_messageController.text.trim().isEmpty) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please enter your message',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
       );
@@ -204,10 +203,9 @@ class _SupportScreenState extends State<SupportScreen>
       if (result['success'] == true) {
         _messageController.clear();
         setState(() => _attachedFile = null);
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Your support request has been submitted',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green[100],
           colorText: Colors.green[800],
         );
@@ -215,10 +213,9 @@ class _SupportScreenState extends State<SupportScreen>
         throw Exception(result['error'] ?? 'Failed to submit');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to submit support request. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
       );

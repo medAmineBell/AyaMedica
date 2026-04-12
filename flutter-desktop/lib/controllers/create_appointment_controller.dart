@@ -18,6 +18,7 @@ import 'dart:convert';
 import '../../../models/appointment.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../screens/appointmentScheduling/widgets/parents_notification_dialog.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class CreateAppointmentController extends GetxController {
   final AppointmentSchedulingController appointmentController = Get.find();
@@ -538,10 +539,9 @@ class CreateAppointmentController extends GetxController {
       }
 
       // Show success
-      Get.snackbar(
+      appSnackbar(
         'Success',
         'Appointment created successfully!',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade100,
         colorText: Colors.green.shade800,
         duration: const Duration(seconds: 3),
@@ -591,10 +591,9 @@ class CreateAppointmentController extends GetxController {
         Get.delete<CreatingAppointmentController>();
       }
 
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to create appointment: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
         duration: const Duration(seconds: 5),
@@ -654,19 +653,17 @@ class CreateAppointmentController extends GetxController {
       );
 
       Get.back(); // Close loading
-      Get.snackbar(
+      appSnackbar(
         'Success',
         'Parents notified successfully!',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade100,
         colorText: Colors.green.shade800,
       );
     } catch (e) {
       Get.back(); // Close loading
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to notify parents: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -800,10 +797,9 @@ class CreateAppointmentController extends GetxController {
         appointment,
       );
 
-      Get.snackbar(
+      appSnackbar(
         'Success',
         'Walk-in appointment started successfully',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade100,
         colorText: Colors.green.shade800,
       );
@@ -813,10 +809,9 @@ class CreateAppointmentController extends GetxController {
         Get.back();
         Get.delete<CreatingAppointmentController>();
       }
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to start appointment: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -831,10 +826,9 @@ class CreateAppointmentController extends GetxController {
       return true;
     }
     if (selectedDate.value == null || selectedTime.value == null) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please select date and time',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -845,10 +839,9 @@ class CreateAppointmentController extends GetxController {
 
   bool _validateWalkInForm() {
     if (walkInSelectedStudent.value == null) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please select a student',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -856,10 +849,9 @@ class CreateAppointmentController extends GetxController {
     }
 
     if (selectedGrade.value == null) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please select a grade',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );
@@ -867,10 +859,9 @@ class CreateAppointmentController extends GetxController {
     }
 
     if (selectedClass.value == null) {
-      Get.snackbar(
+      appSnackbar(
         'Validation Error',
         'Please select a class',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade800,
       );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../controllers/branch_management_controller.dart';
 import '../../../models/branch_model.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AddBranchDialog extends StatefulWidget {
   final BranchModel? branch;
@@ -442,10 +443,9 @@ class _AddBranchDialogState extends State<AddBranchDialog> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to ${widget.branch != null ? 'update' : 'add'} branch: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFF44336),
         colorText: Colors.white,
       );

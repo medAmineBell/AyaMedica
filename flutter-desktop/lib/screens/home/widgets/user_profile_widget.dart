@@ -6,6 +6,7 @@ class UserProfileWidget extends StatefulWidget {
   final String role;
   final Color avatarColor;
   final Widget? trailingIcon;
+  final VoidCallback? onTap;
 
   const UserProfileWidget({
     super.key,
@@ -14,6 +15,7 @@ class UserProfileWidget extends StatefulWidget {
     required this.role,
     this.avatarColor = const Color(0xFF1339FF),
     this.trailingIcon,
+    this.onTap,
   });
 
   @override
@@ -26,9 +28,18 @@ class _UserProfileWidgetState extends State<UserProfileWidget> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      // onEnter: (_) => setState(() => isHovered = true),
-      // onExit: (_) => setState(() => isHovered = false),
-      child: Container(
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: widget.onTap != null
+          ? (_) => setState(() => isHovered = true)
+          : null,
+      onExit: widget.onTap != null
+          ? (_) => setState(() => isHovered = false)
+          : null,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
         padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
         decoration: BoxDecoration(
           color: isHovered ? const Color(0xFFE5E7EB) : const Color(0xFFEDF1F5),
@@ -50,6 +61,7 @@ class _UserProfileWidgetState extends State<UserProfileWidget> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

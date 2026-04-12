@@ -5,6 +5,7 @@ import 'package:flutter_getx_app/models/report.dart';
 import 'package:flutter_getx_app/screens/reports/widgets/generating_report_dialog.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class GenerateReportDialog extends StatefulWidget {
   const GenerateReportDialog({Key? key}) : super(key: key);
@@ -133,10 +134,9 @@ class _GenerateReportDialogState extends State<GenerateReportDialog> {
 
   void _showStudentSelectionDialog() {
     if (_selectedClassId == null) {
-      Get.snackbar(
+      appSnackbar(
         'Info',
         'Please select a class first',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );
@@ -147,10 +147,9 @@ class _GenerateReportDialogState extends State<GenerateReportDialog> {
     final students = classDetails?['students'] as List? ?? [];
 
     if (students.isEmpty) {
-      Get.snackbar(
+      appSnackbar(
         'Info',
         'No students found in this class',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
@@ -292,7 +291,7 @@ class _GenerateReportDialogState extends State<GenerateReportDialog> {
   Future<void> _generateReport() async {
     // Validate required fields
     if (_selectedTemplate == null) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select a report template',
         backgroundColor: Colors.red,
@@ -302,7 +301,7 @@ class _GenerateReportDialogState extends State<GenerateReportDialog> {
     }
 
     if (_dateFrom == null || _dateTo == null) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select date range',
         backgroundColor: Colors.red,

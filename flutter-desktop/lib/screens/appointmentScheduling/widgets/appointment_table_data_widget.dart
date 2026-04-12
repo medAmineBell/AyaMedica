@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../models/appointment_models.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AppointmentTableDataWidget extends StatelessWidget {
   const AppointmentTableDataWidget({Key? key}) : super(key: key);
@@ -533,20 +534,18 @@ void _showDeleteConfirmation(Appointment appointment) {
   
   // Optional: validate that a reason was entered
   if (reason.isEmpty) {
-    Get.snackbar('Reason required', 'Please provide a reason before deleting.',
+    appSnackbar('Reason required', 'Please provide a reason before deleting.',
         backgroundColor: Colors.orange.shade100,
-        colorText: Colors.black87,
-        snackPosition: SnackPosition.BOTTOM);
+        colorText: Colors.black87);
     return;
   }
 
   await controller.deleteAppointment(appointment);
 
   Get.back(); // Close dialog
-  Get.snackbar('Appointment deleted', 'Reason: $reason',
+  appSnackbar('Appointment deleted', 'Reason: $reason',
       backgroundColor: Colors.green.shade100,
-      colorText: Colors.black87,
-      snackPosition: SnackPosition.BOTTOM);
+      colorText: Colors.black87);
 },
 
                       style: ElevatedButton.styleFrom(

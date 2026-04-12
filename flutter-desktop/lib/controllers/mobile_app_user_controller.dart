@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/userAppItem.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum MobileAppUserState { loading, success, error, empty }
 
@@ -81,10 +82,9 @@ class MobileAppUserController extends GetxController {
   /// GET /api/mobile-app/users - Fetch mobile app users
   Future<void> fetchUsers({int page = 1}) async {
     if (organizationId.value.isEmpty || branchId.value.isEmpty) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select a branch first',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -154,10 +154,9 @@ class MobileAppUserController extends GetxController {
     } catch (e) {
       errorMessage.value = e.toString();
       state.value = MobileAppUserState.error;
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load mobile app users: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -169,10 +168,9 @@ class MobileAppUserController extends GetxController {
   /// POST /api/mobile-app/users/notify-unverified - Send email reminders
   Future<bool> notifyUnverifiedUsers() async {
     if (organizationId.value.isEmpty || branchId.value.isEmpty) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Please select a branch first',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -198,10 +196,9 @@ class MobileAppUserController extends GetxController {
         final data = body['data'] as Map<String, dynamic>? ?? {};
         final notifiedCount = data['notifiedCount'] ?? 0;
 
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Email reminders sent to $notifiedCount unverified users',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -216,10 +213,9 @@ class MobileAppUserController extends GetxController {
             'Failed to send reminders: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to send email reminders: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

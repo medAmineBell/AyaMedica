@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../controllers/branch_management_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class BranchSelectionWidget extends StatefulWidget {
   final Widget? trailingIcon;
@@ -221,10 +222,9 @@ class _BranchSelectionWidgetState extends State<BranchSelectionWidget> {
                     });
                     Navigator.of(context).pop();
                     // You can add additional logic here to handle branch selection
-                    Get.snackbar(
+                    appSnackbar(
                       'Branch Selected',
                       'Switched to ${branch.name}',
-                      snackPosition: SnackPosition.TOP,
                       backgroundColor: const Color(0xFF1F62E8),
                       colorText: Colors.white,
                     );

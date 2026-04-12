@@ -17,7 +17,7 @@ class AppConfig {
       String.fromEnvironment('UPDATE_TOKEN', defaultValue: '');
 
   // Development mode configuration
-  static const bool isDevelopment = true;
+  static const bool isDevelopment = false;
 
   // Development credentials
   static const String devEmail = "ahmed@ayamedica.com";

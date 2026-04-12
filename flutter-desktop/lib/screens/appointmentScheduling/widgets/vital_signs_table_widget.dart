@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import '../../../controllers/appointment_history_controller.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../../../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum _VitalSignsType { diabetes, bloodPressure, cardiovascular, bmi }
 
@@ -248,32 +249,13 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               final students = _getFilteredStudents();
 
               return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: _tableWidth,
-                  child: SingleChildScrollView(
-                    child: _buildTable(students),
-                  ),
-                ),
+                child: _buildTable(students),
               );
             }),
           ),
         ],
       ),
     );
-  }
-
-  double get _tableWidth {
-    switch (_type) {
-      case _VitalSignsType.diabetes:
-        return 1200;
-      case _VitalSignsType.bloodPressure:
-        return 1300;
-      case _VitalSignsType.cardiovascular:
-        return 1200;
-      case _VitalSignsType.bmi:
-        return 1200;
-    }
   }
 
   // ─── HEADER ───────────────────────────────────────────────────────────
@@ -594,12 +576,12 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
         };
       case _VitalSignsType.bmi:
         return const {
-          0: FlexColumnWidth(2), // Student
+          0: FlexColumnWidth(2.5), // Student
           1: FlexColumnWidth(1.5), // Presence
-          2: FlexColumnWidth(1.2), // Height
-          3: FlexColumnWidth(1.2), // Weight
+          2: FlexColumnWidth(1.5), // Height
+          3: FlexColumnWidth(1.5), // Weight
           4: FlexColumnWidth(2), // Note
-          5: FlexColumnWidth(2), // BMI Result
+          5: FlexColumnWidth(1.5), // BMI Result
         };
     }
   }
@@ -856,6 +838,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
         child: SizedBox(
           height: 40,
           child: Focus(
+            skipTraversal: true,
             onFocusChange: (hasFocus) {
               if (hasFocus && hasValidation) {
                 setState(() {
@@ -1414,10 +1397,9 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
                               Get.find<AppointmentHistoryController>()
                                   .refreshAppointments();
                             }
-                            Get.snackbar(
+                            appSnackbar(
                               'Success',
                               'Appointment completed successfully',
-                              snackPosition: SnackPosition.BOTTOM,
                               backgroundColor: const Color(0xFF10B981),
                               colorText: Colors.white,
                             );

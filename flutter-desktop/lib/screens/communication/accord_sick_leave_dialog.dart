@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../config/app_config.dart';
 import '../../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class AccordSickLeaveDialog extends StatefulWidget {
   final String messageId;
@@ -37,8 +38,7 @@ class _AccordSickLeaveDialogState extends State<AccordSickLeaveDialog> {
   Future<void> _submit() async {
     final days = int.tryParse(_daysController.text.trim());
     if (days == null || days <= 0) {
-      Get.snackbar('Error', 'Please enter a valid number of days',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Please enter a valid number of days',
           backgroundColor: Colors.red,
           colorText: Colors.white);
       return;
@@ -81,21 +81,18 @@ class _AccordSickLeaveDialogState extends State<AccordSickLeaveDialog> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         Navigator.of(context).pop(true);
-        Get.snackbar('Success', 'Sick leave has been accorded',
-            snackPosition: SnackPosition.BOTTOM,
+        appSnackbar('Success', 'Sick leave has been accorded',
             backgroundColor: const Color(0xFF10B981),
             colorText: Colors.white,
             duration: const Duration(seconds: 2));
       } else {
-        Get.snackbar('Error', 'Failed to accord sick leave',
-            snackPosition: SnackPosition.BOTTOM,
+        appSnackbar('Error', 'Failed to accord sick leave',
             backgroundColor: Colors.red,
             colorText: Colors.white);
       }
     } catch (e) {
       print('[AccordSickLeave] Error: $e');
-      Get.snackbar('Error', 'Something went wrong',
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('Error', 'Something went wrong',
           backgroundColor: Colors.red,
           colorText: Colors.white);
     } finally {

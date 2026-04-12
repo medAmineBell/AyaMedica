@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../config/app_config.dart';
 import '../../utils/api_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum ForgotPasswordStep { email, otp, newPassword }
 
@@ -160,8 +161,7 @@ class ForgotPasswordController extends GetxController {
     isLoading.value = false;
 
     if (result['success'] == true) {
-      Get.snackbar('', 'code_resent'.tr,
-          snackPosition: SnackPosition.BOTTOM,
+      appSnackbar('', 'code_resent'.tr,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
           duration: const Duration(seconds: 2));

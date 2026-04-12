@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
@@ -81,10 +82,9 @@ class UploadController extends GetxController {
             });
           } else {
             print('❌ No file data available for: ${platformFile.name}');
-            Get.snackbar(
+            appSnackbar(
               'Error',
               'Could not read file: ${platformFile.name}',
-              snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.red,
               colorText: Colors.white,
             );
@@ -95,10 +95,9 @@ class UploadController extends GetxController {
       }
     } catch (e) {
       print('💥 Error in pickFiles: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to pick files: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -277,18 +276,16 @@ class UploadController extends GetxController {
 
           // Show appropriate message
           if (defectiveRecords.isNotEmpty) {
-            Get.snackbar(
+            appSnackbar(
               'Upload Completed with Issues',
               '${students.length} students imported, ${defectiveRecords.length} records need correction',
-              snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.orange,
               colorText: Colors.white,
             );
           } else {
-            Get.snackbar(
+            appSnackbar(
               'Upload Complete',
               '${students.length} students imported successfully!',
-              snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.green,
               colorText: Colors.white,
             );
@@ -304,10 +301,9 @@ class UploadController extends GetxController {
         update();
         uploadedFiles.refresh();
 
-        Get.snackbar(
+        appSnackbar(
           'Excel Parse Error',
           'Failed to read Excel file. Please check the format.',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
@@ -318,10 +314,9 @@ class UploadController extends GetxController {
       update();
       uploadedFiles.refresh();
 
-      Get.snackbar(
+      appSnackbar(
         'Processing Error',
         'Failed to process ${uploadFile.name}: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -384,10 +379,9 @@ class UploadController extends GetxController {
 
     print('✅ Files after removal: ${uploadedFiles.length}');
 
-    Get.snackbar(
+    appSnackbar(
       'File Removed',
       '${file.name} removed from upload queue',
-      snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.orange,
       colorText: Colors.white,
       duration: Duration(seconds: 2),

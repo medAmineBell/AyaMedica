@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../models/user_model.dart';
 import '../utils/storage_service.dart';
 import 'branch_management_controller.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum UsersState { loading, success, error, empty }
 
@@ -163,10 +164,9 @@ class UsersController extends GetxController {
       }
     } catch (e) {
       state.value = UsersState.error;
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load users: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -244,9 +244,9 @@ class UsersController extends GetxController {
         users[index] = updatedUser;
       }
 
-      Get.snackbar('Success', 'Campus assignments saved successfully');
+      appSnackbar('Success', 'Campus assignments saved successfully');
     } else {
-      Get.snackbar('Error', 'Please select at least one campus');
+      appSnackbar('Error', 'Please select at least one campus');
     }
   }
 
@@ -293,10 +293,9 @@ class UsersController extends GetxController {
       );
 
       if (response.statusCode == 201) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'User created successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -307,10 +306,9 @@ class UsersController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to create user: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -356,10 +354,9 @@ class UsersController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'User updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -370,10 +367,9 @@ class UsersController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update user: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -410,10 +406,9 @@ class UsersController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'User removed successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -425,10 +420,9 @@ class UsersController extends GetxController {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete user: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

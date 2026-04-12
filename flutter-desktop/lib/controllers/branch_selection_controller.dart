@@ -8,6 +8,7 @@ import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 import '../routes/app_pages.dart';
 
@@ -167,6 +168,9 @@ class BranchSelectionController extends GetxController {
           final totalSelectable =
               totalBranches + orgsWithNoBranches.length;
 
+          // Save multi-branch flag for UserProfileWidget navigation
+          await _storageService.saveHasMultipleBranches(totalSelectable > 1);
+
           // Auto-select if only 1 selectable item
           if (totalSelectable == 1) {
             isLoadingBranches.value = false;
@@ -183,10 +187,9 @@ class BranchSelectionController extends GetxController {
           }
 
           // Show success message
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Loaded ${rawOrgData.length} organizations',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -194,10 +197,9 @@ class BranchSelectionController extends GetxController {
         } else {
           print('❌ API returned success: false');
 
-          Get.snackbar(
+          appSnackbar(
             'Error',
             'Failed to load organizations',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.red,
             colorText: Colors.white,
             duration: const Duration(seconds: 3),
@@ -209,10 +211,9 @@ class BranchSelectionController extends GetxController {
       } else {
         print('❌ HTTP Error: ${response.statusCode}');
 
-        Get.snackbar(
+        appSnackbar(
           'Error',
           'Failed to load organizations: HTTP ${response.statusCode}',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
@@ -224,10 +225,9 @@ class BranchSelectionController extends GetxController {
     } catch (e) {
       print('💥 Exception loading organizations: $e');
 
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load organizations: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -385,16 +385,17 @@ class BranchSelectionController extends GetxController {
       print('✅ Branch selected successfully: ${branch['name']}');
 
       // Delete any existing HomeController so it gets freshly created on HomeScreen
-      Get.delete<HomeController>(force: true);
+      if (Get.isRegistered<HomeController>()) {
+        Get.delete<HomeController>(force: true);
+      }
 
       Get.offAllNamed(Routes.HOME);
     } catch (e) {
       isLoading.value = false;
       print('❌ Error selecting branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to select organization: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -402,7 +403,7 @@ class BranchSelectionController extends GetxController {
   }
 
   void addNewOrganization() {
-    Get.snackbar('Info', 'Add new organization feature coming soon');
+    appSnackbar('Info', 'Add new organization feature coming soon');
     Get.toNamed(Routes.CREATE_ORGANIZATION);
   }
 
@@ -416,10 +417,9 @@ class BranchSelectionController extends GetxController {
       final AuthController authController = Get.find<AuthController>();
       await authController.logout();
     } catch (e) {
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to logout: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

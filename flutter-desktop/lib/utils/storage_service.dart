@@ -102,6 +102,11 @@ class StorageService extends GetxService {
       _box.write('branches_list', branches);
   Future<void> clearBranchesList() => _box.remove('branches_list');
 
+  // Multi-branch flag
+  bool getHasMultipleBranches() => _box.read('hasMultipleBranches') ?? false;
+  Future<void> saveHasMultipleBranches(bool value) =>
+      _box.write('hasMultipleBranches', value);
+
   // User Profile
   Map<String, dynamic>? getUserProfile() => _box.read('user_profile');
   Future<void> saveUserProfile(Map<String, dynamic> profile) =>

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class ResourcesController extends GetxController {
   final StorageService storageService = Get.find<StorageService>();
@@ -96,10 +97,9 @@ class ResourcesController extends GetxController {
       }
     } catch (e) {
       print('Error loading classes: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load classes: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -115,10 +115,9 @@ class ResourcesController extends GetxController {
     final branchId = classData['branchId'] ?? selectedBranchId.value;
     if (branchId == null || (branchId is String && branchId.isEmpty)) {
       print('Cannot create class: Missing branch ID');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Branch ID is missing',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -152,10 +151,9 @@ class ResourcesController extends GetxController {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success'] == true) {
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Class created successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
           );
@@ -169,10 +167,9 @@ class ResourcesController extends GetxController {
       throw Exception('Failed to create class: ${response.statusCode}');
     } catch (e) {
       print('Error creating class: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to create class: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -222,10 +219,9 @@ class ResourcesController extends GetxController {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success'] == true) {
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Class updated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
           );
@@ -239,10 +235,9 @@ class ResourcesController extends GetxController {
       throw Exception('Failed to update class: ${response.statusCode}');
     } catch (e) {
       print('Error updating class: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update class: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -290,10 +285,9 @@ class ResourcesController extends GetxController {
         classes.removeWhere((classItem) => classItem['id'] == classId);
         classes.refresh();
 
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Class deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -303,10 +297,9 @@ class ResourcesController extends GetxController {
       throw Exception('Failed to delete class: ${response.statusCode}');
     } catch (e) {
       print('Error deleting class: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete class: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -359,10 +352,9 @@ class ResourcesController extends GetxController {
       }
     } catch (e) {
       print('Error loading class details: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to load class details: $e',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

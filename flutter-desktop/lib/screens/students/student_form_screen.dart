@@ -7,6 +7,7 @@ import 'package:flutter_getx_app/controllers/home_controller.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:get/get.dart';
 import 'dart:typed_data';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class StudentFormScreen extends StatefulWidget {
   final Student? student;
@@ -139,10 +140,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   }
 
   void _showErrorSnackbar(String message) {
-    Get.snackbar(
+    appSnackbar(
       'Error',
       message,
-      snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.red,
       colorText: Colors.white,
       duration: const Duration(seconds: 3),

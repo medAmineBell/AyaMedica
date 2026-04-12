@@ -7,6 +7,7 @@ import '../models/branch_model.dart';
 import '../models/create_branch_request.dart';
 import '../utils/api_service.dart';
 import '../utils/storage_service.dart';
+import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 enum BranchState { loading, success, error, empty }
 
@@ -329,10 +330,9 @@ class BranchManagementController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Branch created successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Branch created successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -351,10 +351,9 @@ class BranchManagementController extends GetxController {
       }
     } catch (e) {
       print('❌ Error creating branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to create branch: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -428,10 +427,9 @@ class BranchManagementController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Branch updated successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Branch updated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -450,10 +448,9 @@ class BranchManagementController extends GetxController {
       }
     } catch (e) {
       print('❌ Error updating branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to update branch: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -560,10 +557,9 @@ class BranchManagementController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Branch activated successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Branch activated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 2),
@@ -580,10 +576,9 @@ class BranchManagementController extends GetxController {
       }
     } catch (e) {
       print('❌ Error activating branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to activate branch: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -631,10 +626,9 @@ class BranchManagementController extends GetxController {
         if (responseData['success'] == true) {
           print('✅ Branch deactivated successfully');
 
-          Get.snackbar(
+          appSnackbar(
             'Success',
             'Branch deactivated successfully',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: const Color(0xFFFFC107),
             colorText: Colors.black,
             duration: const Duration(seconds: 2),
@@ -651,10 +645,9 @@ class BranchManagementController extends GetxController {
       }
     } catch (e) {
       print('❌ Error deactivating branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to deactivate branch: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
@@ -702,10 +695,9 @@ class BranchManagementController extends GetxController {
       if (response.statusCode == 200 || response.statusCode == 204) {
         print('✅ Branch deleted successfully (hard delete)');
 
-        Get.snackbar(
+        appSnackbar(
           'Success',
           'Branch permanently deleted',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
           duration: const Duration(seconds: 2),
@@ -718,10 +710,9 @@ class BranchManagementController extends GetxController {
       }
     } catch (e) {
       print('❌ Error deleting branch: $e');
-      Get.snackbar(
+      appSnackbar(
         'Error',
         'Failed to delete branch: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         duration: const Duration(seconds: 3),
