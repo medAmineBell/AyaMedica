@@ -97,7 +97,7 @@ class ProfileHeader extends StatelessWidget {
                 // Show popup to fill assessment data
                 appSnackbar(
                   'Assessment Incomplete',
-                  'Please fill in the required assessment fields (Chief complaint, Suspected diseases, Recommendations)',
+                  'Please fill in the required assessment fields (Chief complaint is required. Recommendations required when Suspected diseases are filled)',
                   backgroundColor: const Color(0xFFFEF3C7),
                   colorText: const Color(0xFF92400E),
                   duration: const Duration(seconds: 3),

@@ -54,6 +54,7 @@ class _AssessmentViewState extends State<AssessmentView> {
               onChanged: controller.onComplaintSearchChanged,
               onSelected: controller.addComplaint,
               displayKey: 'name_en',
+              onFreeTextSubmit: controller.addFreeTextComplaint,
             ),
             const SizedBox(height: 8),
             Obx(() => _buildTagsWrap(
@@ -77,8 +78,8 @@ class _AssessmentViewState extends State<AssessmentView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionLabel("Suspected disease(s)",
-                          required: true),
+                      _buildSectionLabel("Suspected disease(s)"),
+                      const SizedBox(height: 8),
                       _buildSearchableField(
                         textController: controller.diseaseSearchController,
                         results: controller.suspectedDiseases,
@@ -101,7 +102,9 @@ class _AssessmentViewState extends State<AssessmentView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionLabel("Recommendations(s)", required: true),
+                      Obx(() => _buildSectionLabel("Recommendations(s)",
+                          required: controller.selectedDiseases.isNotEmpty)),
+                      const SizedBox(height: 8),
                       _buildSearchableField(
                         textController:
                             controller.recommendationSearchController,
@@ -132,12 +135,15 @@ class _AssessmentViewState extends State<AssessmentView> {
   // Tracks which vital fields have been blurred for validation
   final Set<String> _blurredVitalFields = {};
 
-  String? _validateVitalRange(String value, double min, double max, String label) {
+  String? _validateVitalRange(
+      String value, double min, double max, String label) {
     if (value.isEmpty) return null;
     final parsed = double.tryParse(value);
     if (parsed == null) return 'Invalid $label';
-    if (parsed < min) return '$label must be at least ${min.toStringAsFixed(min == min.roundToDouble() ? 0 : 1)}';
-    if (parsed > max) return '$label must be at most ${max.toStringAsFixed(max == max.roundToDouble() ? 0 : 1)}';
+    if (parsed < min)
+      return '$label must be at least ${min.toStringAsFixed(min == min.roundToDouble() ? 0 : 1)}';
+    if (parsed > max)
+      return '$label must be at most ${max.toStringAsFixed(max == max.roundToDouble() ? 0 : 1)}';
     return null;
   }
 
@@ -161,12 +167,17 @@ class _AssessmentViewState extends State<AssessmentView> {
           'assets/svg/blood_pressure_02.svg',
           controller.systolicController,
           controller.diastolicController,
-          min1: 50, max1: 250, validationKey1: 'systolic', label1: 'Systolic',
-          min2: 20, max2: 200, validationKey2: 'diastolic', label2: 'Diastolic',
+          min1: 50,
+          max1: 250,
+          validationKey1: 'systolic',
+          label1: 'Systolic',
+          min2: 20,
+          max2: 200,
+          validationKey2: 'diastolic',
+          label2: 'Diastolic',
         ),
         const SizedBox(width: 8),
-        _buildSingleVitalCard(
-            'Oxygen Saturation', 'assets/svg/Heading.svg',
+        _buildSingleVitalCard('Oxygen Saturation', 'assets/svg/Heading.svg',
             controller.oxygenSaturationController,
             suffix: '%', min: 50, max: 100, validationKey: 'oxygenSaturation'),
         const SizedBox(width: 8),
@@ -179,8 +190,14 @@ class _AssessmentViewState extends State<AssessmentView> {
           'assets/svg/weight.svg',
           controller.heightController,
           controller.weightController,
-          min1: 30, max1: 250, validationKey1: 'height', label1: 'Height',
-          min2: 1, max2: 300, validationKey2: 'weight', label2: 'Weight',
+          min1: 30,
+          max1: 250,
+          validationKey1: 'height',
+          label1: 'Height',
+          min2: 1,
+          max2: 300,
+          validationKey2: 'weight',
+          label2: 'Weight',
         ),
       ],
     );
@@ -206,9 +223,11 @@ class _AssessmentViewState extends State<AssessmentView> {
         ),
         child: Column(
           children: [
-            SvgPicture.asset(svgPath, width: 24, height: 24,
-                colorFilter: const ColorFilter.mode(
-                    Color(0xFF1339FF), BlendMode.srcIn)),
+            SvgPicture.asset(svgPath,
+                width: 24,
+                height: 24,
+                colorFilter:
+                    const ColorFilter.mode(Color(0xFF1339FF), BlendMode.srcIn)),
             const SizedBox(height: 4),
             Text(title,
                 maxLines: 1,
@@ -220,7 +239,11 @@ class _AssessmentViewState extends State<AssessmentView> {
                     fontWeight: FontWeight.w700)),
             const Spacer(),
             _buildVitalInput(textController,
-                suffix: suffix, min: min, max: max, validationKey: validationKey, label: title),
+                suffix: suffix,
+                min: min,
+                max: max,
+                validationKey: validationKey,
+                label: title),
           ],
         ),
       ),
@@ -252,9 +275,11 @@ class _AssessmentViewState extends State<AssessmentView> {
         ),
         child: Column(
           children: [
-            SvgPicture.asset(svgPath, width: 24, height: 24,
-                colorFilter: const ColorFilter.mode(
-                    Color(0xFF1339FF), BlendMode.srcIn)),
+            SvgPicture.asset(svgPath,
+                width: 24,
+                height: 24,
+                colorFilter:
+                    const ColorFilter.mode(Color(0xFF1339FF), BlendMode.srcIn)),
             const SizedBox(height: 4),
             Text(title,
                 maxLines: 1,
@@ -267,11 +292,19 @@ class _AssessmentViewState extends State<AssessmentView> {
             const Spacer(),
             Row(
               children: [
-                Expanded(child: _buildVitalInput(controller1,
-                    min: min1, max: max1, validationKey: validationKey1, label: label1)),
+                Expanded(
+                    child: _buildVitalInput(controller1,
+                        min: min1,
+                        max: max1,
+                        validationKey: validationKey1,
+                        label: label1)),
                 const SizedBox(width: 4),
-                Expanded(child: _buildVitalInput(controller2,
-                    min: min2, max: max2, validationKey: validationKey2, label: label2)),
+                Expanded(
+                    child: _buildVitalInput(controller2,
+                        min: min2,
+                        max: max2,
+                        validationKey: validationKey2,
+                        label: label2)),
               ],
             ),
           ],
@@ -281,14 +314,19 @@ class _AssessmentViewState extends State<AssessmentView> {
   }
 
   Widget _buildVitalInput(TextEditingController textController,
-      {String? suffix, double? min, double? max, String? validationKey, String? label}) {
+      {String? suffix,
+      double? min,
+      double? max,
+      String? validationKey,
+      String? label}) {
     final hasValidation = min != null || max != null;
     final key = validationKey ?? label ?? '';
     final isBlurred = _blurredVitalFields.contains(key);
 
     String? errorText;
     if (hasValidation && isBlurred) {
-      errorText = _validateVitalRange(textController.text, min ?? 0, max ?? double.infinity, label ?? key);
+      errorText = _validateVitalRange(
+          textController.text, min ?? 0, max ?? double.infinity, label ?? key);
     }
     final isError = errorText != null;
 
@@ -322,33 +360,43 @@ class _AssessmentViewState extends State<AssessmentView> {
               }
             },
             style: TextStyle(
-                color: isError ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
+                color:
+                    isError ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
                 fontSize: 12,
                 fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               suffixText: suffix,
               suffixStyle: const TextStyle(
-                  color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
+                  color: Color(0xFF6B7280),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500),
               filled: true,
-              fillColor: isError ? const Color(0xFFFEF2F2) : const Color(0xFFFBFCFD),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              fillColor:
+                  isError ? const Color(0xFFFEF2F2) : const Color(0xFFFBFCFD),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
               isDense: true,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(width: 0.5, color: Color(0xFFE4E9ED)),
+                borderSide:
+                    const BorderSide(width: 0.5, color: Color(0xFFE4E9ED)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: BorderSide(
                   width: isError ? 1 : 0.5,
-                  color: isError ? const Color(0xFFDC2626) : const Color(0xFFE4E9ED),
+                  color: isError
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFE4E9ED),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: BorderSide(
                   width: 1,
-                  color: isError ? const Color(0xFFDC2626) : const Color(0xFF1339FF),
+                  color: isError
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF1339FF),
                 ),
               ),
             ),
@@ -378,6 +426,7 @@ class _AssessmentViewState extends State<AssessmentView> {
     required void Function(String) onChanged,
     required void Function(Map<String, dynamic>) onSelected,
     required String displayKey,
+    void Function(String)? onFreeTextSubmit,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,11 +447,18 @@ class _AssessmentViewState extends State<AssessmentView> {
           child: TextField(
             controller: textController,
             onChanged: onChanged,
+            onSubmitted: onFreeTextSubmit != null
+                ? (value) {
+                    if (value.trim().isNotEmpty) {
+                      onFreeTextSubmit(value);
+                    }
+                  }
+                : null,
             style: const TextStyle(fontSize: 14),
             decoration: InputDecoration(
               prefixIcon:
                   const Icon(Icons.search, size: 20, color: Color(0xFF9CA3AF)),
-              hintText: "search",
+              hintText: onFreeTextSubmit != null ? "search or type and press Enter" : "search",
               hintStyle:
                   const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
               filled: true,

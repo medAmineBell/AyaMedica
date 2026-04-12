@@ -191,7 +191,7 @@ class _EditAppointmentDialogState extends State<EditAppointmentDialog> {
           time.minute,
         );
         if (combined != widget.appointment.appointmentDate) {
-          body['appointmentDate'] = combined.toUtc().toIso8601String();
+          body['appointmentDate'] = combined.toIso8601String();
         }
       }
 
@@ -209,7 +209,7 @@ class _EditAppointmentDialogState extends State<EditAppointmentDialog> {
         );
         if (combined != widget.appointment.vaccineTypeLastConfirmationDate) {
           body['vaccineLastConfirmationDate'] =
-              combined.toUtc().toIso8601String();
+              combined.toIso8601String();
         }
       }
 

@@ -225,7 +225,13 @@ class AssessmentController extends GetxController {
   // --- PATCH Medical Record ---
 
   Future<bool> saveMedicalRecord() async {
-    if (appointmentId == null || medicalRecordId == null) return false;
+    print('[AssessmentController] saveMedicalRecord: appointmentId=$appointmentId, medicalRecordId=$medicalRecordId');
+    if (appointmentId == null || medicalRecordId == null) {
+      print('[AssessmentController] ERROR: Cannot save — appointmentId=$appointmentId, medicalRecordId=$medicalRecordId');
+      appSnackbar('Error', 'Medical record not found. Please try again.',
+          backgroundColor: Colors.red.shade100);
+      return false;
+    }
     try {
       isSaving.value = true;
       final accessToken = _storageService.getAccessToken();
@@ -471,6 +477,22 @@ class AssessmentController extends GetxController {
     complaints.clear();
   }
 
+  void addFreeTextComplaint(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    final alreadySelected =
+        selectedComplaints.any((c) => c['complaint'] == trimmed);
+    if (!alreadySelected) {
+      selectedComplaints.add({
+        'complaint': trimmed,
+        'name_en': trimmed,
+        'name_ar': trimmed,
+      });
+    }
+    complaintSearchController.clear();
+    complaints.clear();
+  }
+
   void removeComplaint(Map<String, dynamic> item) {
     selectedComplaints.removeWhere((c) => c['complaint'] == item['complaint']);
   }
@@ -654,6 +676,5 @@ class AssessmentController extends GetxController {
 
   bool get isAssessmentFilled =>
       selectedComplaints.isNotEmpty &&
-      selectedDiseases.isNotEmpty &&
-      selectedRecommendations.isNotEmpty;
+      (selectedDiseases.isEmpty || selectedRecommendations.isNotEmpty);
 }

@@ -368,7 +368,6 @@ class CreateAppointmentController extends GetxController {
       final date = selectedDate.value!;
       final time = selectedTime.value!;
       final combinedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute)
-          .toUtc()
           .toIso8601String();
 
       final apiType = _mapAppointmentTypeToApi(selectedType.value);
@@ -440,8 +439,8 @@ class CreateAppointmentController extends GetxController {
         final lcd = lastConfirmationDate.value!;
         final lct = lastConfirmationTime.value;
         final combinedLastConfirmation = lct != null
-            ? DateTime(lcd.year, lcd.month, lcd.day, lct.hour, lct.minute).toUtc().toIso8601String()
-            : DateTime(lcd.year, lcd.month, lcd.day).toUtc().toIso8601String();
+            ? DateTime(lcd.year, lcd.month, lcd.day, lct.hour, lct.minute).toIso8601String()
+            : DateTime(lcd.year, lcd.month, lcd.day).toIso8601String();
         body['vaccineLastConfirmationDate'] = combinedLastConfirmation;
       }
 
@@ -684,7 +683,7 @@ class CreateAppointmentController extends GetxController {
       final body = {
         'country': country,
         'branchId': branchId,
-        'appointmentDate': DateTime.now().toUtc().toIso8601String(),
+        'appointmentDate': DateTime.now().toIso8601String(),
         'appointmentType': 'walkin',
         'gradeName': selectedGrade.value ?? '',
         'gradeId': selectedGrade.value ?? '',
@@ -765,7 +764,19 @@ class CreateAppointmentController extends GetxController {
       final responseData = jsonDecode(response.body);
       final data = responseData['data'] as Map<String, dynamic>?;
       final appointmentId = data?['appointmentId'] as String? ?? '';
-      final medicalRecordId = data?['medicalRecordId'] as String?;
+      var medicalRecordId = data?['medicalRecordId'] as String?;
+
+      // Fallback: if create response didn't include medicalRecordId,
+      // try to get it from the refreshed appointment history list
+      if (medicalRecordId == null && Get.isRegistered<AppointmentHistoryController>()) {
+        final historyController = Get.find<AppointmentHistoryController>();
+        final match = historyController.allAppointments
+            .firstWhereOrNull((a) => a.id == appointmentId);
+        if (match != null) {
+          medicalRecordId = match.medicalRecordId;
+        }
+      }
+      print('[CreateAppointment] Walk-in created: appointmentId=$appointmentId, medicalRecordId=$medicalRecordId');
 
       final appointment = AppointmentHistory(
         id: appointmentId,

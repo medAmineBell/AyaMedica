@@ -30,14 +30,20 @@ class _AppointmentStudentProfileScreenState
   @override
   void initState() {
     super.initState();
-    assessmentController = Get.put(AssessmentController());
+    if (Get.isRegistered<AssessmentController>()) {
+      assessmentController = Get.find<AssessmentController>();
+    } else {
+      assessmentController = Get.put(AssessmentController());
+    }
     assessmentController.init(
         widget.appointment.id, widget.appointment.medicalRecordId);
   }
 
   @override
   void dispose() {
-    Get.delete<AssessmentController>();
+    if (Get.isRegistered<AssessmentController>()) {
+      Get.delete<AssessmentController>();
+    }
     super.dispose();
   }
 

@@ -36,6 +36,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
   }
 
   Future<void> _fetchData() async {
+    print('[CheckedOutWalkIn] appointmentId=${widget.appointment.id}, medicalRecordId=${widget.appointment.medicalRecordId}');
     if (widget.appointment.medicalRecordId == null) {
       setState(() => _isLoading = false);
       return;
@@ -148,21 +149,23 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
     final clinicAddress = _studentData?['branch']?['name'] as String? ?? '';
     final doctorAid = record['doctor_aid'] as String? ?? '';
 
-    // Vitals
-    final heartRate = record['heart_rate'];
-    final bloodPressure = record['blood_pressure'];
-    final temperature = record['temperature'];
-    final respiratoryRate = record['respiratory_rate'];
-    final bloodGlucose = record['blood_glucose'];
-    final oxygenSaturation = record['oxygen_saturation'];
-    final height = record['height'];
-    final weight = record['weight'];
+    // Vitals (nested under 'signs')
+    final signs = record['signs'] as Map<String, dynamic>? ?? {};
+    final heartRate = signs['heart_rate'];
+    final bloodPressure = signs['blood_pressure'];
+    final temperature = signs['temperature'];
+    final respiratoryRate = signs['respiratory_rate'];
+    final bloodGlucose = signs['blood_glucose'];
+    final oxygenSaturation = signs['oxygen_saturation'];
+    final height = signs['height'];
+    final weight = signs['weight'];
 
-    // Assessment
-    final complaints = record['chief_complaints'] as List? ?? [];
-    final examination = record['examination_details'] as String?;
-    final diseases = record['suspected_diseases'] as List? ?? [];
-    final recommendations = record['recommendation'] as List? ?? [];
+    // Assessment (nested under 'assessment')
+    final assessment = record['assessment'] as Map<String, dynamic>? ?? {};
+    final complaints = assessment['chief_complaints'] as List? ?? [];
+    final examination = assessment['examination_details'] as String?;
+    final diseases = assessment['suspected_diseases'] as List? ?? [];
+    final recommendations = assessment['recommendation'] as List? ?? [];
     final note = record['note'] as String?;
 
     // Drugs
@@ -187,11 +190,16 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: const Color(0xFFC4A84E),
-                child: Text(initials,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
+                backgroundImage: student?['photo'] != null
+                    ? NetworkImage('${AppConfig.newBackendUrl}${student!['photo']}')
+                    : null,
+                child: student?['photo'] == null
+                    ? Text(initials,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700))
+                    : null,
               ),
               const SizedBox(width: 12),
               Column(
@@ -416,6 +424,9 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
     final foodRelation = drug['drug_relation_to_food'];
     final timing =
         foodRelation is List ? foodRelation.join(', ') : foodRelation?.toString() ?? '-';
+    final dose = drug['dose']?.toString() ?? '-';
+    final doseType = drug['dose_type']?.toString() ?? '';
+    final drugNote = drug['drug_note'] as String?;
     final days = drug['drug_days']?.toString() ?? '-';
     final hours = drug['drug_hours']?.toString() ?? '-';
     final startDate = drug['drug_start_date']?.toString() ?? '-';
@@ -454,8 +465,8 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('x2',
-                      style: TextStyle(
+                  Text('$dose $doseType',
+                      style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF595A5B))),
@@ -496,6 +507,16 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
               ],
             ),
           ),
+          if (drugNote != null && drugNote.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(drugNote,
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF747677),
+                    fontStyle: FontStyle.italic),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis),
+          ],
         ],
       ),
     );
