@@ -59,34 +59,18 @@ class StudentsListScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF22C55E), width: 1.5),
+          color: const Color(0xFF1339FF),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 18),
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEF4444),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            const Icon(Icons.archive_outlined,
+                color: Color(0xFFFFFFFF), size: 18),
             const SizedBox(width: 8),
             const Text(
               'Favorites drugs list',
               style: TextStyle(
-                color: Color(0xFF22C55E),
+                color: Color(0xFFFFFFFF),
                 fontSize: 13,
                 fontFamily: 'IBM Plex Sans Arabic',
                 fontWeight: FontWeight.w600,

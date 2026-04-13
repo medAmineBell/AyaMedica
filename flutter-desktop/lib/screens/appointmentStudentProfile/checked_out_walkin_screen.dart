@@ -36,7 +36,8 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
   }
 
   Future<void> _fetchData() async {
-    print('[CheckedOutWalkIn] appointmentId=${widget.appointment.id}, medicalRecordId=${widget.appointment.medicalRecordId}');
+    print(
+        '[CheckedOutWalkIn] appointmentId=${widget.appointment.id}, medicalRecordId=${widget.appointment.medicalRecordId}');
     if (widget.appointment.medicalRecordId == null) {
       setState(() => _isLoading = false);
       return;
@@ -109,8 +110,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _recordData == null
-                      ? const Center(
-                          child: Text('No record data available'))
+                      ? const Center(child: Text('No record data available'))
                       : SingleChildScrollView(
                           child: _buildContent(),
                         ),
@@ -191,7 +191,8 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
                 radius: 24,
                 backgroundColor: const Color(0xFFC4A84E),
                 backgroundImage: student?['photo'] != null
-                    ? NetworkImage('${AppConfig.newBackendUrl}${student!['photo']}')
+                    ? NetworkImage(
+                        '${AppConfig.newBackendUrl}${student!['photo']}')
                     : null,
                 child: student?['photo'] == null
                     ? Text(initials,
@@ -215,16 +216,16 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
               ),
               const Spacer(),
               Text(formattedTime,
-                  style: const TextStyle(
-                      fontSize: 13, color: Color(0xFF6B7280))),
+                  style:
+                      const TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
             ],
           ),
           const SizedBox(height: 24),
 
           // Specialty
           Text(specialty,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
 
           // Created by
@@ -237,20 +238,17 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
             child: Row(
               children: [
                 const Text('Created by',
-                    style: TextStyle(
-                        fontSize: 13, color: Color(0xFF6B7280))),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                 const SizedBox(width: 16),
                 const Icon(Icons.local_hospital,
                     size: 16, color: Color(0xFF2563EB)),
                 const SizedBox(width: 6),
-                Text('$clinicAddress',
-                    style: const TextStyle(fontSize: 13)),
+                Text('$clinicAddress', style: const TextStyle(fontSize: 13)),
                 const SizedBox(width: 16),
                 const Icon(Icons.medical_services,
                     size: 16, color: Color(0xFF6B7280)),
                 const SizedBox(width: 6),
-                Text(doctorAid,
-                    style: const TextStyle(fontSize: 13)),
+                Text(doctorAid, style: const TextStyle(fontSize: 13)),
               ],
             ),
           ),
@@ -264,8 +262,8 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
           // Chief complaint section
           _buildSectionTitle('Chief complaint'),
           const SizedBox(height: 8),
-          _buildInfoRow(
-              'Chief complaint', complaints.isNotEmpty ? complaints.join(', ') : '-'),
+          _buildInfoRow('Chief complaint',
+              complaints.isNotEmpty ? complaints.join(', ') : '-'),
           _buildInfoRow('Examination details', examination ?? '-'),
 
           const SizedBox(height: 24),
@@ -273,7 +271,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
           // Assessment section
           _buildSectionTitle('Assessment'),
           const SizedBox(height: 8),
-          _buildInfoRow('Suspected disease(s) & Recommendations(s)',
+          _buildInfoRow('Suspected disease(s)',
               diseases.isNotEmpty ? diseases.join(', ') : '-'),
           _buildInfoRow('Recommendations(s)',
               recommendations.isNotEmpty ? recommendations.join(', ') : '-'),
@@ -319,13 +317,41 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
     dynamic weight,
   ) {
     final vitals = [
-      {'title': 'Heart Rate', 'value': heartRate?.toString() ?? '-', 'svg': 'assets/svg/heart_rate_01.svg'},
-      {'title': 'Blood Pressure', 'value': bloodPressure?.toString() ?? '-', 'svg': 'assets/svg/blood_pressure_02.svg'},
-      {'title': 'Temperature', 'value': temperature?.toString() ?? '-', 'svg': 'assets/svg/blood_pressure_01.svg'},
-      {'title': 'Respiratory Rate', 'value': respiratoryRate?.toString() ?? '-', 'svg': 'assets/svg/lungs.svg'},
-      {'title': 'Blood Glucose', 'value': bloodGlucose?.toString() ?? '-', 'svg': 'assets/svg/blood_glucose.svg'},
-      {'title': 'Oxygen Saturation', 'value': oxygenSaturation != null ? '${oxygenSaturation}%' : '-', 'svg': 'assets/svg/Heading.svg'},
-      {'title': 'Height & weight', 'value': '${height ?? '-'} / ${weight ?? '-'}', 'svg': 'assets/svg/weight.svg'},
+      {
+        'title': 'Heart Rate',
+        'value': heartRate?.toString() ?? '-',
+        'svg': 'assets/svg/heart_rate_01.svg'
+      },
+      {
+        'title': 'Blood Pressure',
+        'value': bloodPressure?.toString() ?? '-',
+        'svg': 'assets/svg/blood_pressure_02.svg'
+      },
+      {
+        'title': 'Temperature',
+        'value': temperature?.toString() ?? '-',
+        'svg': 'assets/svg/blood_pressure_01.svg'
+      },
+      {
+        'title': 'Respiratory Rate',
+        'value': respiratoryRate?.toString() ?? '-',
+        'svg': 'assets/svg/lungs.svg'
+      },
+      {
+        'title': 'Blood Glucose',
+        'value': bloodGlucose?.toString() ?? '-',
+        'svg': 'assets/svg/blood_glucose.svg'
+      },
+      {
+        'title': 'Oxygen Saturation',
+        'value': oxygenSaturation != null ? '${oxygenSaturation}%' : '-',
+        'svg': 'assets/svg/Heading.svg'
+      },
+      {
+        'title': 'Height & weight',
+        'value': '${height ?? '-'} / ${weight ?? '-'}',
+        'svg': 'assets/svg/weight.svg'
+      },
     ];
 
     return Row(
@@ -401,8 +427,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(
-                  fontSize: 14, color: Color(0xFF6B7280))),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
           const SizedBox(width: 24),
           Flexible(
             child: Text(value,
@@ -422,8 +447,9 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
     final ingredient = drug['drug_active_ingredient'] as String? ?? '-';
     final form = drug['drug_administration_form'] as String? ?? 'Oral';
     final foodRelation = drug['drug_relation_to_food'];
-    final timing =
-        foodRelation is List ? foodRelation.join(', ') : foodRelation?.toString() ?? '-';
+    final timing = foodRelation is List
+        ? foodRelation.join(', ')
+        : foodRelation?.toString() ?? '-';
     final dose = drug['dose']?.toString() ?? '-';
     final doseType = drug['dose_type']?.toString() ?? '';
     final drugNote = drug['drug_note'] as String?;
@@ -446,8 +472,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(name,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 8),

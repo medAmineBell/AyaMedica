@@ -172,7 +172,7 @@ class _PlansViewState extends State<PlansView> {
         Expanded(
           child: _buildDrugSearchField(
             'Active ingredient',
-            true,
+            false,
             _activeIngredientController,
             'ingredient',
           ),
@@ -181,7 +181,7 @@ class _PlansViewState extends State<PlansView> {
         Expanded(
           child: _buildDrugSearchField(
             'Drug name',
-            true,
+            false,
             _drugNameController,
             'drugName',
           ),
@@ -339,7 +339,7 @@ class _PlansViewState extends State<PlansView> {
       children: [
         Expanded(
           child: _buildDropdownField(
-              'Relation to food', true, _relationToFood, _relationToFoodOptions,
+              'Relation to food', false, _relationToFood, _relationToFoodOptions,
               (value) {
             setState(() {
               _relationToFood = value;
@@ -351,7 +351,7 @@ class _PlansViewState extends State<PlansView> {
         ),
         const SizedBox(width: 24),
         Expanded(
-          child: _buildDropdownField('Administration form', true,
+          child: _buildDropdownField('Administration form', false,
               _administrationForm, _administrationFormOptions, (value) {
             setState(() => _administrationForm = value);
           }),
@@ -453,16 +453,16 @@ class _PlansViewState extends State<PlansView> {
       children: [
         Expanded(
             flex: 2,
-            child: _buildDateField('Starting date', true, _selectedDate,
+            child: _buildDateField('Starting date', false, _selectedDate,
                 (d) => setState(() => _selectedDate = d))),
         const SizedBox(width: 24),
         Expanded(
             child: _buildNumberField(
-                'Number of day', true, _numberOfDaysController)),
+                'Number of day', false, _numberOfDaysController)),
         const SizedBox(width: 24),
         Expanded(
             child: _buildNumberField(
-                'Every (hours)', true, _everyHoursController)),
+                'Every (hours)', false, _everyHoursController)),
       ],
     );
   }

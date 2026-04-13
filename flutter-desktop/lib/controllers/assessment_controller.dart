@@ -277,9 +277,15 @@ class AssessmentController extends GetxController {
 
       // Assessment fields
       request.fields['chief_complaints'] = jsonEncode(complaintValues);
-      request.fields['examination_details'] = examinationController.text;
-      request.fields['suspected_diseases'] = jsonEncode(diseaseKeys);
-      request.fields['recommendation'] = jsonEncode(recommendationNames);
+      if (examinationController.text.isNotEmpty) {
+        request.fields['examination_details'] = examinationController.text;
+      }
+      if (diseaseKeys.isNotEmpty) {
+        request.fields['suspected_diseases'] = jsonEncode(diseaseKeys);
+      }
+      if (recommendationNames.isNotEmpty) {
+        request.fields['recommendation'] = jsonEncode(recommendationNames);
+      }
 
       if (assessmentNoteController.text.isNotEmpty) {
         request.fields['assessment_note'] = assessmentNoteController.text;
