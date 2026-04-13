@@ -10,11 +10,7 @@ class GardSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure controller is initialized
-    Get.put(ResourcesController());
-
     return GetBuilder<ResourcesController>(
-      init: ResourcesController(),
       builder: (controller) {
         return Container(
           color: const Color(0xFFF8FAFC),

@@ -63,12 +63,8 @@ class _GenerateReportDialogState extends State<GenerateReportDialog> {
   void initState() {
     super.initState();
 
-    // Initialize ResourcesController
-    if (Get.isRegistered<ResourcesController>()) {
-      resourcesController = Get.find<ResourcesController>();
-    } else {
-      resourcesController = Get.put(ResourcesController());
-    }
+    // Get ResourcesController (registered globally in AppBinding)
+    resourcesController = Get.find<ResourcesController>();
 
     _dateFrom = DateTime(2025, 5, 21);
     _dateTo = DateTime(2025, 5, 21);

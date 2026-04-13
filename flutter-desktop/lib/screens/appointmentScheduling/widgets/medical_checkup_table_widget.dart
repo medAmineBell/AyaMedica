@@ -143,7 +143,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
             backgroundColor: _classColor(appointment.className),
             child: Text(
               appointment.className.isNotEmpty
-                  ? appointment.className.substring(0, 2).toUpperCase()
+                  ? appointment.className.toUpperCase()
                   : 'CL',
               style: const TextStyle(
                 color: Colors.white,
@@ -174,7 +174,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
               ],
             ),
           ),
-          if (appointment.status != AppointmentStatus.done)
+          if (appointment.status != AppointmentStatus.done && appointment.status != AppointmentStatus.cancelled)
             ElevatedButton(
               onPressed: () => _completeAppointment(),
               style: ElevatedButton.styleFrom(
@@ -418,7 +418,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
       final key = '${appointment.id}_${student.id}_$category';
       final status = controller.getHealthStatus(key);
 
-      final isDone = appointment.status == AppointmentStatus.done;
+      final isDone = appointment.status == AppointmentStatus.done || appointment.status == AppointmentStatus.cancelled;
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),

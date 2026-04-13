@@ -5,6 +5,7 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/models/chronic_disease.dart';
 import 'package:flutter_getx_app/models/create_student_request.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:flutter_getx_app/screens/students/widgets/student_details_sheet_widget.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +15,7 @@ import 'package:flutter_getx_app/utils/app_snackbar.dart';
 class StudentController extends GetxController {
   // Services
   final StorageService _storageService = Get.find();
+  final ResourcesController _resourcesController = Get.find<ResourcesController>();
 
   // Reactive variables
   final RxList<Student> _allStudents = <Student>[].obs;
@@ -49,7 +51,11 @@ class StudentController extends GetxController {
   void onInit() {
     super.onInit();
     _loadBranchId();
-    _loadClassesFromApi();
+    _updateAvailableLists();
+    // Update available grades/classes when ResourcesController loads data
+    ever(_resourcesController.classes, (_) => _updateAvailableLists());
+    // Update available classes when grade selection changes
+    ever(selectedGrade, (_) => _updateAvailableLists());
     loadStudents();
   }
 
@@ -60,55 +66,20 @@ class StudentController extends GetxController {
     super.onClose();
   }
 
-  // Load branch ID and grades from storage
+  // Load branch ID from storage
   void _loadBranchId() {
     final branchData = _storageService.getSelectedBranchData();
     if (branchData != null) {
       selectedBranchId.value = branchData['id'] ?? '';
-      // Load grades from branch data
-      if (branchData['grades'] is List && (branchData['grades'] as List).isNotEmpty) {
-        availableGrades.assignAll(
-          (branchData['grades'] as List).map((g) => g.toString()).toList(),
-        );
-      }
     }
   }
 
-  // Load classes from API
-  Future<void> _loadClassesFromApi() async {
-    if (selectedBranchId.value.isEmpty) return;
-    try {
-      final accessToken = await _storageService.getAccessToken();
-      if (accessToken == null) return;
-
-      final url = Uri.parse(
-        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=${selectedBranchId.value}&page=1&limit=100',
-      );
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      });
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['success'] == true) {
-          final students = jsonData['data']['students'] as List;
-          final classNames = <String>{};
-          for (final s in students) {
-            final classes = s['classes'] as List? ?? [];
-            for (final c in classes) {
-              final name = c['name'] as String?;
-              if (name != null && name.isNotEmpty) {
-                classNames.add(name);
-              }
-            }
-          }
-          availableClasses.assignAll(classNames.toList()..sort());
-        }
-      }
-    } catch (e) {
-      print('❌ Error loading classes: $e');
-    }
+  // Update available grades and classes from ResourcesController
+  void _updateAvailableLists() {
+    availableGrades.assignAll(_resourcesController.availableGrades);
+    availableClasses.assignAll(
+      _resourcesController.getClassNamesForGrade(selectedGrade.value),
+    );
   }
 
   // Method to add defective records

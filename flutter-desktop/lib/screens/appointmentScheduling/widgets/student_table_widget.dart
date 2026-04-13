@@ -124,7 +124,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
               ],
             ),
           ),
-          if (appointment.status != AppointmentStatus.done)
+          if (appointment.status != AppointmentStatus.done && appointment.status != AppointmentStatus.cancelled)
             ElevatedButton(
               onPressed: () => _showCompleteAppointmentDialog(),
               child: const Text('Complete Appointment'),
@@ -340,7 +340,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
       ),
       children: [
         _buildHeaderCell(
-          child: appointment.status == AppointmentStatus.done
+          child: appointment.status == AppointmentStatus.done || appointment.status == AppointmentStatus.cancelled
               ? const SizedBox()
               : Obx(() {
                   final allSelected = _areAllStudentsSelected();
@@ -403,7 +403,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
       ),
       children: [
         _buildDataCell(
-          child: appointment.status == AppointmentStatus.done
+          child: appointment.status == AppointmentStatus.done || appointment.status == AppointmentStatus.cancelled
               ? const SizedBox()
               : Checkbox(
                   value: isSelected,
@@ -578,7 +578,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
       }
 
       // If fulfilled, no actions available for unactioned students
-      if (appointment.status == AppointmentStatus.done) {
+      if (appointment.status == AppointmentStatus.done || appointment.status == AppointmentStatus.cancelled) {
         return const Text('--', style: TextStyle(color: Color(0xFF9CA3AF)));
       }
 
@@ -693,7 +693,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
             ],
           ),
         ),
-        if (appointment.status != AppointmentStatus.done) ...[
+        if (appointment.status != AppointmentStatus.done && appointment.status != AppointmentStatus.cancelled) ...[
           const SizedBox(width: 6),
           // Undo button
           GestureDetector(

@@ -104,18 +104,18 @@ class StudentTableRow extends StatelessWidget {
             ),
 
             // 6. EMR (flex: 1)
-            Expanded(
-              flex: 1,
-              child: Center(
-                child: Text(
-                  student.emrNumber?.toString() ?? '0',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            // Expanded(
+            //   flex: 1,
+            //   child: Center(
+            //     child: Text(
+            //       student.emrNumber?.toString() ?? '0',
+            //       style: const TextStyle(
+            //         fontSize: 14,
+            //         fontWeight: FontWeight.w600,
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             // 8. Actions (flex: 1)
             Expanded(
@@ -240,5 +240,4 @@ class StudentTableRow extends StatelessWidget {
       ],
     );
   }
-
 }

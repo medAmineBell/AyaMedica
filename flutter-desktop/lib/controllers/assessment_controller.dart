@@ -95,6 +95,10 @@ class AssessmentController extends GetxController {
     return branchData?['country'] as String? ?? 'EG';
   }
 
+  String? get _branchId {
+    return _storageService.getSelectedBranchData()?['id'] as String?;
+  }
+
   Map<String, String> _authHeaders() {
     final accessToken = _storageService.getAccessToken();
     return {
@@ -622,12 +626,37 @@ class AssessmentController extends GetxController {
     });
   }
 
+  // Cached favorites list — loaded once, then searched locally
+  List<Map<String, dynamic>>? _cachedFavorites;
+
   Future<void> fetchDrugs(String search) async {
     try {
       isLoadingDrugs.value = true;
       final accessToken = _storageService.getAccessToken();
       if (accessToken == null) return;
 
+      // Load favorites once on first call
+      if (_cachedFavorites == null) {
+        _cachedFavorites = await _fetchAllFavorites();
+      }
+
+      // If favorites exist, always search within them only
+      if (_cachedFavorites!.isNotEmpty) {
+        if (search.isEmpty) {
+          drugResults.assignAll(_cachedFavorites!);
+        } else {
+          final query = search.toLowerCase();
+          drugResults.assignAll(_cachedFavorites!.where((d) {
+            final name = d['drug_name']?.toString().toLowerCase() ?? '';
+            final ingredients =
+                d['ingredients']?.toString().toLowerCase() ?? '';
+            return name.contains(query) || ingredients.contains(query);
+          }).toList());
+        }
+        return;
+      }
+
+      // Only use lookup drugs API if favorites list is empty
       var urlStr =
           '${AppConfig.newBackendUrl}/api/lookups/drugs?country=$_country';
       if (search.isNotEmpty) {
@@ -653,6 +682,28 @@ class AssessmentController extends GetxController {
     } finally {
       isLoadingDrugs.value = false;
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAllFavorites() async {
+    try {
+      final branchId = _branchId;
+      if (branchId == null) return [];
+      final url =
+          '${AppConfig.newBackendUrl}/api/clinic/medications/favorites'
+          '?branchId=$branchId&country=$_country';
+      final response = await http.get(Uri.parse(url), headers: _authHeaders());
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          return (jsonData['data'] as List)
+              .map((d) => Map<String, dynamic>.from(d))
+              .toList();
+        }
+      }
+    } catch (e) {
+      print('[AssessmentController] Error fetching favorite drugs: $e');
+    }
+    return [];
   }
 
   void addDrug(Map<String, dynamic> drug) {

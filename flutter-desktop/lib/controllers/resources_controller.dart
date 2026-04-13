@@ -53,6 +53,45 @@ class ResourcesController extends GetxController {
     searchQuery.value = query;
   }
 
+  // Derived: unique sorted grades from loaded classes
+  List<String> get availableGrades {
+    final grades = classes
+        .map((c) => c['grade'] as String?)
+        .where((g) => g != null && g.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList()
+      ..sort();
+    return grades;
+  }
+
+  // Get classes filtered by a specific grade
+  List<Map<String, dynamic>> getClassesForGrade(String? grade) {
+    if (grade == null || grade.isEmpty) return List.from(classes);
+    return classes.where((c) => c['grade'] == grade).toList();
+  }
+
+  // Get class names filtered by grade (for dropdown display)
+  List<String> getClassNamesForGrade(String? grade) {
+    return getClassesForGrade(grade)
+        .map((c) => c['name'] as String? ?? '')
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
+
+  // Get full class data by name and grade
+  Map<String, dynamic>? getClassByNameAndGrade(String name, String grade) {
+    try {
+      return classes.firstWhere(
+        (c) => c['name'] == name && c['grade'] == grade,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   // GET /api/classes
   // List classes for a branch
   Future<void> loadClasses() async {

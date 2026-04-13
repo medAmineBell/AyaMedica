@@ -493,7 +493,9 @@ class AppointmentHistoryController extends GetxController {
         selectedStudents: students,
         status: appointment.appointmentStatus.toLowerCase() == 'fulfilled'
             ? AppointmentStatus.done
-            : AppointmentStatus.notDone,
+            : appointment.appointmentStatus.toLowerCase() == 'cancelled'
+                ? AppointmentStatus.cancelled
+                : AppointmentStatus.notDone,
       );
     } catch (e) {
       appSnackbar(

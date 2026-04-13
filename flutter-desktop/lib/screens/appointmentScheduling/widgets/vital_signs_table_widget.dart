@@ -335,7 +335,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               ],
             ),
           ),
-          if (appointment.status != AppointmentStatus.done)
+          if (appointment.status != AppointmentStatus.done && appointment.status != AppointmentStatus.cancelled)
             ElevatedButton(
               onPressed: () => _completeAppointment(),
               style: ElevatedButton.styleFrom(
@@ -652,7 +652,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
   }
 
   TableRow _buildStudentRow(Student student) {
-    final isDone = appointment.status == AppointmentStatus.done;
+    final isDone = appointment.status == AppointmentStatus.done || appointment.status == AppointmentStatus.cancelled;
     final key = _key(student);
     final data = controller.getVitalSignsData(key) ?? VitalSignsData();
 

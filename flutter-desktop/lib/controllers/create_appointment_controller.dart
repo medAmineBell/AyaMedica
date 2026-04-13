@@ -10,6 +10,7 @@ import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/creating_
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/notify_parents_dialog.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -24,6 +25,7 @@ class CreateAppointmentController extends GetxController {
   final AppointmentSchedulingController appointmentController = Get.find();
   final ApiService _apiService = Get.find<ApiService>();
   final StorageService _storageService = Get.find<StorageService>();
+  final ResourcesController _resourcesController = Get.find<ResourcesController>();
 
   final _formKey = GlobalKey<FormState>();
   late final List<Map<String, dynamic>> _appointmentTypes;
@@ -44,12 +46,9 @@ class CreateAppointmentController extends GetxController {
   // "Other" disease text field
   final otherDiseaseText = ''.obs;
   final otherDiseaseController = TextEditingController();
-  final RxList<String> _classes = <String>[].obs;
-  final RxList<String> _grades = <String>[].obs;
   final RxBool isLoadingDiseases = false.obs;
   final RxBool isLoadingVaccinations = false.obs;
   final RxList<Student> _students = <Student>[].obs;
-  final RxBool isLoadingClasses = false.obs;
   final RxBool isLoadingStudents = false.obs;
 
   // Regular appointment fields
@@ -80,8 +79,8 @@ class CreateAppointmentController extends GetxController {
   List<Map<String, dynamic>> get appointmentTypes => _appointmentTypes;
   RxList<String> get doctors => _doctors;
   RxList<String> get diseases => _diseases;
-  RxList<String> get classes => _classes;
-  RxList<String> get grades => _grades;
+  List<String> get classes => _resourcesController.getClassNamesForGrade(selectedGrade.value);
+  List<String> get grades => _resourcesController.availableGrades;
   RxList<String> get vaccinationTypes => _vaccinationTypesList;
   RxList<Student> get students => _students;
 
@@ -95,10 +94,6 @@ class CreateAppointmentController extends GetxController {
     fetchDiseases('');
     fetchVaccinations('');
 
-    // Load grades from branch data
-    _loadGradesFromBranch();
-    // Load classes from API
-    _loadClassesFromApi();
     // Load students from API
     _loadStudentsFromApi().then((_) {
       filteredStudentsForWalkIn.assignAll(_students);
@@ -1006,105 +1001,6 @@ class CreateAppointmentController extends GetxController {
       print('Error loading vaccinations: $e');
     } finally {
       isLoadingVaccinations.value = false;
-    }
-  }
-
-  void _loadGradesFromBranch() {
-    final branchData = _storageService.getSelectedBranchData();
-    if (branchData != null && branchData['grades'] is List && (branchData['grades'] as List).isNotEmpty) {
-      final gradesList = (branchData['grades'] as List)
-          .map((g) => g.toString())
-          .toList();
-      _grades.assignAll(gradesList);
-      print('📚 Loaded ${gradesList.length} grades from branch data');
-    } else {
-      // Fallback: fetch grades from API via students data
-      _loadGradesFromApi();
-    }
-  }
-
-  Future<void> _loadGradesFromApi() async {
-    final branchData = _storageService.getSelectedBranchData();
-    final branchId = branchData?['id'];
-    if (branchId == null) return;
-
-    try {
-      final accessToken = _storageService.getAccessToken();
-      if (accessToken == null) return;
-
-      final url = Uri.parse(
-        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=$branchId&page=1&limit=100',
-      );
-
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      });
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['success'] == true) {
-          final students = jsonData['data']['students'] as List;
-          final gradeNames = <String>{};
-          for (final s in students) {
-            final grade = s['grade'] as String?;
-            if (grade != null && grade.isNotEmpty) {
-              gradeNames.add(grade);
-            }
-          }
-          if (gradeNames.isNotEmpty) {
-            final sorted = gradeNames.toList()..sort();
-            _grades.assignAll(sorted);
-            print('📚 Loaded ${gradeNames.length} grades from students API');
-          }
-        }
-      }
-    } catch (e) {
-      print('❌ Error loading grades from API: $e');
-    }
-  }
-
-  Future<void> _loadClassesFromApi() async {
-    final branchData = _storageService.getSelectedBranchData();
-    final branchId = branchData?['id'];
-    if (branchId == null) return;
-
-    isLoadingClasses.value = true;
-    try {
-      final accessToken = _storageService.getAccessToken();
-      if (accessToken == null) return;
-
-      final url = Uri.parse(
-        '${AppConfig.newBackendUrl}/api/school-admin/students?branchId=$branchId&page=1&limit=100',
-      );
-
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      });
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['success'] == true) {
-          final students = jsonData['data']['students'] as List;
-          final classNames = <String>{};
-          for (final s in students) {
-            final classes = s['classes'] as List? ?? [];
-            for (final c in classes) {
-              final name = c['name'] as String?;
-              if (name != null && name.isNotEmpty) {
-                classNames.add(name);
-              }
-            }
-          }
-          _classes.assignAll(classNames.toList()..sort());
-          print('🏫 Loaded ${classNames.length} classes from API');
-        }
-      }
-    } catch (e) {
-      print('❌ Error loading classes: $e');
-    } finally {
-      isLoadingClasses.value = false;
     }
   }
 

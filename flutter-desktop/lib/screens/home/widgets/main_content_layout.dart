@@ -22,6 +22,7 @@ import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
 import '../../appointmentScheduling/appointment_scheduling_screen.dart';
 
+import '../../students/favorite_drugs_screen.dart';
 import '../../students/student_form_screen.dart';
 import '../../students/students_list_screen.dart';
 import '../../branches/branches_management_screen.dart';
@@ -117,6 +118,8 @@ class MainContentLayout extends GetView<HomeController> {
         return CommunicationScreen();
       case ContentType.appointmentScheduling:
         return const AppointmentHistoryScreen();
+      case ContentType.favoriteDrugs:
+        return const FavoriteDrugsScreen();
       default:
         return DashboardScreen();
     }

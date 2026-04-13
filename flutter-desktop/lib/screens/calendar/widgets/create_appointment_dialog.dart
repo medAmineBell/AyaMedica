@@ -4,6 +4,7 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/appointment_type_card_widget.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/custom_dropdown.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/custom_radio_option_widget.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_getx_app/utils/app_snackbar.dart';
@@ -17,7 +18,8 @@ class CreateAppointmentDialog extends StatefulWidget {
 
 class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
   final CalendarController calendarController = Get.find<CalendarController>();
-  
+  final ResourcesController _resourcesController = Get.find<ResourcesController>();
+
   // Form state
   String _selectedType = 'Checkup';
   String _selectedOption = 'all'; // 'all' or 'selected'
@@ -54,8 +56,8 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
     'Type C',
   ];
 
-  final List<String> _grades = ['G4', 'G5', 'G6', 'G7', 'G8'];
-  final List<String> _classes = ['Lion Class', 'Tiger Class', 'Eagle Class', 'Bear Class'];
+  List<String> get _grades => _resourcesController.availableGrades;
+  List<String> get _classes => _resourcesController.getClassNamesForGrade(_selectedGrade);
   final List<String> _doctors = [
     'Dr. Salem Said Al Ali',
     'Dr. Ahmad Samir',
@@ -436,7 +438,10 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
                                 hint: 'Grade',
                                 value: _selectedGrade,
                                 items: DropdownHelper.createStringItems(_grades),
-                                onChanged: (val) => setState(() => _selectedGrade = val),
+                                onChanged: (val) => setState(() {
+                                  _selectedGrade = val;
+                                  _selectedClass = null;
+                                }),
                               ),
                             ],
                           ),

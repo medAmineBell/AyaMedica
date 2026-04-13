@@ -31,6 +31,7 @@ enum ContentType {
   support,
   feedbackDetails,
   notifications,
+  favoriteDrugs,
 }
 
 class HomeController extends GetxController {
@@ -351,6 +352,14 @@ class HomeController extends GetxController {
     branchToEdit.value = branch;
     isEditingBranch.value = true;
     currentContent.value = ContentType.branchForm;
+  }
+
+  void navigateToFavoriteDrugs() {
+    currentContent.value = ContentType.favoriteDrugs;
+  }
+
+  void exitFavoriteDrugs() {
+    currentContent.value = ContentType.studentsList;
   }
 
   void exitBranchForm() {

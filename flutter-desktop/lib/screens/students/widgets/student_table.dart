@@ -69,7 +69,7 @@ class _StudentTableHeaderRow extends StatelessWidget {
           _HeaderCell('Grade & Class', flex: 2),
           _HeaderCell('First Guardian', flex: 3, hasTooltip: true),
           _HeaderCell('2nd Guardian', flex: 3, hasTooltip: true),
-          _HeaderCell('EMR', flex: 1, hasTooltip: true),
+          //_HeaderCell('EMR', flex: 1, hasTooltip: true),
           _HeaderCell('Actions', flex: 1),
         ],
       ),

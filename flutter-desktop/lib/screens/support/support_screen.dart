@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,8 +23,8 @@ class SupportScreen extends StatefulWidget {
 class _SupportScreenState extends State<SupportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late final WebViewController _privacyWebViewController;
-  late final WebViewController _termsWebViewController;
+  WebViewController? _privacyWebViewController;
+  WebViewController? _termsWebViewController;
 
   // API services
   final ApiService _apiService = Get.find<ApiService>();
@@ -89,38 +91,40 @@ class _SupportScreenState extends State<SupportScreen>
 
     _fetchSocialLinks();
 
-    _privacyWebViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            if (request.url == 'https://ayamedica.com/privacy-policy/' ||
-                request.url == 'https://ayamedica.com/privacy-policy') {
-              return NavigationDecision.navigate;
-            }
-            return NavigationDecision.prevent;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('https://ayamedica.com/privacy-policy/'));
+    if (Platform.isMacOS) {
+      _privacyWebViewController = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onNavigationRequest: (NavigationRequest request) {
+              if (request.url == 'https://ayamedica.com/privacy-policy/' ||
+                  request.url == 'https://ayamedica.com/privacy-policy') {
+                return NavigationDecision.navigate;
+              }
+              return NavigationDecision.prevent;
+            },
+          ),
+        )
+        ..loadRequest(Uri.parse('https://ayamedica.com/privacy-policy/'));
 
-    _termsWebViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            if (request.url ==
-                    'https://ayamedica.com/terms-and-conditions/' ||
-                request.url ==
-                    'https://ayamedica.com/terms-and-conditions') {
-              return NavigationDecision.navigate;
-            }
-            return NavigationDecision.prevent;
-          },
-        ),
-      )
-      ..loadRequest(
-          Uri.parse('https://ayamedica.com/terms-and-conditions/'));
+      _termsWebViewController = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onNavigationRequest: (NavigationRequest request) {
+              if (request.url ==
+                      'https://ayamedica.com/terms-and-conditions/' ||
+                  request.url ==
+                      'https://ayamedica.com/terms-and-conditions') {
+                return NavigationDecision.navigate;
+              }
+              return NavigationDecision.prevent;
+            },
+          ),
+        )
+        ..loadRequest(
+            Uri.parse('https://ayamedica.com/terms-and-conditions/'));
+    }
   }
 
   @override
@@ -692,29 +696,105 @@ class _SupportScreenState extends State<SupportScreen>
   }
 
   Widget _buildPrivacyPoliciesTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+    if (_privacyWebViewController != null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: WebViewWidget(controller: _privacyWebViewController!),
         ),
-        clipBehavior: Clip.hardEdge,
-        child: WebViewWidget(controller: _privacyWebViewController),
-      ),
+      );
+    }
+    return _buildOpenInBrowserFallback(
+      title: 'Privacy Policies',
+      url: 'https://ayamedica.com/privacy-policy/',
     );
   }
 
   Widget _buildTermsOfServiceTab() {
+    if (_termsWebViewController != null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: WebViewWidget(controller: _termsWebViewController!),
+        ),
+      );
+    }
+    return _buildOpenInBrowserFallback(
+      title: 'Terms of Service',
+      url: 'https://ayamedica.com/terms-and-conditions/',
+    );
+  }
+
+  Widget _buildOpenInBrowserFallback({
+    required String title,
+    required String url,
+  }) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Container(
+        padding: const EdgeInsets.all(48),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
-        clipBehavior: Clip.hardEdge,
-        child: WebViewWidget(controller: _termsWebViewController),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.open_in_browser,
+                  size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This content is available in your browser.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri,
+                        mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text('Open in browser'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0066FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

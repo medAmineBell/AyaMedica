@@ -11,6 +11,7 @@ import '../../shared/widgets/custom_text_field.dart';
 import '../../shared/widgets/form_field_widget.dart';
 import '../appointmentScheduling/widgets/custom_dropdown.dart';
 import '../../controllers/home_controller.dart';
+import '../../controllers/resources_controller.dart';
 
 class FeedbackDashboardScreen extends StatelessWidget {
   const FeedbackDashboardScreen({super.key});
@@ -55,6 +56,8 @@ class FeedbackDashboardScreen extends StatelessWidget {
     final TextEditingController subjectController = TextEditingController();
     final TextEditingController explanationController = TextEditingController();
     final controller = Get.find<FeedbackController>();
+
+    final resourcesController = Get.find<ResourcesController>();
 
     String? selectedBranch;
     String? selectedGrade;
@@ -152,9 +155,12 @@ class FeedbackDashboardScreen extends StatelessWidget {
                                 hint: 'Choose grade',
                                 value: selectedGrade,
                                 items: DropdownHelper.createStringItems(
-                                    ['G1', 'G2']),
+                                    resourcesController.availableGrades),
                                 onChanged: (value) =>
-                                    setState(() => selectedGrade = value),
+                                    setState(() {
+                                      selectedGrade = value;
+                                      selectedClass = null;
+                                    }),
                               ),
                             ),
                           ),
@@ -166,7 +172,7 @@ class FeedbackDashboardScreen extends StatelessWidget {
                                 hint: 'Choose class',
                                 value: selectedClass,
                                 items: DropdownHelper.createStringItems(
-                                    ['Class A', 'Class B', 'Class C']),
+                                    resourcesController.getClassNamesForGrade(selectedGrade)),
                                 onChanged: (value) =>
                                     setState(() => selectedClass = value),
                               ),

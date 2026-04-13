@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/calendar_controller.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:get/get.dart';
 
 class FilterDialog extends GetView<CalendarController> {
   const FilterDialog({Key? key}) : super(key: key);
+
+  ResourcesController get _resourcesController => Get.find<ResourcesController>();
 
   @override
   Widget build(BuildContext context) {
@@ -59,13 +62,20 @@ class FilterDialog extends GetView<CalendarController> {
                     const SizedBox(height: 24),
                     _buildFilterSection(
                       'Grade',
-                      ['G4', 'G5', 'G6', 'G7'],
+                      _resourcesController.availableGrades,
                       controller.selectedGrades,
                     ),
                     const SizedBox(height: 24),
                     _buildFilterSection(
                       'Class',
-                      ['Lion Class', 'Tiger Class', 'Eagle Class'],
+                      controller.selectedGrades.isEmpty
+                          ? _resourcesController.classes.map((c) => c['name'] as String? ?? '').where((n) => n.isNotEmpty).toSet().toList()
+                          : _resourcesController.classes
+                              .where((c) => controller.selectedGrades.contains(c['grade']))
+                              .map((c) => c['name'] as String? ?? '')
+                              .where((n) => n.isNotEmpty)
+                              .toSet()
+                              .toList(),
                       controller.selectedClasses,
                     ),
                     const SizedBox(height: 24),
