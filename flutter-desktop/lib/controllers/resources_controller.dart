@@ -55,6 +55,10 @@ class ResourcesController extends GetxController {
 
   // Derived: unique sorted grades from loaded classes
   List<String> get availableGrades {
+    // If classes haven't loaded yet, trigger a reload
+    if (classes.isEmpty && !isLoading.value) {
+      loadClasses();
+    }
     final grades = classes
         .map((c) => c['grade'] as String?)
         .where((g) => g != null && g.isNotEmpty)
@@ -93,8 +97,15 @@ class ResourcesController extends GetxController {
   }
 
   // GET /api/classes
-  // List classes for a branch
+  // Load classes once and cache the result
   Future<void> loadClasses() async {
+    // Skip if already loaded (cached)
+    if (classes.isNotEmpty) return;
+
+    // Retry loading branch ID if it's still empty
+    if (selectedBranchId.value.isEmpty) {
+      loadBranchData();
+    }
     if (selectedBranchId.value.isEmpty) {
       print('Cannot load classes: Missing branch ID');
       return;
@@ -122,9 +133,6 @@ class ResourcesController extends GetxController {
         },
       );
 
-      print('Classes Response Status: ${response.statusCode}');
-      print('Classes Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success'] == true) {
@@ -136,12 +144,6 @@ class ResourcesController extends GetxController {
       }
     } catch (e) {
       print('Error loading classes: $e');
-      appSnackbar(
-        'Error',
-        'Failed to load classes: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     } finally {
       isLoading.value = false;
     }
@@ -198,6 +200,7 @@ class ResourcesController extends GetxController {
           );
 
           // Reload classes list
+          classes.clear();
           await loadClasses();
           return true;
         }
@@ -266,6 +269,7 @@ class ResourcesController extends GetxController {
           );
 
           // Reload classes list
+          classes.clear();
           await loadClasses();
           return true;
         }
@@ -422,6 +426,7 @@ class ResourcesController extends GetxController {
 
   // Refresh classes list
   Future<void> refreshClasses() async {
+    classes.clear();
     await loadClasses();
   }
 }

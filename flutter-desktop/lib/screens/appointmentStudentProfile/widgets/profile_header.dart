@@ -86,14 +86,14 @@ class ProfileHeader extends StatelessWidget {
           final isFilled = assessmentController.isAssessmentFilled;
 
           final showCompleteWalkIn =
-              (isAssessmentTab && isFilled) || isPlansTab;
+              (isAssessmentTab || isPlansTab) && isFilled;
           final buttonText = (isAssessmentTab || isPlansTab)
               ? 'Complete Walk in'
               : 'Assessment';
 
           return ElevatedButton(
             onPressed: () {
-              if (isAssessmentTab && !isFilled) {
+              if ((isAssessmentTab || isPlansTab) && !isFilled) {
                 // Show popup to fill assessment data
                 appSnackbar(
                   'Assessment Incomplete',

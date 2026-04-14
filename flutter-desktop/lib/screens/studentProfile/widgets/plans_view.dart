@@ -642,19 +642,27 @@ class _PlansViewState extends State<PlansView> {
     }
 
     final days = int.tryParse(_numberOfDaysController.text) ?? 0;
-    final startDate = _selectedDate ?? DateTime.now();
-    final endDate = startDate.add(Duration(days: days));
+    final startDate = _selectedDate;
+    final endDate =
+        (startDate != null && days > 0) ? startDate.add(Duration(days: days)) : null;
 
     final drug = <String, dynamic>{
       'drug_name': _drugNameController.text,
       'drug_active_ingredient': _activeIngredientController.text,
-      'drug_relation_to_food': _selectedTags.toList(),
-      'drug_administration_form': _administrationForm ?? 'Oral',
-      'drug_hours': _everyHoursController.text,
-      'drug_days': _numberOfDaysController.text,
-      'drug_start_date': DateFormat('yyyy-MM-dd').format(startDate),
-      'drug_end_date': DateFormat('yyyy-MM-dd').format(endDate),
-      'drug_note': _notesController.text,
+      if (_selectedTags.isNotEmpty)
+        'drug_relation_to_food': _selectedTags.toList(),
+      if (_administrationForm != null && _administrationForm!.isNotEmpty)
+        'drug_administration_form': _administrationForm,
+      if (_everyHoursController.text.isNotEmpty)
+        'drug_hours': _everyHoursController.text,
+      if (_numberOfDaysController.text.isNotEmpty)
+        'drug_days': _numberOfDaysController.text,
+      if (startDate != null)
+        'drug_start_date': DateFormat('yyyy-MM-dd').format(startDate),
+      if (endDate != null)
+        'drug_end_date': DateFormat('yyyy-MM-dd').format(endDate),
+      if (_notesController.text.isNotEmpty)
+        'drug_note': _notesController.text,
     };
 
     _controller.addDrug(drug);
@@ -672,7 +680,7 @@ class _PlansViewState extends State<PlansView> {
     final drug = _controller.addedDrugs[index];
     final name = drug['drug_name'] as String? ?? '{Drug name}';
     final ingredient = drug['drug_active_ingredient'] as String? ?? '';
-    final form = drug['drug_administration_form'] as String? ?? 'Oral';
+    final form = drug['drug_administration_form'] as String? ?? '';
     final foodRelation = drug['drug_relation_to_food'];
     final timing =
         foodRelation is List ? foodRelation.join(', ') : foodRelation?.toString() ?? '';
@@ -716,57 +724,64 @@ class _PlansViewState extends State<PlansView> {
           Row(
             children: [
               _buildPillTag(ingredient.isNotEmpty ? ingredient : 'Active ingredient'),
-              const SizedBox(width: 8),
-              _buildPillTag(form),
+              if (form.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _buildPillTag(form),
+              ],
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('x2',
-                      style: TextStyle(
-                          color: Color(0xFF595A5B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700)),
-                  Text(timing,
-                      style: const TextStyle(
-                          color: Color(0xFF747677), fontSize: 10)),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$days days',
-                      style: const TextStyle(
-                          color: Color(0xFF595A5B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700)),
-                  Text('Every $hours hours',
-                      style: const TextStyle(
-                          color: Color(0xFF747677), fontSize: 10)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDF1F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+          if (timing.isNotEmpty || days.isNotEmpty || hours.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildDateInfo('Starting date', _formatDisplayDate(startDate)),
-                _buildDateInfo('End date', _formatDisplayDate(endDate)),
+                if (timing.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(timing,
+                          style: const TextStyle(
+                              color: Color(0xFF747677), fontSize: 10)),
+                    ],
+                  ),
+                if (days.isNotEmpty || hours.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (days.isNotEmpty)
+                        Text('$days days',
+                            style: const TextStyle(
+                                color: Color(0xFF595A5B),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      if (hours.isNotEmpty)
+                        Text('Every $hours hours',
+                            style: const TextStyle(
+                                color: Color(0xFF747677), fontSize: 10)),
+                    ],
+                  ),
               ],
             ),
-          ),
+          ],
+          if (startDate.isNotEmpty || endDate.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDF1F5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  if (startDate.isNotEmpty)
+                    _buildDateInfo('Starting date', _formatDisplayDate(startDate)),
+                  if (endDate.isNotEmpty)
+                    _buildDateInfo('End date', _formatDisplayDate(endDate)),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

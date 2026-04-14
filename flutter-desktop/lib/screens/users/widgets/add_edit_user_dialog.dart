@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../controllers/home_controller.dart';
 import '../../../controllers/users_controller.dart';
 import '../../../models/user_model.dart';
 
@@ -20,9 +21,12 @@ class _AddEditUserDialogState extends State<AddEditUserDialog> {
   final _phoneController = TextEditingController();
   String? _selectedRole;
   String? _selectedGender;
+  List<String> _selectedRoles = [];
   bool _isLoading = false;
 
   bool get isEditMode => widget.user != null;
+  bool get _canEditRoles =>
+      !Get.find<HomeController>().isRestrictedRole;
 
   @override
   void initState() {
@@ -33,6 +37,8 @@ class _AddEditUserDialogState extends State<AddEditUserDialog> {
       _emailController.text = widget.user!.email;
       _phoneController.text = widget.user!.phone ?? '';
       _selectedGender = widget.user!.gender;
+      _selectedRoles =
+          widget.user!.roles.map((r) => r.role).toSet().toList();
     }
   }
 
@@ -220,6 +226,65 @@ class _AddEditUserDialogState extends State<AddEditUserDialog> {
               });
             },
           ),
+        if (isEditMode && _canEditRoles) ...[
+          const SizedBox(height: 16),
+          _buildRolesSelector(controller),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRolesSelector(UsersController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Roles',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF2D2E2E),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: controller.staffRoles.map((role) {
+            final isSelected = _selectedRoles.contains(role);
+            return FilterChip(
+              label: Text(role),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    _selectedRoles.add(role);
+                  } else {
+                    _selectedRoles.remove(role);
+                  }
+                });
+              },
+              selectedColor: const Color(0xFF1339FF).withValues(alpha: 0.15),
+              checkmarkColor: const Color(0xFF1339FF),
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? const Color(0xFF1339FF)
+                    : const Color(0xFF595A5B),
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xFF1339FF)
+                      : const Color(0xFFE5E7EB),
+                ),
+              ),
+              backgroundColor: Colors.white,
+            );
+          }).toList(),
+        ),
       ],
     );
   }
@@ -376,6 +441,9 @@ class _AddEditUserDialogState extends State<AddEditUserDialog> {
           email: _emailController.text.trim(),
           phone: _phoneController.text.trim(),
           gender: _selectedGender,
+          roles: _canEditRoles && _selectedRoles.isNotEmpty
+              ? _selectedRoles
+              : null,
         );
       } else {
         success = await controller.createUser(

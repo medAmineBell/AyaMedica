@@ -384,12 +384,24 @@ class BranchSelectionController extends GetxController {
 
       print('✅ Branch selected successfully: ${branch['name']}');
 
-      // Delete any existing HomeController so it gets freshly created on HomeScreen
-      if (Get.isRegistered<HomeController>()) {
-        Get.delete<HomeController>(force: true);
+      // Close any open snackbars to prevent overlay barriers on the new screen
+      if (Get.isSnackbarOpen) {
+        Get.closeAllSnackbars();
       }
 
-      Get.offAllNamed(Routes.HOME);
+      // If switching branches from HOME (HOME is the previous route),
+      // refresh the existing controller and pop back to avoid GetX's
+      // route-name-based controller disposal bug with offAllNamed.
+      if (Get.previousRoute == Routes.HOME &&
+          Get.isRegistered<HomeController>()) {
+        try {
+          Get.find<HomeController>().resetForBranchSwitch();
+        } catch (_) {}
+        Get.until((route) => route.settings.name == Routes.HOME);
+      } else {
+        // First-time login flow: no HOME in stack yet
+        Get.offAllNamed(Routes.HOME);
+      }
     } catch (e) {
       isLoading.value = false;
       print('❌ Error selecting branch: $e');

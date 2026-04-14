@@ -74,34 +74,50 @@ class CreateAppointmentController extends GetxController {
   final RxList<Student> filteredStudentsForWalkIn = <Student>[].obs;
   bool _isSelectingStudent = false;
 
+  // Reactive grade/class lists (updated when ResourcesController loads)
+  final RxList<String> _gradesList = <String>[].obs;
+  final RxList<String> _classesList = <String>[].obs;
+
   // Getters for easy access
   GlobalKey<FormState> get formKey => _formKey;
   List<Map<String, dynamic>> get appointmentTypes => _appointmentTypes;
   RxList<String> get doctors => _doctors;
   RxList<String> get diseases => _diseases;
-  List<String> get classes => _resourcesController.getClassNamesForGrade(selectedGrade.value);
-  List<String> get grades => _resourcesController.availableGrades;
+  RxList<String> get classes => _classesList;
+  RxList<String> get grades => _gradesList;
   RxList<String> get vaccinationTypes => _vaccinationTypesList;
   RxList<Student> get students => _students;
+
+  void _updateGradesAndClasses() {
+    _gradesList.assignAll(_resourcesController.availableGrades);
+    _classesList.assignAll(
+      _resourcesController.getClassNamesForGrade(selectedGrade.value),
+    );
+  }
 
   @override
   void onInit() {
     super.onInit();
-    
+
     // Initialize lists
     _appointmentTypes = _buildAppointmentTypes();
     _loadDoctorsFromHome();
     fetchDiseases('');
     fetchVaccinations('');
 
+    // Load grades/classes reactively from ResourcesController
+    _updateGradesAndClasses();
+    ever(_resourcesController.classes, (_) => _updateGradesAndClasses());
+    ever(selectedGrade, (_) => _updateGradesAndClasses());
+
+    // Ensure classes are loaded
+    _resourcesController.loadClasses();
+
     // Load students from API
     _loadStudentsFromApi().then((_) {
       filteredStudentsForWalkIn.assignAll(_students);
     });
 
-    // Listen to grade and class changes for Walk-In filtering
-    ever(selectedGrade, (_) => _filterStudentsForWalkIn());
-    ever(selectedClass, (_) => _filterStudentsForWalkIn());
   }
 
   @override
@@ -150,6 +166,7 @@ class CreateAppointmentController extends GetxController {
     // Clear search field
     aidController.clear();
     searchResults.clear();
+    _students.clear();
 
     if (className != null) {
       _loadStudentsFromApi(
@@ -171,6 +188,8 @@ class CreateAppointmentController extends GetxController {
     // Reset class and student when grade changes
     selectedClass.value = null;
     walkInSelectedStudent.value = null;
+    selectedStudents.clear();
+    _students.clear();
     filteredStudentsForWalkIn.clear();
     // Clear search field
     aidController.clear();
@@ -291,17 +310,6 @@ class CreateAppointmentController extends GetxController {
   void removeWalkInSelectedStudent() {
     walkInSelectedStudent.value = null;
     aidController.clear();
-  }
-
-  void _filterStudentsForWalkIn() {
-    if (_isSelectingStudent) return;
-    _loadStudentsFromApi(
-      grade: selectedGrade.value,
-      studentClass: selectedClass.value,
-    ).then((_) {
-      walkInSelectedStudent.value = null;
-      filteredStudentsForWalkIn.assignAll(_students);
-    });
   }
 
   void _autoSelectGradeAndClass(Student student) {

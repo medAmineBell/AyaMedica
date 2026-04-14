@@ -122,7 +122,17 @@ class StudentFiltersDropdown extends StatelessWidget {
           if (grades.isEmpty) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text('No grades available', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Loading grades...', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                ],
+              ),
             );
           }
           return Column(

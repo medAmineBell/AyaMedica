@@ -7,6 +7,18 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
+import 'package:flutter_getx_app/controllers/appointment_history_controller.dart';
+import 'package:flutter_getx_app/controllers/appointment_scheduling_controller.dart';
+import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
+import 'package:flutter_getx_app/controllers/users_controller.dart';
+import 'package:flutter_getx_app/controllers/mobile_app_user_controller.dart';
+import 'package:flutter_getx_app/controllers/notification_controller.dart';
+import 'package:flutter_getx_app/controllers/favorite_drugs_controller.dart';
+import 'package:flutter_getx_app/controllers/student_controller.dart';
+import 'package:flutter_getx_app/controllers/medical_records_controller.dart';
+import 'package:flutter_getx_app/controllers/communication_controller.dart';
+import 'package:flutter_getx_app/controllers/reports_controller.dart';
 
 enum ContentType {
   dashboard,
@@ -136,6 +148,7 @@ class HomeController extends GetxController {
       AppointmentHistory appointment) {
     currentStudent.value = student;
     currentAppointmentHistory.value = appointment;
+    selectedProfileMenuItem.value = 'Profile';
     currentContent.value = ContentType.appointmentStudentProfile;
 
     // Fetch full student data from medical record API
@@ -391,6 +404,66 @@ class HomeController extends GetxController {
     currentContent.value = ContentType.appointmentScheduling;
   }
 
+  /// Reset controller state for a branch switch (reloads branch data + defaults)
+  void resetForBranchSwitch() {
+    // Reload branch data from storage
+    loadSelectedBranchData();
+
+    // Reset HomeController UI state to defaults
+    selectedIndex.value = 5;
+    currentContent.value = ContentType.appointmentScheduling;
+    expandedMenuItems.clear();
+    currentStudent.value = null;
+    currentAppointment.value = null;
+    currentAppointmentHistory.value = null;
+    currentMedicalCheckupData.value = {};
+    studentToEdit.value = null;
+    isEditingStudent.value = false;
+    branchToEdit.value = null;
+    isEditingBranch.value = false;
+    isSecondSidebarVisible.value = true;
+    isSummaryMode.value = false;
+    isMedicalRecordsView.value = false;
+    isMedicalHistoryView.value = false;
+    isAssessmentView.value = false;
+    isMonitoringSignsView.value = false;
+    isPlansView.value = false;
+    patientMedicalRecords.clear();
+    patientMedicalHistory.clear();
+    selectedProfileMenuItem.value = 'Profile';
+    doctors.clear();
+    isDoctorsLoaded.value = false;
+
+    // Delete all branch-dependent controllers so they get recreated
+    // fresh (via fenix) with the new branch data when their screens
+    // are next accessed.
+    _deleteSafely<AppointmentSchedulingController>();
+    _deleteSafely<AppointmentHistoryController>();
+    _deleteSafely<BranchManagementController>();
+    _deleteSafely<UsersController>();
+    _deleteSafely<MobileAppUserController>();
+    _deleteSafely<ResourcesController>();
+    _deleteSafely<NotificationController>();
+    _deleteSafely<FavoriteDrugsController>();
+    _deleteSafely<StudentController>();
+    _deleteSafely<MedicalRecordsController>();
+    _deleteSafely<CommunicationController>();
+    _deleteSafely<ReportsController>();
+
+    // Reload HomeController's own data for the new branch
+    _checkMultipleBranches();
+    fetchAndCacheUserProfile();
+    loadDoctors();
+    // Eagerly reload classes so they're cached before Create Appointment opens
+    Get.find<ResourcesController>().loadClasses();
+  }
+
+  void _deleteSafely<T extends GetxController>() {
+    if (Get.isRegistered<T>()) {
+      Get.delete<T>(force: true);
+    }
+  }
+
   // Method to load selected branch data
   void loadSelectedBranchData() {
     final storageService = Get.find<StorageService>();
@@ -462,6 +535,8 @@ class HomeController extends GetxController {
     _checkMultipleBranches();
     fetchAndCacheUserProfile();
     loadDoctors();
+    // Eagerly load grades/classes so they're cached before Create Appointment opens
+    Get.find<ResourcesController>().loadClasses();
   }
 
   /// Load doctors list once at startup

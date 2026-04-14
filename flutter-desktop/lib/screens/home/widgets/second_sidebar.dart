@@ -209,8 +209,11 @@ class SecondSidebar extends GetView<HomeController> {
 
   Widget _buildConditionalMenuItems() {
     final selectedBranchData = controller.selectedBranchData.value;
-    final isSchool = true; // selectedBranchData?['isSchool'] ?? false;
-    final isClinic = selectedBranchData?['isClinic'] ?? false;
+    if (selectedBranchData == null) {
+      return const SizedBox.shrink();
+    }
+    final isSchool = selectedBranchData['isSchool'] ?? false;
+    final isClinic = selectedBranchData['isClinic'] ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +488,7 @@ class SecondSidebar extends GetView<HomeController> {
       }
 
       // Get organization type flags from stored data
-      final isSchool = true; // selectedBranchData?['isSchool'] ?? false;
+      final isSchool = selectedBranchData?['isSchool'] ?? false;
       final isClinic = selectedBranchData?['isClinic'] ?? false;
 
       // Find the main branch organization (the one with "Main Branch" type)

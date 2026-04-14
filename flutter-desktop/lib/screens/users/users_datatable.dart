@@ -147,29 +147,34 @@ class UsersDatatable extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Role badge
+          // Role badges
           Expanded(
             flex: 2,
-            child: Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDCFCE7),
-                    borderRadius: BorderRadius.circular(12),
+            child: user.roles.isEmpty
+                ? const Text('-',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)))
+                : Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: user.roles.map((r) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          r.role,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  child: Text(
-                    user.role.isNotEmpty ? user.role : '-',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF059669),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           // Status
           Expanded(

@@ -378,8 +378,10 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
         // Grades and students
         _buildGradeClassRow(controller),
         const SizedBox(height: 16),
-        // Students multi-select
-        _buildStudentMultiSelect(controller),
+        // Students multi-select (only show when class is selected)
+        Obx(() => controller.selectedClass.value != null
+            ? _buildStudentMultiSelect(controller)
+            : const SizedBox.shrink()),
       ],
     );
   }
@@ -569,19 +571,38 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
+          child: Obx(() => Row(
             children: [
               Expanded(
-                child: Text(
-                  isAllStudents ? 'All students' : 'Select Students',
-                  style: TextStyle(
-                    color: isAllStudents
-                        ? const Color(0xFF374151)
-                        : const Color(0xFF9CA3AF),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+                child: controller.isLoadingStudents.value
+                    ? Row(
+                        children: const [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Loading students...',
+                            style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        isAllStudents ? 'All students' : 'Select Students',
+                        style: TextStyle(
+                          color: isAllStudents
+                              ? const Color(0xFF374151)
+                              : const Color(0xFF9CA3AF),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
               ),
               const Icon(
                 Icons.keyboard_arrow_down,
@@ -589,7 +610,7 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
                 size: 20,
               ),
             ],
-          ),
+          )),
         ),
       ),
     );
@@ -1181,13 +1202,14 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
   void _showStudentSelectionDialog(CreateAppointmentController controller) {
     showDialog(
       context: Get.context!,
-      builder: (context) => _StudentSelectionDialog(
+      builder: (context) => Obx(() => _StudentSelectionDialog(
         students: controller.students,
         selectedStudents: controller.selectedStudents,
+        isLoading: controller.isLoadingStudents.value,
         onSelectionChanged: (selectedStudents) {
           controller.updateSelectedStudents(selectedStudents);
         },
-      ),
+      )),
     );
   }
 
@@ -1216,11 +1238,13 @@ class _StudentSelectionDialog extends StatefulWidget {
   final List<Student> students;
   final List<Student> selectedStudents;
   final Function(List<Student>) onSelectionChanged;
+  final bool isLoading;
 
   const _StudentSelectionDialog({
     required this.students,
     required this.selectedStudents,
     required this.onSelectionChanged,
+    this.isLoading = false,
   });
 
   @override
@@ -1239,6 +1263,14 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
     _selectedStudents = List<Student>.from(widget.selectedStudents);
     _filteredStudents = List<Student>.from(widget.students);
     _searchController.addListener(_filterStudents);
+  }
+
+  @override
+  void didUpdateWidget(covariant _StudentSelectionDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.students != widget.students) {
+      _filterStudents();
+    }
   }
 
   @override
@@ -1354,36 +1386,45 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
 
             // Students list
             Expanded(
-              child: ListView.builder(
-                itemCount: _filteredStudents.length,
-                itemBuilder: (context, index) {
-                  final student = _filteredStudents[index];
-                  final isSelected =
-                      _selectedStudents.any((s) => s.id == student.id);
+              child: widget.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredStudents.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No students found',
+                            style: TextStyle(color: Color(0xFF9CA3AF)),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _filteredStudents.length,
+                          itemBuilder: (context, index) {
+                            final student = _filteredStudents[index];
+                            final isSelected =
+                                _selectedStudents.any((s) => s.id == student.id);
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: student.avatarColor,
-                      child: Text(
-                        _getInitials(student.name),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 16,
+                                backgroundColor: student.avatarColor,
+                                child: Text(
+                                  _getInitials(student.name),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              title: Text(student.name),
+                              trailing: Checkbox(
+                                value: isSelected,
+                                onChanged: (_) => _toggleStudent(student),
+                                activeColor: const Color(0xFF1339FF),
+                              ),
+                              onTap: () => _toggleStudent(student),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                    title: Text(student.name),
-                    trailing: Checkbox(
-                      value: isSelected,
-                      onChanged: (_) => _toggleStudent(student),
-                      activeColor: const Color(0xFF1339FF),
-                    ),
-                    onTap: () => _toggleStudent(student),
-                  );
-                },
-              ),
             ),
 
             // Bottom buttons

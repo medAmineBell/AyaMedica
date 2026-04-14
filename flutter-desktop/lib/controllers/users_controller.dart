@@ -326,12 +326,16 @@ class UsersController extends GetxController {
     required String email,
     String? phone,
     String? gender,
+    List<String>? roles,
   }) async {
     try {
       isSubmitting.value = true;
 
       final accessToken = _storageService.getAccessToken();
       if (accessToken == null) throw Exception('No access token found');
+
+      final branchData = _storageService.getSelectedBranchData();
+      final organizationId = branchData?['id'] ?? '';
 
       final url = Uri.parse(
         '${AppConfig.newBackendUrl}/api/school-admin/users/$practitionerId',
@@ -340,9 +344,11 @@ class UsersController extends GetxController {
       final body = <String, dynamic>{
         'name': {'given': givenName, 'family': familyName},
         'email': email,
+        'organizationId': organizationId,
       };
       if (phone != null && phone.isNotEmpty) body['phone'] = phone;
       if (gender != null && gender.isNotEmpty) body['gender'] = gender;
+      if (roles != null && roles.isNotEmpty) body['roles'] = roles;
 
       final response = await http.put(
         url,

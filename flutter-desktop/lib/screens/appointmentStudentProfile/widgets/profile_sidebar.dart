@@ -32,7 +32,8 @@ class ProfileSidebar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               child: Obx(() {
-                final activeStudent = controller.currentStudent.value ?? student;
+                final activeStudent =
+                    controller.currentStudent.value ?? student;
                 return Column(
                   children: [
                     _buildAvatar(activeStudent),
@@ -49,8 +50,8 @@ class ProfileSidebar extends StatelessWidget {
                     const SizedBox(height: 8),
                     if (activeStudent.aid != null)
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFFCCF1FF),
                           borderRadius: BorderRadius.circular(30),
@@ -66,7 +67,8 @@ class ProfileSidebar extends StatelessWidget {
                       ),
                     const SizedBox(height: 4),
                     Text(
-                      '${activeStudent.grade ?? ''} ${activeStudent.className ?? ''}'.trim(),
+                      '${activeStudent.grade ?? ''} ${activeStudent.className ?? ''}'
+                          .trim(),
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF6B7280),
@@ -79,6 +81,7 @@ class ProfileSidebar extends StatelessWidget {
 
             // Navigation Menu
             const SidebarNavigationMenu(),
+            const SizedBox(height: 10),
           ],
         ),
       ),
