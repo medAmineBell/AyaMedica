@@ -30,13 +30,15 @@ class BranchSelectionScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLanguageSection(),
+              // _buildLanguageSection(),
               const SizedBox(height: 32),
               _buildWelcomeSection(),
               const SizedBox(height: 32),
               Expanded(
                 child: _buildBranchSection(controller),
               ),
+              const SizedBox(height: 16),
+              _buildLogoutButton(controller),
             ],
           ),
         ),
@@ -145,6 +147,47 @@ class BranchSelectionScreen extends StatelessWidget {
     });
   }
 
+  Widget _buildLogoutButton(BranchSelectionController controller) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () {
+          Get.dialog(
+            AlertDialog(
+              title: Text('logout_confirmation_title'.tr),
+              content: Text('logout_confirmation_message'.tr),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text('cancel'.tr),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Get.back();
+                    await controller.logout();
+                  },
+                  child: Text(
+                    'logout'.tr,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        icon: const Icon(Icons.logout, color: Colors.red, size: 18),
+        label: Text(
+          'logout'.tr,
+          style: const TextStyle(
+            color: Colors.red,
+            fontSize: 14,
+            fontFamily: 'IBM Plex Sans Arabic',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrganizationWithBranches(
     Map<String, dynamic> organization,
     List<dynamic> branches,
@@ -174,7 +217,11 @@ class BranchSelectionScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(left: 20, bottom: 16),
               child: Column(
-                children: branches.reversed.toList().asMap().entries.map((branchEntry) {
+                children: branches.reversed
+                    .toList()
+                    .asMap()
+                    .entries
+                    .map((branchEntry) {
                   final branchIndex = branchEntry.key;
                   final branch = branchEntry.value;
                   final isFirst = branchIndex == 0;

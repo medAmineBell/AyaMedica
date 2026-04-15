@@ -91,15 +91,10 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
           CircleAvatar(
             radius: 24,
             backgroundColor: _getClassColor(appointment.className),
-            child: Text(
-              appointment.className.isNotEmpty
-                  ? appointment.className.substring(0, 2).toUpperCase()
-                  : 'CL',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: Colors.white,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -108,7 +103,7 @@ class _StudentTableWidgetState extends State<StudentTableWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${appointment.className} | ${appointment.grade}',
+                  '${appointment.grade} | ${appointment.className}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

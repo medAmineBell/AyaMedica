@@ -178,10 +178,10 @@ class AppointmentsList extends GetView<CalendarController> {
             : '${appointment.selectedStudents.length} students';
 
     final displayName = appointment.allStudents
-        ? '${appointment.className} | ${appointment.grade}'
+        ? '${appointment.grade} | ${appointment.className}'
         : appointment.selectedStudents.isNotEmpty
             ? appointment.selectedStudents.first.name
-            : '${appointment.className} | ${appointment.grade}';
+            : '${appointment.grade} | ${appointment.className}';
 
     return Row(
       children: [

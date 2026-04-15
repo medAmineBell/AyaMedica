@@ -117,13 +117,13 @@ class MedicalRecordsScreen extends StatelessWidget {
             );
           }),
           const SizedBox(height: 12),
-          // Branch chips
-          Obx(() => Wrap(
-                spacing: 8,
-                children: branchController.branches
-                    .map((branch) => _buildBranchChip(branch.name))
-                    .toList(),
-              )),
+          // // Branch chips
+          // Obx(() => Wrap(
+          //       spacing: 8,
+          //       children: branchController.branches
+          //           .map((branch) => _buildBranchChip(branch.name))
+          //           .toList(),
+          //     )),
         ],
       ),
     );

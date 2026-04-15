@@ -103,7 +103,7 @@ class MedicalCheckupTableScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Class: ${appointment.className} | Grade: ${appointment.grade}',
+                    'Grade: ${appointment.grade} | Class: ${appointment.className}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF6B7280),

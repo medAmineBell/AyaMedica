@@ -170,6 +170,7 @@ class GardesSettingsDatatable extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -180,14 +181,14 @@ class GardesSettingsDatatable extends StatelessWidget {
                         color: Color(0xFF374151),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      classItem['classType'] ?? 'Offline',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
+                    // const SizedBox(height: 2),
+                    // Text(
+                    //   classItem['classType'] ?? 'Offline',
+                    //   style: const TextStyle(
+                    //     fontSize: 12,
+                    //     color: Color(0xFF6B7280),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

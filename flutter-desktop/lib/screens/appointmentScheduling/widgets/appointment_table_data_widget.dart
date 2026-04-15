@@ -180,15 +180,10 @@ class AppointmentTableDataWidget extends StatelessWidget {
             child: CircleAvatar(
               radius: 20,
               backgroundColor: _getClassColor(appointment.className),
-              child: Text(
-                appointment.className.isNotEmpty 
-                    ? appointment.className.substring(0, 2).toUpperCase() 
-                    : 'CL',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: const Icon(
+                Icons.school_outlined,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),
@@ -205,7 +200,7 @@ class AppointmentTableDataWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${appointment.className} | ${appointment.grade}',
+                    '${appointment.grade} | ${appointment.className}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,

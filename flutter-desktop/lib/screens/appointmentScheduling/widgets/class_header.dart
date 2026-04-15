@@ -46,7 +46,7 @@ class ClassHeader extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '$className | $grade',
+                  '$grade | $className',
                   style: _titleStyle,
                 ),
                 const SizedBox(width: 8),
@@ -65,11 +65,6 @@ class ClassHeader extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    // Get first 2 characters safely
-    final initials = className.length >= 2 
-        ? className.substring(0, 2).toUpperCase()
-        : className.toUpperCase();
-
     return Container(
       width: 48,
       height: 48,
@@ -78,15 +73,10 @@ class ClassHeader extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: const TextStyle(
-          color: Color(0xFFEDEEF0),
-          fontSize: 14,
-          fontFamily: 'IBM Plex Sans Arabic',
-          fontWeight: FontWeight.w400,
-          height: 1.43,
-        ),
+      child: const Icon(
+        Icons.school_outlined,
+        color: Color(0xFFEDEEF0),
+        size: 24,
       ),
     );
   }

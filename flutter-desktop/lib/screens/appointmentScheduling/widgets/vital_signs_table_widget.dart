@@ -286,15 +286,10 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
             CircleAvatar(
               radius: 24,
               backgroundColor: _classColor(appointment.className),
-              child: Text(
-                appointment.className.isNotEmpty
-                    ? appointment.className.substring(0, 2).toUpperCase()
-                    : 'CL',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: const Icon(
+                Icons.school_outlined,
+                color: Colors.white,
+                size: 24,
               ),
             ),
           ] else ...[
@@ -316,7 +311,7 @@ class _VitalSignsTableWidgetState extends State<VitalSignsTableWidget> {
               children: [
                 Text(
                   _type == _VitalSignsType.bmi
-                      ? '${appointment.className} | ${appointment.grade}'
+                      ? '${appointment.grade} | ${appointment.className}'
                       : appointment.disease,
                   style: const TextStyle(
                     fontSize: 18,

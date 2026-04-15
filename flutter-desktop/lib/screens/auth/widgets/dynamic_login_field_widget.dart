@@ -154,23 +154,35 @@ class DynamicLoginFieldWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: [
-              // Country flag
-              Container(
-                child: CountryFlag.fromCountryCode(
-                  authController.countryService.countryIsoCode.value,
-                  height: 24,
-                  width: 24,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                authController.countryService.countryCode.value,
-                style: TextStyle(
-                  color: authController.isFieldInvalid.value 
-                        ? const Color(0xFFED1F4F) 
-                        : const Color(0xFF2D2E2E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              // Country flag + code (tappable to change country)
+              GestureDetector(
+                onTap: () => authController.countryService.showCountryPicker(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CountryFlag.fromCountryCode(
+                      authController.countryService.countryIsoCode.value,
+                      height: 24,
+                      width: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      authController.countryService.countryCode.value,
+                      style: TextStyle(
+                        color: authController.isFieldInvalid.value
+                              ? const Color(0xFFED1F4F)
+                              : const Color(0xFF2D2E2E),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_drop_down,
+                      color: Color(0xFF595A5B),
+                      size: 20,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),

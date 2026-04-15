@@ -141,15 +141,10 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
           CircleAvatar(
             radius: 24,
             backgroundColor: _classColor(appointment.className),
-            child: Text(
-              appointment.className.isNotEmpty
-                  ? appointment.className.toUpperCase()
-                  : 'CL',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: Colors.white,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -158,7 +153,7 @@ class _MedicalCheckupTableWidgetState extends State<MedicalCheckupTableWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${appointment.className} | ${appointment.grade}',
+                  '${appointment.grade} | ${appointment.className}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

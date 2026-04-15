@@ -38,10 +38,10 @@ class AppointmentDetailsScreen extends StatelessWidget {
 
   Widget _buildHeader(AppointmentDetailsController controller) {
     final displayName = appointment.allStudents
-        ? '${appointment.className} | ${appointment.grade}'
+        ? '${appointment.grade} | ${appointment.className}'
         : appointment.selectedStudents.isNotEmpty
             ? appointment.selectedStudents.first.name
-            : '${appointment.className} | ${appointment.grade}';
+            : '${appointment.grade} | ${appointment.className}';
 
     return Container(
       padding: const EdgeInsets.all(24),
