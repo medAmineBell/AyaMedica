@@ -167,6 +167,9 @@ class AppointmentSchedulingScreen
 
   @override
   Widget build(BuildContext context) {
+    // Refresh data in background each time screen is displayed
+    controller.refreshInBackground();
+
     return Container(
       color: const Color(0xFFFBFCFD),
       child: SingleChildScrollView(

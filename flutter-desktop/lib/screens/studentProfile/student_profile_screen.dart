@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
+import 'widgets/add_medical_history_dialog.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/profile_sidebar.dart';
 import 'widgets/profile_main_content.dart';
@@ -30,6 +31,25 @@ class StudentProfileScreen extends StatelessWidget {
               onBackPressed: () {
                 homeController.changeContent(ContentType.studentsList);
               },
+              trailing: ElevatedButton.icon(
+                onPressed: () => AddMedicalHistoryDialog.show(context),
+                icon: const Icon(
+                  Icons.add,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                label: const Text('Add medical history'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1339FF),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 

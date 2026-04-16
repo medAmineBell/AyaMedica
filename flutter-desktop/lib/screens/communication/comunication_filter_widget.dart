@@ -34,20 +34,20 @@ class CommunicationFiltersWidget extends StatelessWidget {
           Obx(() {
             return Wrap(
               children: [
-                // _buildFilterChip(
-                //   label: 'Inbox',
-                //   status: 'Inbox',
-                //   controller: controller,
-                //   badgeCount: 0,
-                //   borderRadius: radiusStart,
-                // ),
-                // _buildFilterChip(
-                //   label: 'Sent',
-                //   status: 'Sent',
-                //   controller: controller,
-                //   badgeCount: 0,
-                //   borderRadius: radiusMiddle,
-                // ),
+                _buildFilterChip(
+                  label: 'Inbox',
+                  status: 'Inbox',
+                  controller: controller,
+                  badgeCount: 0,
+                  borderRadius: radiusStart,
+                ),
+                _buildFilterChip(
+                  label: 'Sent',
+                  status: 'Sent',
+                  controller: controller,
+                  badgeCount: 0,
+                  borderRadius: radiusMiddle,
+                ),
                 _buildFilterChip(
                   label: 'Received records',
                   status: 'Received records',

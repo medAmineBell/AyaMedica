@@ -23,10 +23,10 @@ class AppConfig {
   static const String devEmail = "ahmed@ayamedica.com";
   static const String devPassword = "22001018888818";
 
-  //static const String newBackendUrl = 'http://localhost:3000';
+  static const String newBackendUrl = 'http://localhost:3000';
   // NEW Backend API Configuration
-  static const String newBackendUrl =
-      'https://ayamedica-backend.ayamedica.online';
+  //static const String newBackendUrl =
+  //    'https://ayamedica-backend.ayamedica.online';
 
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';
@@ -36,6 +36,13 @@ class AppConfig {
       '$newBackendUrl/api/auth/verify-reset-otp';
   static const String resetPasswordUrl =
       '$newBackendUrl/api/auth/reset-password';
+
+  // Medical History
+  static const String medicalHistoryUrl =
+      '$newBackendUrl/api/medical-records/medical-history';
+  static const String medicalRecordLookupsUrl =
+      '$newBackendUrl/api/lookups/medical-records';
+  static const String drugsLookupUrl = '$newBackendUrl/api/lookups/drugs';
 
   // Original Medplum API Configuration (keep for backwards compatibility)
   static const String baseUrl = 'https://api.ayamedica.online';

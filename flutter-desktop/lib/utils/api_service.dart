@@ -787,7 +787,12 @@ class ApiService extends GetxService {
     try {
       final url = Uri.parse('${AppConfig.newBackendUrl}/api/upload');
 
+      final token = _storageService.getAccessToken();
+
       final request = http.MultipartRequest('POST', url);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
       request.files.add(await http.MultipartFile.fromPath('file', filePath, filename: fileName));
 
       final streamedResponse = await request.send().timeout(timeout);
@@ -823,6 +828,7 @@ class ApiService extends GetxService {
     String? attachmentUrl,
   }) async {
     try {
+      final token = _storageService.getAccessToken();
       final url =
           Uri.parse('${AppConfig.newBackendUrl}/api/customer-support');
 
@@ -834,9 +840,14 @@ class ApiService extends GetxService {
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       };
 
+      final headers = token != null ? _headersWithAuth(token) : _headers;
+
       final response = await http
-          .post(url, headers: _headers, body: jsonEncode(body))
+          .post(url, headers: headers, body: jsonEncode(body))
           .timeout(timeout);
+
+      print('📤 Support ticket request: ${jsonEncode(body)}');
+      print('📥 Support ticket response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
@@ -845,9 +856,14 @@ class ApiService extends GetxService {
           'data': responseData,
         };
       } else {
+        String errorMsg = 'Failed to submit support ticket';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMsg = errorData['message'] ?? errorData['error'] ?? errorMsg;
+        } catch (_) {}
         return {
           'success': false,
-          'error': 'Failed to submit support ticket',
+          'error': errorMsg,
         };
       }
     } catch (e) {

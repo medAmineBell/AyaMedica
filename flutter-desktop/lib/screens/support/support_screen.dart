@@ -35,8 +35,8 @@ class _SupportScreenState extends State<SupportScreen>
   bool _isLoadingSocialLinks = true;
 
   // Contact form state
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  String _userEmail = '';
   String _selectedCategory = 'Customer Support';
   String _selectedSubCategory = 'Access to platform';
   PlatformFile? _attachedFile;
@@ -83,10 +83,10 @@ class _SupportScreenState extends State<SupportScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
 
-    // Pre-fill email from user data
-    final userData = _storageService.getUserData();
-    if (userData != null && userData['email'] != null) {
-      _emailController.text = userData['email'];
+    // Get email from user profile
+    final profile = _storageService.getUserProfile();
+    if (profile != null && profile['email'] != null) {
+      _userEmail = profile['email'];
     }
 
     _fetchSocialLinks();
@@ -130,7 +130,6 @@ class _SupportScreenState extends State<SupportScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _emailController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -158,16 +157,6 @@ class _SupportScreenState extends State<SupportScreen>
   }
 
   Future<void> _submitSupportTicket() async {
-    if (_emailController.text.trim().isEmpty) {
-      appSnackbar(
-        'Validation Error',
-        'Please enter your email',
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-      return;
-    }
-
     if (_messageController.text.trim().isEmpty) {
       appSnackbar(
         'Validation Error',
@@ -197,7 +186,7 @@ class _SupportScreenState extends State<SupportScreen>
       }
 
       final result = await _apiService.submitSupportTicket(
-        email: _emailController.text.trim(),
+        email: _userEmail,
         serviceCategory: _selectedCategory,
         subCategory: _selectedSubCategory,
         message: _messageController.text.trim(),
@@ -219,7 +208,7 @@ class _SupportScreenState extends State<SupportScreen>
     } catch (e) {
       appSnackbar(
         'Error',
-        'Failed to submit support request. Please try again.',
+        e.toString(),
         backgroundColor: Colors.red[100],
         colorText: Colors.red[800],
       );
@@ -442,64 +431,45 @@ class _SupportScreenState extends State<SupportScreen>
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildFormField(
-                        label: 'Email',
-                        required: true,
-                        child: TextField(
-                          controller: _emailController,
-                          decoration: _inputDecoration(
-                              hintText: 'email@company.com'),
+                _buildFormField(
+                  label: 'Services',
+                  required: true,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBFCFD),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: const Color(0xFFE9E9E9)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCategory,
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: Color(0xFF0066FF)),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF374151),
+                          fontWeight: FontWeight.w400,
                         ),
+                        items: _categories
+                            .map((c) => DropdownMenuItem(
+                                value: c, child: Text(c)))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedCategory = value;
+                              _selectedSubCategory =
+                                  _currentSubCategories.first;
+                            });
+                          }
+                        },
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildFormField(
-                        label: 'Services',
-                        required: true,
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFBFCFD),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: const Color(0xFFE9E9E9)),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedCategory,
-                              isExpanded: true,
-                              icon: const Icon(Icons.arrow_drop_down,
-                                  color: Color(0xFF0066FF)),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF374151),
-                                fontWeight: FontWeight.w400,
-                              ),
-                              items: _categories
-                                  .map((c) => DropdownMenuItem(
-                                      value: c, child: Text(c)))
-                                  .toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedCategory = value;
-                                    _selectedSubCategory =
-                                        _currentSubCategories.first;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildFormField(

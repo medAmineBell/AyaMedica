@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../../controllers/assessment_controller.dart';
 import '../../../../controllers/home_controller.dart';
 
 class SidebarNavigationMenu extends StatelessWidget {
@@ -53,6 +54,20 @@ class SidebarNavigationMenu extends StatelessWidget {
                 size: 16,
               ),
               onTap: () {
+                final previousItem =
+                    homeController.selectedProfileMenuItem.value;
+
+                // Auto-save medical record when leaving Assessment or Plans tab
+                if (previousItem == 'Assessment' || previousItem == 'Plans') {
+                  if (Get.isRegistered<AssessmentController>()) {
+                    final assessmentController =
+                        Get.find<AssessmentController>();
+                    if (assessmentController.medicalRecordId != null) {
+                      assessmentController.saveMedicalRecord();
+                    }
+                  }
+                }
+
                 homeController.selectedProfileMenuItem.value =
                     item['label'] as String;
 

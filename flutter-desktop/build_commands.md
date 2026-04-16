@@ -18,7 +18,7 @@ vpk upload github \
   --releaseName "v1.0.16" \
   --tag v1.0.16 \
   --merge \
-  --token github _pat _11BANKSXY0sC5muLFkY1V6_gcjMZPbI0BppjzP9nQR7CwLielJL0iLYERTfCO4Vs2G3MDW3XGTyNZybrZy
+  --token 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
 
 
 

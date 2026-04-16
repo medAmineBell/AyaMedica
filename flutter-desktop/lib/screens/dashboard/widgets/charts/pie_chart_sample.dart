@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_getx_app/controllers/dashboard_controller.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/pie_chart_widget.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
 
 class PieChartSample extends StatefulWidget {
   const PieChartSample({super.key});
@@ -15,8 +16,9 @@ class _PieChartSampleState extends State<PieChartSample> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<DashboardController>();
+
     return Container(
-      // margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -32,19 +34,19 @@ class _PieChartSampleState extends State<PieChartSample> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Text(
-                'Title',
+              const Text(
+                'Health Issues',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF2D2E2E),
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               CustomDateFilterDropdown(
-                options: [
+                options: const [
                   "This Week",
                   "Last Week",
                   "This Month",
@@ -54,148 +56,124 @@ class _PieChartSampleState extends State<PieChartSample> {
                   "Custom Date",
                 ],
                 initialValue: "This Week",
-              )
+                onChanged: (period, {DateTime? startDate, DateTime? endDate}) {
+                  controller.changeHealthPeriod(period,
+                      startDate: startDate, endDate: endDate);
+                },
+              ),
             ],
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: PieChart(
-              PieChartData(
-                pieTouchData: PieTouchData(
-                  touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                    setState(() {
-                      if (!event.isInterestedForInteractions ||
-                          pieTouchResponse == null ||
-                          pieTouchResponse.touchedSection == null) {
-                        touchedIndex = -1;
-                        return;
-                      }
-                      touchedIndex =
-                          pieTouchResponse.touchedSection!.touchedSectionIndex;
-                    });
-                  },
+            child: Obx(() {
+              if (controller.isLoadingHealthIssues.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.healthIssuesByReason.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No health issues data',
+                    style: TextStyle(
+                      color: Color(0xFF858789),
+                      fontSize: 14,
+                    ),
+                  ),
+                );
+              }
+
+              return PieChart(
+                PieChartData(
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          touchedIndex = -1;
+                          return;
+                        }
+                        touchedIndex =
+                            pieTouchResponse.touchedSection!.touchedSectionIndex;
+                      });
+                    },
+                  ),
+                  startDegreeOffset: 180,
+                  borderData: FlBorderData(show: false),
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  sections: _buildSections(controller),
                 ),
-                startDegreeOffset: 180,
-                borderData: FlBorderData(show: false),
-                sectionsSpace: 1,
-                centerSpaceRadius: 0,
-                sections: showingSections(),
-              ),
-            ),
+              );
+            }),
           ),
           const SizedBox(height: 16),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _Indicator(
-                color: const Color(0xFF1339FF),
-                text: 'Product1',
-                value: '25%',
-                isSquare: false,
-              ),
-              SizedBox(height: 8),
-              _Indicator(
-                color: const Color(0xFF1397FF),
-                text: 'Product2',
-                value: '25%',
-                isSquare: false,
-              ),
-              SizedBox(height: 8),
-              _Indicator(
-                color: Color(0xFF01C448),
-                text: 'Product3',
-                value: '25%',
-                isSquare: false,
-              ),
-              SizedBox(height: 8),
-              _Indicator(
-                color: Color(0xFFD6A100),
-                text: 'Product4',
-                value: '25%',
-                isSquare: false,
-              ),
-            ],
-          ),
+          Obx(() => _buildLegend(controller)),
           const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0),
-            child: Row(
-              children: [
-                const Text(
-                  "\$20 678.89 ",
-                  style: TextStyle(
+          Obx(() => Padding(
+                padding: const EdgeInsets.only(left: 10.0),
+                child: Text(
+                  'Total: ${controller.healthIssuesTotal.value}',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF2D2E2E),
                   ),
                 ),
-                const SizedBox(
-                  width: 8,
-                ),
-                const Text(
-                  "-1.5%",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF747677),
-                  ),
-                ),
-                const SizedBox(
-                  width: 4,
-                ),
-                SvgPicture.asset(
-                  'assets/svg/trend_arrow.svg',
-                  width: 16,
-                  height: 16,
-                ),
-              ],
-            ),
-          ),
+              )),
         ],
       ),
     );
   }
 
-  List<PieChartSectionData> showingSections() {
-    return List.generate(
-      4,
-      (i) {
-        final isTouched = i == touchedIndex;
-        final opacity = isTouched ? 1.0 : 0.8;
+  List<PieChartSectionData> _buildSections(DashboardController controller) {
+    final items = controller.healthIssuesByReason;
+    if (items.isEmpty) return [];
 
-        switch (i) {
-          case 0:
-            return PieChartSectionData(
-              color: const Color(0xFF1339FF).withOpacity(opacity),
-              value: 25,
-              title: '',
-              radius: 25,
-            );
-          case 1:
-            return PieChartSectionData(
-              color: const Color(0xFF01C448).withOpacity(opacity),
-              value: 25,
-              title: '',
-              radius: 50,
-            );
-          case 2:
-            return PieChartSectionData(
-              color: const Color(0xFF1397FF).withOpacity(opacity),
-              value: 25,
-              title: '',
-              radius: 60,
-            );
-          case 3:
-            return PieChartSectionData(
-              color: const Color(0xFFD6A100).withOpacity(opacity),
-              value: 25,
-              title: '',
-              radius: 75,
-            );
-          default:
-            return PieChartSectionData();
-        }
-      },
+    final sections = <PieChartSectionData>[];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      final percentage = (item['percentage'] as num?)?.toDouble() ?? 0;
+      if (percentage <= 0) continue;
+
+      final isTouched = sections.length == touchedIndex;
+      final radius = isTouched ? 60.0 : 50.0;
+
+      sections.add(PieChartSectionData(
+        color: controller.getColorForReason(i),
+        value: percentage,
+        title: '${percentage.round()}%',
+        radius: radius,
+        titleStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ));
+    }
+    return sections;
+  }
+
+  Widget _buildLegend(DashboardController controller) {
+    if (controller.healthIssuesByReason.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children:
+          controller.healthIssuesByReason.asMap().entries.map((entry) {
+        final i = entry.key;
+        final item = entry.value;
+        final reason = item['reason'] as String? ?? '';
+        final count = item['count'] as num? ?? 0;
+        return _Indicator(
+          color: controller.getColorForReason(i),
+          text: '$reason ($count)',
+          isSquare: false,
+        );
+      }).toList(),
     );
   }
 }
@@ -203,14 +181,12 @@ class _PieChartSampleState extends State<PieChartSample> {
 class _Indicator extends StatelessWidget {
   final Color color;
   final String text;
-  final String value;
   final bool isSquare;
   final double size;
 
   const _Indicator({
     required this.color,
     required this.text,
-    required this.value,
     this.isSquare = false,
     this.size = 12,
   });
@@ -218,6 +194,7 @@ class _Indicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: size,
@@ -236,15 +213,6 @@ class _Indicator extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-        /*const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Color(0xFF2D2E2E),
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),*/
       ],
     );
   }

@@ -530,6 +530,12 @@ class AppointmentSchedulingController extends GetxController {
     loadAppointments();
   }
 
+  /// Refresh appointments in background without clearing current data
+  void refreshInBackground() {
+    _loadIds();
+    loadAppointments(background: true);
+  }
+
   /// Load organization and branch IDs from storage
   void _loadIds() {
     final branchData = _storageService.getSelectedBranchData();
@@ -670,9 +676,12 @@ class AppointmentSchedulingController extends GetxController {
   Future<void> loadAppointments({
     String? startDate,
     String? endDate,
+    bool background = false,
   }) async {
     try {
-      screenState.value = AppointmentScreenState.loading;
+      if (!background) {
+        screenState.value = AppointmentScreenState.loading;
+      }
       errorMessage.value = '';
 
       if (organizationId.value.isEmpty || branchId.value.isEmpty) {
@@ -719,18 +728,21 @@ class AppointmentSchedulingController extends GetxController {
           print('📅 Found ${apiAppointments.length} appointments from API');
 
           // Convert API appointments to our Appointment model
-          appointments.clear();
+          final newAppointments = <Appointment>[];
           for (final apiAppt in apiAppointments) {
             try {
               final appointment =
                   _convertApiToAppointment(apiAppt as Map<String, dynamic>);
               if (appointment != null) {
-                appointments.add(appointment);
+                newAppointments.add(appointment);
               }
             } catch (e) {
               print('⚠️ Error converting appointment: $e');
             }
           }
+
+          // Replace all at once to avoid UI flicker
+          appointments.assignAll(newAppointments);
 
           print('✅ Successfully loaded ${appointments.length} appointments');
 
@@ -1099,6 +1111,10 @@ class AppointmentSchedulingController extends GetxController {
       case 'bmiResult':
         data.bmiResult = value;
         break;
+    }
+    // Auto-set presence to "Present" when BMI data is entered
+    if ((fieldName == 'height' || fieldName == 'weight') && data.presence.isEmpty) {
+      data.presence = 'Present';
     }
     // Update BMI result automatically when height or weight changes
     if (fieldName == 'height' || fieldName == 'weight' || fieldName == 'presence') {

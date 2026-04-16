@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/controllers/dashboard_controller.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/bar_chart_widget.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/line_chart_widget.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/pie_chart_sample.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/pie_chart_widget.dart';
 import 'package:flutter_getx_app/shared/widgets/breadcrumb_widget.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    Get.put(DashboardController());
     final GlobalKey filterButtonKey = GlobalKey();
     return Container(
       color: const Color(0xFFFBFCFD),
@@ -50,103 +53,152 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   Spacer(),
                   // Download Button
-                  Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        print('Export data pressed');
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/svg/download.svg', // your SVG path
-                            width: 18,
-                            height: 18,
-                            color: const Color(0xFF7A7A7A), // icon color
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Export data',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 24,
-                  ),
-                  // Filters Button
-                  Container(
-                    key: filterButtonKey,
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        showFilterDropdown(context, filterButtonKey);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/svg/filter-2.svg', // your SVG path
-                            width: 18,
-                            height: 18,
-                            color: const Color(0xFF7A7A7A), // icon color
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Filters',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 0),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFC2E53),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              "1",
-                              style: TextStyle(
-                                color: Color(0xFFF9F9F9),
-                                fontSize: 12,
-                                fontFamily: 'Inter',
-                                fontWeight:
-                                    true ? FontWeight.w700 : FontWeight.w500,
-                                height: 1.58,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Container(
+                  //   height: 44,
+                  //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white,
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     border: Border.all(color: const Color(0xFFE5E7EB)),
+                  //   ),
+                  //   child: InkWell(
+                  //     onTap: () {
+                  //       print('Export data pressed');
+                  //     },
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         SvgPicture.asset(
+                  //           'assets/svg/download.svg', // your SVG path
+                  //           width: 18,
+                  //           height: 18,
+                  //           color: const Color(0xFF7A7A7A), // icon color
+                  //         ),
+                  //         const SizedBox(width: 8),
+                  //         const Text(
+                  //           'Export data',
+                  //           style: TextStyle(
+                  //             fontSize: 16,
+                  //             fontWeight: FontWeight.w400,
+                  //             color: Color(0xFF6B7280),
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
+                  // const SizedBox(
+                  //   width: 24,
+                  // ),
+                  // // Filters Button
+                  // Container(
+                  //   key: filterButtonKey,
+                  //   height: 44,
+                  //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white,
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     border: Border.all(color: const Color(0xFFE5E7EB)),
+                  //   ),
+                  //   child: InkWell(
+                  //     onTap: () {
+                  //       showFilterDropdown(context, filterButtonKey);
+                  //     },
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         SvgPicture.asset(
+                  //           'assets/svg/filter-2.svg', // your SVG path
+                  //           width: 18,
+                  //           height: 18,
+                  //           color: const Color(0xFF7A7A7A), // icon color
+                  //         ),
+                  //         const SizedBox(width: 8),
+                  //         const Text(
+                  //           'Filters',
+                  //           style: TextStyle(
+                  //             fontSize: 16,
+                  //             fontWeight: FontWeight.w400,
+                  //             color: Color(0xFF6B7280),
+                  //           ),
+                  //         ),
+                  //         const SizedBox(width: 8),
+                  //         Container(
+                  //           padding: const EdgeInsets.symmetric(
+                  //               horizontal: 8, vertical: 0),
+                  //           decoration: BoxDecoration(
+                  //             color: const Color(0xFFFC2E53),
+                  //             borderRadius: BorderRadius.circular(10),
+                  //           ),
+                  //           child: const Text(
+                  //             "1",
+                  //             style: TextStyle(
+                  //               color: Color(0xFFF9F9F9),
+                  //               fontSize: 12,
+                  //               fontFamily: 'Inter',
+                  //               fontWeight:
+                  //                   true ? FontWeight.w700 : FontWeight.w500,
+                  //               height: 1.58,
+                  //             ),
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
+              const SizedBox(height: 16),
+              // Stats cards row
+              Obx(() {
+                final c = Get.find<DashboardController>();
+                return Row(
+                  children: [
+                    Expanded(
+                        child: _StatCard(
+                            icon: Icons.school_outlined,
+                            iconColor: const Color(0xFF1339FF),
+                            bgColor: const Color(0xFFE8EAFF),
+                            label: 'Total Students',
+                            value: '${c.totalStudents.value}')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _StatCard(
+                            icon: Icons.medical_services_outlined,
+                            iconColor: const Color(0xFF01C448),
+                            bgColor: const Color(0xFFE6F9ED),
+                            label: 'Medical Records',
+                            value: '${c.totalMedicalRecords.value}')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _StatCard(
+                            icon: Icons.event_note_outlined,
+                            iconColor: const Color(0xFFD6A100),
+                            bgColor: const Color(0xFFFFF5DC),
+                            label: 'Total Visits',
+                            value: '${c.totalVisits.value}')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _StatCard(
+                            icon: Icons.business_outlined,
+                            iconColor: const Color(0xFF1397FF),
+                            bgColor: const Color(0xFFE3F2FD),
+                            label: 'Total Branches',
+                            value: '${c.totalBranches.value}')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: _StatCard(
+                            icon: Icons.people_outlined,
+                            iconColor: const Color(0xFFFF6B6B),
+                            bgColor: const Color(0xFFFFE8E8),
+                            label: 'Total Users',
+                            value: '${c.totalUsers.value}')),
+                  ],
+                );
+              }),
+
               const SizedBox(height: 16),
               // First row: 1/3 + 2/3
 
@@ -751,4 +803,77 @@ void showFilterDropdown(BuildContext context, GlobalKey buttonKey) {
       );
     },
   );
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
+  final String label;
+  final String value;
+
+  const _StatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF858789),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color(0xFF2D2E2E),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

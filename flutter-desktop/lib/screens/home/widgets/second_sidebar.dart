@@ -219,16 +219,16 @@ class SecondSidebar extends GetView<HomeController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Common items for both School and Clinic
-        // _buildSectionTitle(title: "School dashboard"),
-        // MenuItemWidget(
-        //   icon: 'assets/svg/chart-square.svg',
-        //   title: 'Dashboard',
-        //   isActive: controller.selectedIndex.value == 0,
-        //   onTap: () {
-        //     controller.changeIndex(0);
-        //     controller.changeContent(ContentType.dashboard);
-        //   },
-        // ),
+        _buildSectionTitle(title: "Dashboard"),
+        MenuItemWidget(
+          icon: 'assets/svg/chart-square.svg',
+          title: 'Dashboard',
+          isActive: controller.selectedIndex.value == 0,
+          onTap: () {
+            controller.changeIndex(0);
+            controller.changeContent(ContentType.dashboard);
+          },
+        ),
 
         _buildSectionTitle(title: "Appointments management"),
         MenuItemWidget(

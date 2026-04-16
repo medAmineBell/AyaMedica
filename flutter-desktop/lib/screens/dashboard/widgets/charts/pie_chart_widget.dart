@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:get/get.dart';
+import '../../../../controllers/dashboard_controller.dart';
 
 class PieChartWidget extends StatelessWidget {
   const PieChartWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<DashboardController>();
+
     return Container(
-      // margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -23,10 +26,10 @@ class PieChartWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Appointments',
                 style: TextStyle(
                   fontSize: 20,
@@ -35,7 +38,7 @@ class PieChartWidget extends StatelessWidget {
                 ),
               ),
               CustomDateFilterDropdown(
-                options: [
+                options: const [
                   "This Week",
                   "Last Week",
                   "This Month",
@@ -45,84 +48,77 @@ class PieChartWidget extends StatelessWidget {
                   "Custom Date",
                 ],
                 initialValue: "This Week",
-              )
+                onChanged: (period, {DateTime? startDate, DateTime? endDate}) {
+                  controller.changePeriod(period,
+                      startDate: startDate, endDate: endDate);
+                },
+              ),
             ],
           ),
           const SizedBox(height: 24),
           Expanded(
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 0,
-                centerSpaceRadius: 40,
-                sections: [
-                  PieChartSectionData(
-                    color: const Color(0xFF1339FF),
-                    value: 40,
-                    title: '40%',
-                    radius: 50,
-                    titleStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            child: Obx(() {
+              if (controller.isLoadingAppointments.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.appointmentsByType.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No appointment data',
+                    style: TextStyle(
+                      color: Color(0xFF858789),
+                      fontSize: 14,
                     ),
                   ),
-                  PieChartSectionData(
-                    color: const Color(0xFFCDFF1F),
-                    value: 30,
-                    title: '30%',
-                    radius: 50,
-                    titleStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D2E2E),
-                    ),
-                  ),
-                  PieChartSectionData(
-                    color: const Color(0xFFEDF1F5),
-                    value: 30,
-                    title: '30%',
-                    radius: 50,
-                    titleStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D2E2E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                );
+              }
+
+              return PieChart(
+                PieChartData(
+                  sectionsSpace: 0,
+                  centerSpaceRadius: 40,
+                  sections: controller.appointmentsByType.map((item) {
+                    final type = item['type'] as String? ?? '';
+                    final percentage =
+                        (item['percentage'] as num?)?.toDouble() ?? 0;
+                    return PieChartSectionData(
+                      color: controller.getColorForType(type),
+                      value: percentage,
+                      title: '${percentage.round()}%',
+                      radius: 50,
+                      titleStyle: controller.getTitleStyleForType(type),
+                    );
+                  }).toList(),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 24),
-          _buildLegend(),
+          Obx(() => _buildLegend(controller)),
         ],
       ),
     );
   }
 
-  Widget _buildLegend() {
-    return const Padding(
-      padding: EdgeInsets.only(left: 32.0, right: 32.0),
+  Widget _buildLegend(DashboardController controller) {
+    if (controller.appointmentsByType.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 32.0, right: 32.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _LegendItem(
-            color: Color(0xFF1339FF),
-            label: 'Boys',
-            value: '245',
-          ),
-          SizedBox(width: 16),
-          _LegendItem(
-            color: Color(0xFFCDFF1F),
-            label: 'Girls',
-            value: '184',
-          ),
-          SizedBox(width: 16),
-          _LegendItem(
-            color: Color(0xFFEDF1F5),
-            label: 'Staff',
-            value: '184',
-          ),
-        ],
+        children: controller.appointmentsByType.map((item) {
+          final type = item['type'] as String? ?? '';
+          final count = item['count'] as num? ?? 0;
+          return _LegendItem(
+            color: controller.getColorForType(type),
+            label: controller.getLabelForType(type),
+            value: count.toString(),
+          );
+        }).toList(),
       ),
     );
   }
@@ -167,11 +163,14 @@ class _LegendItem extends StatelessWidget {
 class CustomDateFilterDropdown extends StatefulWidget {
   final List<String> options;
   final String initialValue;
+  final void Function(String period, {DateTime? startDate, DateTime? endDate})?
+      onChanged;
 
   const CustomDateFilterDropdown({
     super.key,
     required this.options,
     this.initialValue = "This Week",
+    this.onChanged,
   });
 
   @override
@@ -223,7 +222,7 @@ class _CustomDateFilterDropdownState extends State<CustomDateFilterDropdown> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Color(0xFFE5E7EB)),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -270,7 +269,12 @@ class _CustomDateFilterDropdownState extends State<CustomDateFilterDropdown> {
                               setState(() {
                                 selectedValue = "Custom Date";
                               });
-                              _toggleCustomPanel(); // close
+                              _toggleCustomPanel();
+                              widget.onChanged?.call(
+                                "Custom Date",
+                                startDate: startDate,
+                                endDate: endDate,
+                              );
                             }
                           : null,
                       child: const Text("Apply"),
@@ -298,7 +302,6 @@ class _CustomDateFilterDropdownState extends State<CustomDateFilterDropdown> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // MAIN DROPDOWN
           Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -329,6 +332,7 @@ class _CustomDateFilterDropdownState extends State<CustomDateFilterDropdown> {
                       startDate = null;
                       endDate = null;
                     });
+                    widget.onChanged?.call(value!);
                   }
                 },
                 items: widget.options
@@ -340,8 +344,6 @@ class _CustomDateFilterDropdownState extends State<CustomDateFilterDropdown> {
               ),
             ),
           ),
-
-          // RANGE BELOW (only for Custom Date)
           if (selectedValue == "Custom Date" &&
               startDate != null &&
               endDate != null)

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 class ProfileHeader extends StatelessWidget {
   final VoidCallback onBackPressed;
+  final Widget? trailing;
 
   const ProfileHeader({
     Key? key,
     required this.onBackPressed,
+    this.trailing,
   }) : super(key: key);
 
   @override
@@ -37,6 +39,8 @@ class ProfileHeader extends StatelessWidget {
             ),
           ),
         ),
+        const Spacer(),
+        if (trailing != null) trailing!,
       ],
     );
   }

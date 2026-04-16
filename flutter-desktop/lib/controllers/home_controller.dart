@@ -19,6 +19,7 @@ import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/medical_records_controller.dart';
 import 'package:flutter_getx_app/controllers/communication_controller.dart';
 import 'package:flutter_getx_app/controllers/reports_controller.dart';
+import 'package:flutter_getx_app/controllers/dashboard_controller.dart';
 
 enum ContentType {
   dashboard,
@@ -47,7 +48,7 @@ enum ContentType {
 }
 
 class HomeController extends GetxController {
-  final RxInt selectedIndex = 5.obs;
+  final RxInt selectedIndex = 0.obs;
   final RxInt selectedSideIndex = 0.obs;
   final RxBool isSummaryMode = false.obs;
   final RxBool isChronicExpanded = true.obs;
@@ -58,7 +59,7 @@ class HomeController extends GetxController {
   final RxBool isMonitoringSignsView = false.obs;
   final RxBool isPlansView = false.obs;
 
-  final Rx<ContentType> currentContent = ContentType.appointmentScheduling.obs;
+  final Rx<ContentType> currentContent = ContentType.dashboard.obs;
   final Rx<Student?> currentStudent = Rx<Student?>(null);
   final RxString currentAppointmentType = ''.obs;
   final Rx<dynamic> currentAppointment = Rx<dynamic>(null);
@@ -106,7 +107,7 @@ class HomeController extends GetxController {
     selectedIndex.value = index;
     switch (index) {
       case 0:
-        currentContent.value = ContentType.appointmentScheduling;
+        currentContent.value = ContentType.dashboard;
         break;
       case 1:
         currentContent.value = ContentType.appointmentScheduling;
@@ -410,8 +411,8 @@ class HomeController extends GetxController {
     loadSelectedBranchData();
 
     // Reset HomeController UI state to defaults
-    selectedIndex.value = 5;
-    currentContent.value = ContentType.appointmentScheduling;
+    selectedIndex.value = 0;
+    currentContent.value = ContentType.dashboard;
     expandedMenuItems.clear();
     currentStudent.value = null;
     currentAppointment.value = null;
@@ -437,6 +438,7 @@ class HomeController extends GetxController {
     // Delete all branch-dependent controllers so they get recreated
     // fresh (via fenix) with the new branch data when their screens
     // are next accessed.
+    _deleteSafely<DashboardController>();
     _deleteSafely<AppointmentSchedulingController>();
     _deleteSafely<AppointmentHistoryController>();
     _deleteSafely<BranchManagementController>();

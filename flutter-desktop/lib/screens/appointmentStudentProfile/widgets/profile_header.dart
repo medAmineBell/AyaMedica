@@ -31,7 +31,13 @@ class ProfileHeader extends StatelessWidget {
             CancelExaminationDialog.show(context).then((result) {
               if (result == null) return;
               if (result == 'back') {
-                // Just go back to appointments
+                // Save medical record before going back
+                if (Get.isRegistered<AssessmentController>()) {
+                  final ac = Get.find<AssessmentController>();
+                  if (ac.medicalRecordId != null) {
+                    ac.saveMedicalRecord();
+                  }
+                }
                 onBackPressed();
               } else {
                 // Result is the cancellation reason text
