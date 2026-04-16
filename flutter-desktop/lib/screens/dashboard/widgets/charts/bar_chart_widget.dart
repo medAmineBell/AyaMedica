@@ -242,7 +242,7 @@ class BarChartWidget extends StatelessWidget {
           const Row(
             children: [
               Text(
-                'Medical Records',
+                'Complains (Coming soon)',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -319,12 +319,12 @@ class BarChartWidget extends StatelessWidget {
                       reservedSize: 30,
                       getTitlesWidget: (value, meta) {
                         final monthLabels = [
-                          "April",
-                          "May",
-                          "June",
-                          "July",
-                          "August",
-                          "September"
+                          "Complain",
+                          "Complain",
+                          "Complain",
+                          "Complain",
+                          "Complain",
+                          "Complain"
                         ];
                         int index = value.toInt();
                         if (index >= 0 && index < monthLabels.length) {
@@ -379,7 +379,7 @@ class BarChartWidget extends StatelessWidget {
             child: Row(
               children: [
                 const Text(
-                  "\$20 678.89 ",
+                  "Total",
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -388,7 +388,7 @@ class BarChartWidget extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  "-1.5%",
+                  "5",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -396,25 +396,12 @@ class BarChartWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1339FF),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_downward,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ),
                 const Spacer(),
-                _buildLegendItem(const Color(0xFF1339FF), 'Product 1'),
+                _buildLegendItem(const Color(0xFF1339FF), 'Complain 1'),
                 const SizedBox(width: 16),
-                _buildLegendItem(const Color(0xFFD6A100), 'Product 2'),
+                _buildLegendItem(const Color(0xFFD6A100), 'Complain 2'),
                 const SizedBox(width: 16),
-                _buildLegendItem(const Color(0xFF1397FF), 'Product 2'),
+                _buildLegendItem(const Color(0xFF1397FF), 'Complain 3'),
               ],
             ),
           ),

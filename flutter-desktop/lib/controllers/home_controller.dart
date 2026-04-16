@@ -338,6 +338,17 @@ class HomeController extends GetxController {
     }
   }
 
+  /// Refresh patient records after adding new medical history.
+  /// Handles both appointment-based and student profile contexts.
+  Future<void> refreshPatientRecords() async {
+    final appointment = currentAppointmentHistory.value;
+    if (appointment != null) {
+      await _fetchPatientRecords(appointment.id);
+    } else if (currentStudent.value != null) {
+      await fetchStudentMedicalData(currentStudent.value!.id);
+    }
+  }
+
   void navigateToAddStudent() {
     studentToEdit.value = null;
     isEditingStudent.value = false;

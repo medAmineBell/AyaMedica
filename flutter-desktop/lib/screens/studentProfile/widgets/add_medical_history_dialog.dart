@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../../controllers/add_medical_history_controller.dart';
+import '../../../controllers/home_controller.dart';
+import '../../../utils/app_snackbar.dart';
 
 class AddMedicalHistoryDialog extends StatefulWidget {
   const AddMedicalHistoryDialog({super.key});
 
   static Future<void> show(BuildContext context) {
+    Get.put(AddMedicalHistoryController());
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const AddMedicalHistoryDialog(),
-    );
+    ).then((_) {
+      if (Get.isRegistered<AddMedicalHistoryController>()) {
+        Get.delete<AddMedicalHistoryController>();
+      }
+    });
   }
 
   @override
@@ -19,55 +28,60 @@ class AddMedicalHistoryDialog extends StatefulWidget {
 }
 
 class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
-  int _currentStep = 0; // 0 = medical history details, 1 = medication/plans
+  late final AddMedicalHistoryController _controller;
+  late final HomeController _homeController;
+
+  int _currentStep = 0; // 0 = details, 1 = medication (Diseases only)
 
   // Step 1 fields
-  String _selectedCategory = 'Chronic diseases';
-  String _selectedChronicCategory = 'Essential (Primary) Hypertension';
+  String _selectedCategory = 'Diseases';
   DateTime? _consultationDate;
-  final TextEditingController _additionalDetailsController =
+  final TextEditingController _diseaseSearchController =
       TextEditingController();
+  static const String _notePrefix = 'Copied from admission paper, ';
+  final TextEditingController _noteController = TextEditingController();
 
-  // Step 2 fields
-  final TextEditingController _activeIngredientController =
-      TextEditingController();
+  // Selected disease (for Diseases category)
+  Map<String, dynamic>? _selectedDisease;
+
+  // Multi-item list (for Surgeries/Vaccinations/Medication)
+  final List<Map<String, dynamic>> _categoryItems = [];
+
+  // Step 2 fields (Diseases -> medication)
   final TextEditingController _drugNameController = TextEditingController();
+  String _selectedDrugIngredients = '';
   final TextEditingController _numberOfDaysController = TextEditingController();
   final TextEditingController _everyHoursController = TextEditingController();
   final TextEditingController _dozeController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _sickLeaveDaysController =
-      TextEditingController();
-  final TextEditingController _sickLeaveNotesController =
-      TextEditingController();
+  final TextEditingController _drugNotesController = TextEditingController();
 
   String? _relationToFood;
   String? _administrationForm;
   String? _dozeType;
   DateTime? _drugStartDate;
-  DateTime? _sickLeaveDate;
   final List<String> _selectedTags = [];
   final List<Map<String, dynamic>> _addedDrugs = [];
 
-  static const List<String> _categories = [
-    'Chronic diseases',
-    'Allergies',
-    'Surgeries',
-    'Injuries',
-    'Other',
-  ];
+  // Overlay state
+  final LayerLink _diseaseLayerLink = LayerLink();
+  final LayerLink _drugLayerLink = LayerLink();
+  OverlayEntry? _diseaseOverlay;
+  OverlayEntry? _drugOverlay;
+  bool _isDiseaseOverlayVisible = false;
+  bool _isDrugOverlayVisible = false;
 
-  static const List<String> _chronicCategories = [
-    'Essential (Primary) Hypertension',
-    'Type 1 Diabetes Mellitus',
-    'Type 2 Diabetes Mellitus',
-    'Asthma',
-    'Epilepsy',
-    'Sickle Cell Disease',
-    'Thalassemia',
-    'Congenital Heart Disease',
-    'Celiac Disease',
-    'Other',
+  // Item addition search state
+  final TextEditingController _itemSearchController = TextEditingController();
+  final LayerLink _itemLayerLink = LayerLink();
+  OverlayEntry? _itemOverlay;
+  bool _isItemOverlayVisible = false;
+  bool _isAddingItem = false;
+
+  static const List<String> _categories = [
+    'Diseases',
+    'Surgeries',
+    'Vaccinations',
+    'Medication',
   ];
 
   static const List<String> _relationToFoodOptions = [
@@ -109,18 +123,379 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _controller = Get.find<AddMedicalHistoryController>();
+    _homeController = Get.find<HomeController>();
+    _noteController.text = _notePrefix;
+    _noteController.addListener(_guardNotePrefix);
+  }
+
+  void _guardNotePrefix() {
+    final text = _noteController.text;
+    if (!text.startsWith(_notePrefix)) {
+      _noteController.removeListener(_guardNotePrefix);
+      _noteController.text = _notePrefix;
+      _noteController.selection = TextSelection.collapsed(
+        offset: _notePrefix.length,
+      );
+      _noteController.addListener(_guardNotePrefix);
+    }
+  }
+
+  @override
   void dispose() {
-    _additionalDetailsController.dispose();
-    _activeIngredientController.dispose();
+    _removeAllOverlays();
+    _noteController.removeListener(_guardNotePrefix);
+    _diseaseSearchController.dispose();
+    _noteController.dispose();
     _drugNameController.dispose();
     _numberOfDaysController.dispose();
     _everyHoursController.dispose();
     _dozeController.dispose();
-    _notesController.dispose();
-    _sickLeaveDaysController.dispose();
-    _sickLeaveNotesController.dispose();
+    _drugNotesController.dispose();
+    _itemSearchController.dispose();
     super.dispose();
   }
+
+  void _removeAllOverlays() {
+    _diseaseOverlay?.remove();
+    _diseaseOverlay = null;
+    _isDiseaseOverlayVisible = false;
+    _drugOverlay?.remove();
+    _drugOverlay = null;
+    _isDrugOverlayVisible = false;
+    _itemOverlay?.remove();
+    _itemOverlay = null;
+    _isItemOverlayVisible = false;
+  }
+
+  // ─── Validation ───
+
+  bool get _isStep1ValidForDiseases =>
+      _selectedDisease != null && _consultationDate != null;
+
+  bool get _isStep1ValidForOtherCategories => _categoryItems.isNotEmpty;
+
+  bool get _isStep2Valid => true; // Diseases step 2: drugs are optional
+
+  // ─── Category change ───
+
+  void _onCategoryChanged(String? value) {
+    if (value == null) return;
+    _removeAllOverlays();
+    setState(() {
+      _selectedCategory = value;
+      _selectedDisease = null;
+      _diseaseSearchController.clear();
+      _categoryItems.clear();
+      _isAddingItem = false;
+      _itemSearchController.clear();
+      _controller.clearLookupResults();
+      _controller.clearDrugResults();
+    });
+  }
+
+  // ─── Disease search overlay ───
+
+  void _showDiseaseOverlay() {
+    if (_isDiseaseOverlayVisible) return;
+    _diseaseOverlay = _buildOverlayEntry(
+      layerLink: _diseaseLayerLink,
+      builder: () => Obx(() {
+        final results = _controller.lookupResults;
+        final isLoading = _controller.isSearchingLookup.value;
+        return _buildOverlayContent(
+          results: results,
+          isLoading: isLoading,
+          displayKey: 'name',
+          onSelect: (item) {
+            setState(() {
+              _selectedDisease = item;
+              _diseaseSearchController.text = item['name'] ?? '';
+            });
+            _controller.clearLookupResults();
+            _hideDiseaseOverlay();
+          },
+        );
+      }),
+    );
+    Overlay.of(context).insert(_diseaseOverlay!);
+    _isDiseaseOverlayVisible = true;
+  }
+
+  void _hideDiseaseOverlay() {
+    _diseaseOverlay?.remove();
+    _diseaseOverlay = null;
+    _isDiseaseOverlayVisible = false;
+  }
+
+  // ─── Drug search overlay ───
+
+  void _showDrugOverlay() {
+    if (_isDrugOverlayVisible) return;
+    _drugOverlay = _buildOverlayEntry(
+      layerLink: _drugLayerLink,
+      builder: () => Obx(() {
+        final results = _controller.drugResults;
+        final isLoading = _controller.isSearchingDrugs.value;
+        return _buildOverlayContent(
+          results: results,
+          isLoading: isLoading,
+          displayKey: 'drug_name',
+          onSelect: (item) {
+            setState(() {
+              _drugNameController.text = item['drug_name'] ?? '';
+              _selectedDrugIngredients = item['ingredients'] ?? '';
+            });
+            _controller.clearDrugResults();
+            _hideDrugOverlay();
+          },
+        );
+      }),
+    );
+    Overlay.of(context).insert(_drugOverlay!);
+    _isDrugOverlayVisible = true;
+  }
+
+  void _hideDrugOverlay() {
+    _drugOverlay?.remove();
+    _drugOverlay = null;
+    _isDrugOverlayVisible = false;
+  }
+
+  // ─── Item search overlay (for Surgeries/Vaccinations/Medication) ───
+
+  void _showItemOverlay() {
+    if (_isItemOverlayVisible) return;
+    _itemOverlay = _buildOverlayEntry(
+      layerLink: _itemLayerLink,
+      builder: () {
+        final isMedication = _selectedCategory == 'Medication';
+        return Obx(() {
+          final results = isMedication
+              ? _controller.drugResults
+              : _controller.lookupResults;
+          final isLoading = isMedication
+              ? _controller.isSearchingDrugs.value
+              : _controller.isSearchingLookup.value;
+          return _buildOverlayContent(
+            results: results,
+            isLoading: isLoading,
+            displayKey: isMedication ? 'drug_name' : 'name',
+            onSelect: (item) async {
+              _hideItemOverlay();
+              _itemSearchController.clear();
+              if (isMedication) {
+                _controller.clearDrugResults();
+              } else {
+                _controller.clearLookupResults();
+              }
+              // Pick a date for this item
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+                builder: (ctx, child) => Theme(
+                  data: Theme.of(ctx).copyWith(
+                    colorScheme:
+                        const ColorScheme.light(primary: Color(0xFF1339FF)),
+                  ),
+                  child: child!,
+                ),
+              );
+              if (picked != null) {
+                setState(() {
+                  _categoryItems.add({
+                    'name': isMedication
+                        ? (item['drug_name'] ?? '')
+                        : (item['name'] ?? ''),
+                    'ingredients': item['ingredients'],
+                    'date': picked.toIso8601String(),
+                    'displayDate': DateFormat('dd/MM/yyyy').format(picked),
+                  });
+                  _isAddingItem = false;
+                });
+              }
+            },
+          );
+        });
+      },
+    );
+    Overlay.of(context).insert(_itemOverlay!);
+    _isItemOverlayVisible = true;
+  }
+
+  void _hideItemOverlay() {
+    _itemOverlay?.remove();
+    _itemOverlay = null;
+    _isItemOverlayVisible = false;
+  }
+
+  // ─── Shared overlay builder ───
+
+  OverlayEntry _buildOverlayEntry({
+    required LayerLink layerLink,
+    required Widget Function() builder,
+  }) {
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        width: 300,
+        child: CompositedTransformFollower(
+          link: layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 44),
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: builder(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayContent({
+    required List<Map<String, dynamic>> results,
+    required bool isLoading,
+    required String displayKey,
+    required ValueChanged<Map<String, dynamic>> onSelect,
+  }) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (results.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('No results found',
+            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+      );
+    }
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: EdgeInsets.zero,
+      itemCount: results.length,
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+      itemBuilder: (_, i) {
+        final item = results[i];
+        return InkWell(
+          onTap: () => onSelect(item),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text(
+              item[displayKey]?.toString() ?? '',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF2D2E2E)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Submit ───
+
+  Future<void> _submit() async {
+    final patientId = _homeController.currentStudent.value?.id;
+    if (patientId == null) {
+      appSnackbar('Error', 'No student selected',
+          backgroundColor: const Color(0xFFFFCDD2),
+          colorText: const Color(0xFFC62828));
+      return;
+    }
+
+    final note = _noteController.text.trim();
+
+    if (_selectedCategory == 'Diseases') {
+      final medications = _addedDrugs.isNotEmpty
+          ? _addedDrugs
+              .map((d) => <String, dynamic>{
+                    'name': d['drug_name'] ?? '',
+                    'ingredients': d['active_ingredient'] ?? '',
+                  })
+              .toList()
+          : null;
+
+      final success = await _controller.submitMedicalHistory(
+        patientId: patientId,
+        category: 'Diseases',
+        date: _consultationDate,
+        disease: _selectedDisease != null
+            ? {'name': _selectedDisease!['name'] ?? ''}
+            : null,
+        medications: medications,
+        note: note,
+      );
+
+      if (success) {
+        if (mounted) Navigator.of(context).pop();
+        appSnackbar('Success', 'Medical history added successfully',
+            backgroundColor: const Color(0xFFC8E6C9),
+            colorText: const Color(0xFF2E7D32));
+        _homeController.refreshPatientRecords();
+      } else {
+        appSnackbar('Error', 'Failed to add medical history',
+            backgroundColor: const Color(0xFFFFCDD2),
+            colorText: const Color(0xFFC62828));
+      }
+    } else {
+      // Surgeries / Vaccinations / Medication: submit each item separately
+      int successCount = 0;
+      int failCount = 0;
+
+      for (final item in _categoryItems) {
+        final itemData = <String, dynamic>{
+          'name': item['name'] ?? '',
+          if (item['ingredients'] != null) 'ingredients': item['ingredients'],
+          'date': item['date'],
+        };
+
+        final success = await _controller.submitMedicalHistory(
+          patientId: patientId,
+          category: _selectedCategory,
+          items: [itemData],
+          note: note,
+        );
+
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
+      if (failCount == 0) {
+        if (mounted) Navigator.of(context).pop();
+        appSnackbar('Success',
+            '$successCount ${_selectedCategory.toLowerCase()} added successfully',
+            backgroundColor: const Color(0xFFC8E6C9),
+            colorText: const Color(0xFF2E7D32));
+        _homeController.refreshPatientRecords();
+      } else {
+        appSnackbar(
+            'Error', '$failCount of ${_categoryItems.length} failed to add',
+            backgroundColor: const Color(0xFFFFCDD2),
+            colorText: const Color(0xFFC62828));
+      }
+    }
+  }
+
+  // ─── BUILD ───
 
   @override
   Widget build(BuildContext context) {
@@ -137,15 +512,20 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     );
   }
 
-  // ─── STEP 1: Medical history details ───
+  // ═══════════════════════════════════════════════════════════════════
+  // STEP 1
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildStep1() {
+    final isDiseases = _selectedCategory == 'Diseases';
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -167,7 +547,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Enter the medical history details and upload the required document',
+            'Enter the medical history details',
             style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
           ),
           const SizedBox(height: 24),
@@ -180,54 +560,61 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  'Category',
-                  true,
-                  _selectedCategory,
-                  _categories,
-                  (v) => setState(() => _selectedCategory = v!),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildDropdownField(
-                  'Chronic disease category',
-                  true,
-                  _selectedChronicCategory,
-                  _chronicCategories,
-                  (v) => setState(() => _selectedChronicCategory = v!),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildDateField(
-            'Consultation date',
+
+          // Category dropdown
+          _buildDropdownField(
+            'Category',
             true,
-            _consultationDate,
-            (d) => setState(() => _consultationDate = d),
+            _selectedCategory,
+            _categories,
+            _onCategoryChanged,
           ),
           const SizedBox(height: 16),
-          _buildLabel('Additional details', false),
-          const SizedBox(height: 6),
-          Container(
-            height: 120,
-            decoration: _fieldDecoration(),
-            child: TextField(
-              controller: _additionalDetailsController,
-              maxLines: null,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Additional details',
-                contentPadding: EdgeInsets.all(14),
-                hintStyle: TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
-              ),
+
+          if (isDiseases) ...[
+            // Disease search field
+            _buildSearchField(
+              label: 'Disease',
+              required: true,
+              controller: _diseaseSearchController,
+              layerLink: _diseaseLayerLink,
+              onChanged: (query) {
+                _selectedDisease = null;
+                _controller.onLookupSearchChanged(query, 'Diseases');
+                if (query.isNotEmpty) {
+                  _showDiseaseOverlay();
+                } else {
+                  _hideDiseaseOverlay();
+                }
+              },
             ),
-          ),
+            const SizedBox(height: 16),
+
+            // Date picker
+            _buildDateField(
+              'Consultation date',
+              true,
+              _consultationDate,
+              (d) => setState(() => _consultationDate = d),
+            ),
+            const SizedBox(height: 16),
+
+            // Notes
+            _buildTextAreaField('Additional details', false, _noteController,
+                'Additional details'),
+          ] else ...[
+            // Multi-item list for Surgeries/Vaccinations/Medication
+            _buildCategoryItemsList(),
+            const SizedBox(height: 16),
+
+            // Notes
+            _buildTextAreaField(
+                'Note', false, _noteController, 'Add a note (optional)'),
+          ],
+
           const SizedBox(height: 32),
+
+          // Buttons
           Row(
             children: [
               Expanded(
@@ -248,20 +635,10 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _currentStep = 1),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1339FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Next: add medication history',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                ),
+                child: isDiseases
+                    ? _buildNextButton()
+                    : _buildSubmitButton(
+                        enabled: _isStep1ValidForOtherCategories),
               ),
             ],
           ),
@@ -270,7 +647,199 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     );
   }
 
-  // ─── STEP 2: Medication / Plans ───
+  Widget _buildNextButton() {
+    final enabled = _isStep1ValidForDiseases;
+    return ElevatedButton(
+      onPressed: enabled
+          ? () {
+              _removeAllOverlays();
+              setState(() => _currentStep = 1);
+            }
+          : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF1339FF),
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF1339FF).withValues(alpha: 0.4),
+        disabledForegroundColor: Colors.white70,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        elevation: 0,
+      ),
+      child: const Text('Next: add medication',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+    );
+  }
+
+  Widget _buildSubmitButton({required bool enabled}) {
+    return Obx(() {
+      final isSubmitting = _controller.isSubmitting.value;
+      return ElevatedButton(
+        onPressed: (enabled && !isSubmitting) ? _submit : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1339FF),
+          foregroundColor: Colors.white,
+          disabledBackgroundColor:
+              const Color(0xFF1339FF).withValues(alpha: 0.4),
+          disabledForegroundColor: Colors.white70,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          elevation: 0,
+        ),
+        child: isSubmitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+              )
+            : const Text('Add record',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      );
+    });
+  }
+
+  // ─── Category items list (Surgeries/Vaccinations/Medication) ───
+
+  Widget _buildCategoryItemsList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_categoryItems.isNotEmpty)
+          ..._categoryItems.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE8E8E8)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['name'] ?? '',
+                          style: const TextStyle(
+                            color: Color(0xFF2D2E2E),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (item['ingredients'] != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            item['ingredients'],
+                            style: const TextStyle(
+                                color: Color(0xFF9E9E9E), fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (item['displayDate'] != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            item['displayDate'],
+                            style: const TextStyle(
+                                color: Color(0xFFA6A9AC), fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _categoryItems.removeAt(index)),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFEBEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          const Icon(Icons.close, color: Colors.red, size: 16),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+        // Add item row (with inline search)
+        if (_isAddingItem) ...[
+          _buildSearchField(
+            label: 'Search $_selectedCategory',
+            required: false,
+            controller: _itemSearchController,
+            layerLink: _itemLayerLink,
+            onChanged: (query) {
+              if (_selectedCategory == 'Medication') {
+                _controller.onDrugSearchChanged(query);
+              } else {
+                _controller.onLookupSearchChanged(query, _selectedCategory);
+              }
+              if (query.isNotEmpty) {
+                _showItemOverlay();
+              } else {
+                _hideItemOverlay();
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () {
+                _hideItemOverlay();
+                _itemSearchController.clear();
+                _controller.clearLookupResults();
+                _controller.clearDrugResults();
+                setState(() => _isAddingItem = false);
+              },
+              child: const Text('Cancel',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+            ),
+          ),
+        ] else
+          GestureDetector(
+            onTap: () => setState(() => _isAddingItem = true),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFE0E0E0)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, color: Color(0xFF1339FF), size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Add $_selectedCategory',
+                    style: const TextStyle(
+                      color: Color(0xFF1339FF),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // STEP 2: Medication (Diseases category only)
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildStep2() {
     return Padding(
@@ -292,7 +861,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
               ],
             ),
             const Text(
-              'Request new record',
+              'Add medication',
               style: TextStyle(
                 color: Color(0xFF2D2E2E),
                 fontSize: 20,
@@ -300,30 +869,52 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Requires approval from the patient app',
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+            Text(
+              'Disease: ${_selectedDisease?['name'] ?? ''}',
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             const Text(
               'Add prescriptions and plan details here',
               style: TextStyle(color: Color(0xFF595A5B), fontSize: 14),
             ),
             const SizedBox(height: 24),
 
-            // Drug search fields
+            // Drug search field
+            CompositedTransformTarget(
+              link: _drugLayerLink,
+              child: _buildTextField(
+                'Drug name',
+                false,
+                _drugNameController,
+                prefixIcon: Icons.search,
+                onChanged: (query) {
+                  _controller.onDrugSearchChanged(query);
+                  if (query.isNotEmpty) {
+                    _showDrugOverlay();
+                  } else {
+                    _hideDrugOverlay();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Dose
             Row(
               children: [
                 Expanded(
-                  child: _buildTextField(
-                      'Active ingredient', true, _activeIngredientController,
-                      prefixIcon: Icons.search),
+                  child: _buildNumberField('Dose', false, _dozeController),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildTextField(
-                      'Drug name', true, _drugNameController,
-                      prefixIcon: Icons.search),
+                  child: _buildDropdownField(
+                    'Dose type',
+                    false,
+                    _dozeType,
+                    _dozeTypeOptions,
+                    (v) => setState(() => _dozeType = v),
+                  ),
                 ),
               ],
             ),
@@ -341,7 +932,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                 Expanded(
                   child: _buildDropdownField(
                     'Relation to food',
-                    true,
+                    false,
                     _relationToFood,
                     _relationToFoodOptions,
                     (v) {
@@ -358,7 +949,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                 Expanded(
                   child: _buildDropdownField(
                     'Administration',
-                    true,
+                    false,
                     _administrationForm,
                     _administrationFormOptions,
                     (v) => setState(() => _administrationForm = v),
@@ -394,8 +985,8 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                                         fontWeight: FontWeight.w500)),
                                 const SizedBox(width: 4),
                                 GestureDetector(
-                                  onTap: () => setState(
-                                      () => _selectedTags.remove(tag)),
+                                  onTap: () =>
+                                      setState(() => _selectedTags.remove(tag)),
                                   child: const Icon(Icons.close,
                                       size: 16, color: Color(0xFFED1F4F)),
                                 ),
@@ -413,7 +1004,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                   flex: 2,
                   child: _buildDateField(
                     'Starting date',
-                    true,
+                    false,
                     _drugStartDate,
                     (d) => setState(() => _drugStartDate = d),
                   ),
@@ -421,34 +1012,16 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildNumberField(
-                      'Number of day', true, _numberOfDaysController,
+                      'Number of days', false, _numberOfDaysController,
                       prefixIcon: Icons.calendar_today),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildNumberField(
-                      'Every (hours)', true, _everyHoursController,
+                      'Every (hours)', false, _everyHoursController,
                       prefixIcon: Icons.access_time),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-
-            // Notes
-            Container(
-              height: 95,
-              decoration: _fieldDecoration(),
-              child: TextField(
-                controller: _notesController,
-                maxLines: null,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Notes',
-                  contentPadding: EdgeInsets.all(14),
-                  hintStyle:
-                      TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
-                ),
-              ),
             ),
             const SizedBox(height: 16),
 
@@ -481,46 +1054,10 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
-                children: List.generate(
-                    _addedDrugs.length, (i) => _buildDrugCard(i)),
+                children:
+                    List.generate(_addedDrugs.length, (i) => _buildDrugCard(i)),
               ),
 
-            const SizedBox(height: 24),
-
-            // Sick leave
-            Row(
-              children: [
-                const Text('Requires sick leave for (number of days)',
-                    style: TextStyle(
-                        color: Color(0xFF595A5B),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 200,
-                  child: _buildSmallNumberField(_sickLeaveDaysController,
-                      prefixIcon: Icons.calendar_today),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Sick leave notes
-            Container(
-              height: 95,
-              decoration: _fieldDecoration(),
-              child: TextField(
-                controller: _sickLeaveNotesController,
-                maxLines: null,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Notes',
-                  contentPadding: EdgeInsets.all(14),
-                  hintStyle:
-                      TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
-                ),
-              ),
-            ),
             const SizedBox(height: 32),
 
             // Buttons
@@ -528,7 +1065,10 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => setState(() => _currentStep = 0),
+                    onPressed: () {
+                      _removeAllOverlays();
+                      setState(() => _currentStep = 0);
+                    },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: const BorderSide(color: Color(0xFFE9E9E9)),
@@ -544,23 +1084,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: wire to API later
-                      Navigator.of(context).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1339FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Add record',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500)),
-                  ),
+                  child: _buildSubmitButton(enabled: _isStep2Valid),
                 ),
               ],
             ),
@@ -570,7 +1094,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     );
   }
 
-  // ─── Shared helpers ───
+  // ─── Drug helpers ───
 
   void _addDrug() {
     if (_drugNameController.text.isEmpty) return;
@@ -582,27 +1106,36 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
 
     _addedDrugs.add({
       'drug_name': _drugNameController.text,
-      'active_ingredient': _activeIngredientController.text,
+      'active_ingredient': _selectedDrugIngredients,
       if (_dozeController.text.isNotEmpty) 'dose': _dozeController.text,
       if (_dozeType != null) 'dose_type': _dozeType,
       if (_selectedTags.isNotEmpty) 'relation_to_food': _selectedTags.toList(),
-      if (_administrationForm != null) 'administration_form': _administrationForm,
+      if (_administrationForm != null)
+        'administration_form': _administrationForm,
       if (_everyHoursController.text.isNotEmpty)
         'every_hours': _everyHoursController.text,
       if (_numberOfDaysController.text.isNotEmpty)
         'days': _numberOfDaysController.text,
       if (_drugStartDate != null)
         'start_date': DateFormat('yyyy-MM-dd').format(_drugStartDate!),
-      if (endDate != null)
-        'end_date': DateFormat('yyyy-MM-dd').format(endDate),
-      if (_notesController.text.isNotEmpty) 'notes': _notesController.text,
+      if (endDate != null) 'end_date': DateFormat('yyyy-MM-dd').format(endDate),
+      if (_drugNotesController.text.isNotEmpty)
+        'notes': _drugNotesController.text,
     });
 
     _drugNameController.clear();
-    _activeIngredientController.clear();
     _dozeController.clear();
-    _notesController.clear();
-    setState(() {});
+    _drugNotesController.clear();
+    _numberOfDaysController.clear();
+    _everyHoursController.clear();
+    setState(() {
+      _relationToFood = null;
+      _administrationForm = null;
+      _dozeType = null;
+      _drugStartDate = null;
+      _selectedDrugIngredients = '';
+      _selectedTags.clear();
+    });
   }
 
   Widget _buildDrugCard(int index) {
@@ -611,7 +1144,6 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     final ingredient = drug['active_ingredient'] as String? ?? '';
     final form = drug['administration_form'] as String? ?? '';
     final dose = drug['dose']?.toString() ?? '';
-    final doseType = drug['dose_type']?.toString() ?? '';
     final foodRelation = drug['relation_to_food'];
     final timing = foodRelation is List
         ? foodRelation.join(', ')
@@ -712,9 +1244,9 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   if (startDate.isNotEmpty)
-                    _buildDateInfo('Starting date', _formatDate(startDate)),
+                    _buildDateInfo('Starting date', _formatDateStr(startDate)),
                   if (endDate.isNotEmpty)
-                    _buildDateInfo('End date', _formatDate(endDate)),
+                    _buildDateInfo('End date', _formatDateStr(endDate)),
                 ],
               ),
             ),
@@ -756,7 +1288,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     );
   }
 
-  String _formatDate(String dateStr) {
+  String _formatDateStr(String dateStr) {
     try {
       return DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
     } catch (_) {
@@ -764,7 +1296,9 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     }
   }
 
-  // ─── Field builders ───
+  // ═══════════════════════════════════════════════════════════════════
+  // FIELD BUILDERS
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildLabel(String label, bool required) {
     return Row(
@@ -792,11 +1326,12 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
   Widget _buildDropdownField(String label, bool required, String? value,
       List<String> options, ValueChanged<String?> onChanged) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildLabel(label, required),
         const SizedBox(height: 6),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: _fieldDecoration(),
           child: DropdownButtonHideUnderline(
@@ -822,10 +1357,79 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
     );
   }
 
+  Widget _buildTextAreaField(String label, bool required,
+      TextEditingController controller, String hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildLabel(label, required),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          height: 120,
+          decoration: _fieldDecoration(),
+          child: TextField(
+            controller: controller,
+            maxLines: null,
+            expands: true,
+            textAlignVertical: TextAlignVertical.top,
+            style: const TextStyle(color: Color(0xFF2D2E2E), fontSize: 14),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: hint,
+              contentPadding: const EdgeInsets.all(14),
+              hintStyle:
+                  const TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField({
+    required String label,
+    required bool required,
+    required TextEditingController controller,
+    required LayerLink layerLink,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildLabel(label, required),
+        const SizedBox(height: 6),
+        CompositedTransformTarget(
+          link: layerLink,
+          child: Container(
+            width: double.infinity,
+            height: 46,
+            decoration: _fieldDecoration(),
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: const TextStyle(color: Color(0xFF2D2E2E), fontSize: 14),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Search...',
+                hintStyle: TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
+                prefixIcon:
+                    Icon(Icons.search, color: Color(0xFFA6A9AC), size: 20),
+                prefixIconConstraints: BoxConstraints(minWidth: 42),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDateField(String label, bool required, DateTime? date,
       ValueChanged<DateTime> onPicked) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildLabel(label, required),
         const SizedBox(height: 6),
@@ -834,14 +1438,21 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
             final picked = await showDatePicker(
               context: context,
               initialDate: date ?? DateTime.now(),
-              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(),
+              builder: (ctx, child) => Theme(
+                data: Theme.of(ctx).copyWith(
+                  colorScheme:
+                      const ColorScheme.light(primary: Color(0xFF1339FF)),
+                ),
+                child: child!,
+              ),
             );
             if (picked != null) onPicked(picked);
           },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: _fieldDecoration(),
             child: Row(
               children: [
@@ -870,25 +1481,31 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
 
   Widget _buildTextField(
       String label, bool required, TextEditingController controller,
-      {IconData? prefixIcon}) {
+      {IconData? prefixIcon, ValueChanged<String>? onChanged}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildLabel(label, required),
         const SizedBox(height: 6),
         Container(
+          width: double.infinity,
+          height: 46,
           decoration: _fieldDecoration(),
           child: TextField(
             controller: controller,
+            onChanged: onChanged,
+            style: const TextStyle(color: Color(0xFF2D2E2E), fontSize: 14),
             decoration: InputDecoration(
               border: InputBorder.none,
-              hintText: 'search',
+              hintText: 'Search',
               hintStyle:
                   const TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: const Color(0xFFA6A9AC))
+                  ? Icon(prefixIcon, color: const Color(0xFFA6A9AC), size: 20)
                   : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+              prefixIconConstraints: const BoxConstraints(minWidth: 42),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
           ),
         ),
@@ -900,7 +1517,7 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
       String label, bool required, TextEditingController controller,
       {IconData? prefixIcon}) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildLabel(label, required),
         const SizedBox(height: 6),
@@ -912,18 +1529,23 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
   Widget _buildSmallNumberField(TextEditingController controller,
       {IconData? prefixIcon}) {
     return Container(
+      width: double.infinity,
+      height: 46,
       decoration: _fieldDecoration(),
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(color: Color(0xFF2D2E2E), fontSize: 14),
         decoration: InputDecoration(
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           hintStyle: const TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
           prefixIcon: prefixIcon != null
               ? Icon(prefixIcon, size: 18, color: const Color(0xFFA6A9AC))
               : null,
+          prefixIconConstraints: const BoxConstraints(minWidth: 42),
         ),
       ),
     );

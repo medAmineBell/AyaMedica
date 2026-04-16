@@ -875,6 +875,137 @@ class ApiService extends GetxService {
     }
   }
 
+  // Search medical record lookups (diseases, surgeries, vaccinations)
+  Future<Map<String, dynamic>> searchMedicalRecordLookups({
+    required String type,
+    String? country,
+    String? search,
+  }) async {
+    try {
+      final token = _storageService.getAccessToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'error': 'No access token available.'};
+      }
+
+      final params = <String, String>{
+        'type': type,
+      };
+      if (country != null && country.isNotEmpty) params['country'] = country;
+      if (search != null && search.isNotEmpty) params['search'] = search;
+
+      final url = Uri.parse(AppConfig.medicalRecordLookupsUrl)
+          .replace(queryParameters: params);
+
+      final response = await http
+          .get(url, headers: _headersWithAuth(token))
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return {'success': true, 'data': responseData['data']};
+        }
+        return {'success': false, 'error': 'Failed to fetch lookups'};
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to fetch lookups',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Search drugs lookup
+  Future<Map<String, dynamic>> searchDrugs({
+    String? country,
+    String? search,
+  }) async {
+    try {
+      final token = _storageService.getAccessToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'error': 'No access token available.'};
+      }
+
+      final params = <String, String>{};
+      if (country != null && country.isNotEmpty) params['country'] = country;
+      if (search != null && search.isNotEmpty) params['search'] = search;
+
+      final url = params.isEmpty
+          ? Uri.parse(AppConfig.drugsLookupUrl)
+          : Uri.parse(AppConfig.drugsLookupUrl)
+              .replace(queryParameters: params);
+
+      final response = await http
+          .get(url, headers: _headersWithAuth(token))
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return {'success': true, 'data': responseData['data']};
+        }
+        return {'success': false, 'error': 'Failed to fetch drugs'};
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to fetch drugs',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  // Submit medical history record
+  Future<Map<String, dynamic>> submitMedicalHistory({
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      final token = _storageService.getAccessToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'error': 'No access token available.'};
+      }
+
+      final url = Uri.parse(AppConfig.medicalHistoryUrl);
+
+      final response = await http
+          .post(url, headers: _headersWithAuth(token), body: jsonEncode(body))
+          .timeout(timeout);
+
+      print('📤 Medical History Submit: ${jsonEncode(body)}');
+      print('📥 Medical History Response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return {'success': true, 'data': responseData['data']};
+        }
+        return {
+          'success': true,
+          'data': responseData,
+        };
+      } else {
+        String errorMsg = 'Failed to submit medical history';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMsg = errorData['message'] ?? errorMsg;
+        } catch (_) {}
+        return {
+          'success': false,
+          'error': errorMsg,
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('💥 API Service: Submit Medical History Error: $e');
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
   // Mark notification as read API request
   Future<Map<String, dynamic>> markNotificationAsRead(String notificationId) async {
     try {

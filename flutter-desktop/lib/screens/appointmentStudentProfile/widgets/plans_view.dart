@@ -16,9 +16,8 @@ class _PlansViewState extends State<PlansView> {
   late final AssessmentController _controller;
 
   // Local form controllers
-  final TextEditingController _activeIngredientController =
-      TextEditingController();
   final TextEditingController _drugNameController = TextEditingController();
+  String _selectedDrugIngredients = '';
   final TextEditingController _numberOfDaysController = TextEditingController();
   final TextEditingController _everyHoursController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -82,7 +81,6 @@ class _PlansViewState extends State<PlansView> {
 
   @override
   void dispose() {
-    _activeIngredientController.dispose();
     _drugNameController.dispose();
     _numberOfDaysController.dispose();
     _everyHoursController.dispose();
@@ -185,27 +183,11 @@ class _PlansViewState extends State<PlansView> {
   // --- Drug Search Fields ---
 
   Widget _buildInputSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _buildDrugSearchField(
-            'Active ingredient',
-            false,
-            _activeIngredientController,
-            'ingredient',
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: _buildDrugSearchField(
-            'Drug name',
-            false,
-            _drugNameController,
-            'drugName',
-          ),
-        ),
-      ],
+    return _buildDrugSearchField(
+      'Drug name',
+      false,
+      _drugNameController,
+      'drugName',
     );
   }
 
@@ -320,7 +302,7 @@ class _PlansViewState extends State<PlansView> {
                     onTap: () {
                       setState(() {
                         _drugNameController.text = drugName;
-                        _activeIngredientController.text = ingredients;
+                        _selectedDrugIngredients = ingredients;
                         _activeSearchField = '';
                         _controller.drugResults.clear();
                       });
@@ -669,9 +651,8 @@ class _PlansViewState extends State<PlansView> {
   }
 
   void _addDrug() {
-    if (_drugNameController.text.isEmpty ||
-        _activeIngredientController.text.isEmpty) {
-      appSnackbar('Error', 'Please fill in required fields',
+    if (_drugNameController.text.isEmpty) {
+      appSnackbar('Error', 'Please enter a drug name',
           backgroundColor: Colors.red.shade100);
       return;
     }
@@ -683,7 +664,7 @@ class _PlansViewState extends State<PlansView> {
 
     final drug = <String, dynamic>{
       'drug_name': _drugNameController.text,
-      'drug_active_ingredient': _activeIngredientController.text,
+      'drug_active_ingredient': _selectedDrugIngredients,
       if (_dozeController.text.isNotEmpty) 'dose': _dozeController.text,
       if (_dozeType != null && _dozeType!.isNotEmpty) 'dose_type': _dozeType,
       if (_selectedTags.isNotEmpty)
@@ -704,13 +685,19 @@ class _PlansViewState extends State<PlansView> {
 
     _controller.addDrug(drug);
 
-    // Clear form
+    // Reset all drug fields
     _drugNameController.clear();
-    _activeIngredientController.clear();
     _dozeController.clear();
     _notesController.clear();
+    _numberOfDaysController.clear();
+    _everyHoursController.clear();
     setState(() {
+      _relationToFood = null;
+      _administrationForm = null;
       _dozeType = null;
+      _selectedDate = null;
+      _selectedDrugIngredients = '';
+      _selectedTags.clear();
     });
 
     appSnackbar('Success', 'Drug added successfully!',

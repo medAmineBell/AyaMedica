@@ -113,17 +113,32 @@ class MedicalHistoryView extends StatelessWidget {
         item['itemName'] as String? ??
         '-';
 
-    final date = _formatDate(item['date'] as String?);
+    // Date: for Diseases use 'date', for others use 'itemDate'
+    final isDiseases = category.toLowerCase().contains('diseases');
+    final date = _formatDate(
+      isDiseases ? item['date'] as String? : (item['itemDate'] as String? ?? item['date'] as String?),
+    );
     final notes = item['notes'] as String? ?? '-';
 
-    // Medication: for "Medication" category, use itemName as drug; otherwise itemIngredients or empty
+    // Medication column
     String medication = '-';
     if (category == 'Medication') {
       medication = item['itemName'] as String? ?? '-';
     } else {
-      final ingredients = item['itemIngredients'] as String?;
-      if (ingredients != null && ingredients.isNotEmpty) {
-        medication = ingredients;
+      // Check medications array (for Diseases category)
+      final medications = item['medications'] as List?;
+      if (medications != null && medications.isNotEmpty) {
+        medication = medications
+            .map((m) => m['name'] as String? ?? '')
+            .where((n) => n.isNotEmpty)
+            .join(', ');
+        if (medication.isEmpty) medication = '-';
+      } else {
+        // Fallback to itemIngredients (for single-item categories)
+        final ingredients = item['itemIngredients'] as String?;
+        if (ingredients != null && ingredients.isNotEmpty) {
+          medication = ingredients;
+        }
       }
     }
 
