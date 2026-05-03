@@ -4,6 +4,8 @@ import 'package:flutter_getx_app/screens/auth/forgot_password_screen.dart';
 import 'package:flutter_getx_app/controllers/auth/forgot_password_controller.dart';
 import 'package:flutter_getx_app/screens/organisation/branch_selection_screen.dart';
 import 'package:flutter_getx_app/screens/organisation/create_organization_screen.dart';
+import 'package:flutter_getx_app/screens/onerosterImport/oneroster_import_screen.dart';
+import 'package:flutter_getx_app/controllers/oneroster_import_controller.dart';
 import 'package:get/get.dart';
 import 'package:flutter_getx_app/screens/splash/splash_screen.dart';
 import 'package:flutter_getx_app/screens/onboarding/onboarding_screen.dart';
@@ -72,6 +74,14 @@ class AppPages {
     GetPage(
       name: Routes.CREATE_ORGANIZATION,
       page: () => CreateOrganizationScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: Routes.ONEROSTER_IMPORT,
+      page: () => const OneRosterImportScreen(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut(() => OneRosterImportController());
+      }),
       transition: Transition.rightToLeft,
     ),
 

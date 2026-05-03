@@ -1,8 +1,10 @@
 import 'package:flutter_getx_app/controllers/appointment_history_controller.dart';
+import 'package:flutter_getx_app/controllers/clinic_visits_controller.dart';
 import 'package:flutter_getx_app/controllers/notification_controller.dart';
 import 'package:flutter_getx_app/controllers/favorite_drugs_controller.dart';
 import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:get/get.dart';
+import '../controllers/communication_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/appointment_scheduling_controller.dart';
 import '../controllers/branch_management_controller.dart';
@@ -21,5 +23,7 @@ class AppBinding extends Bindings {
     Get.lazyPut(() => NotificationController(), fenix: true);
     Get.lazyPut(() => ResourcesController(), fenix: true);
     Get.lazyPut(() => FavoriteDrugsController(), fenix: true);
+    Get.lazyPut(() => CommunicationController(), fenix: true);
+    Get.lazyPut(() => ClinicVisitsController(), fenix: true);
   }
 }

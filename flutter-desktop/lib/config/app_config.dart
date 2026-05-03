@@ -19,14 +19,17 @@ class AppConfig {
   // Development mode configuration
   static const bool isDevelopment = false;
 
+  // OneRoster demo import screen (between login and branch selection)
+  static const bool showOneRosterImport = false;
+
   // Development credentials
   static const String devEmail = "ahmed@ayamedica.com";
   static const String devPassword = "22001018888818";
 
-  //static const String newBackendUrl = 'http://localhost:3000';
   // NEW Backend API Configuration
-  static const String newBackendUrl =
-      'https://ayamedica-backend.ayamedica.online';
+  static const String newBackendUrl = 'http://localhost:3000';
+  // static const String newBackendUrl =
+  //     'https://ayamedica-backend.ayamedica.online';
 
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';
@@ -43,6 +46,11 @@ class AppConfig {
   static const String medicalRecordLookupsUrl =
       '$newBackendUrl/api/lookups/medical-records';
   static const String drugsLookupUrl = '$newBackendUrl/api/lookups/drugs';
+
+  // OneRoster import (demo)
+  static const String organizationsUrl = '$newBackendUrl/api/organizations';
+  static const String oneRosterImportUrl =
+      '$newBackendUrl/api/owner/oneroster/import';
 
   // Original Medplum API Configuration (keep for backwards compatibility)
   static const String baseUrl = 'https://api.ayamedica.online';

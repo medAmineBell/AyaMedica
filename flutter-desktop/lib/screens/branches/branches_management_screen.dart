@@ -141,7 +141,11 @@ class BranchManagementScreen extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: () =>
                     Get.find<HomeController>().navigateToAddBranch(),
-                icon: const Icon(Icons.add, size: 20),
+                icon: const Icon(
+                  Icons.add,
+                  size: 20,
+                  color: Colors.white,
+                ),
                 label: const Text('Add new branch'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1339FF),
@@ -230,8 +234,7 @@ class BranchManagementScreen extends StatelessWidget {
           InkWell(
             onTap: () {
               appSnackbar('Export', 'Export functionality coming soon',
-                  backgroundColor: Colors.blue,
-                  colorText: Colors.white);
+                  backgroundColor: Colors.blue, colorText: Colors.white);
             },
             borderRadius: BorderRadius.circular(8),
             child: Container(

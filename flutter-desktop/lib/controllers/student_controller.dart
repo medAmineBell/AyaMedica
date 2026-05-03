@@ -1,6 +1,12 @@
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
+import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
+import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_getx_app/models/branch_model.dart';
+import 'package:flutter_getx_app/models/bulk_upload_models.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/models/chronic_disease.dart';
 import 'package:flutter_getx_app/models/create_student_request.dart';
@@ -10,6 +16,7 @@ import 'package:flutter_getx_app/screens/students/widgets/student_details_sheet_
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
 class StudentController extends GetxController {
@@ -29,9 +36,13 @@ class StudentController extends GetxController {
   final RxInt itemsPerPage = 10.obs;
   final RxInt totalStudents = 0.obs;
   final RxInt totalPages = 0.obs;
-  final RxList<Map<String, dynamic>> defectiveRecords =
-      <Map<String, dynamic>>[].obs;
+  final RxList<BulkUploadRowResult> defectiveRecords =
+      <BulkUploadRowResult>[].obs;
   final RxBool hasDefectiveRecords = false.obs;
+  final RxnString defectedRecordsFileBase64 = RxnString();
+  final RxnString lastBulkUploadMessage = RxnString();
+  final Rxn<BulkUploadResponse> lastBulkUploadResponse =
+      Rxn<BulkUploadResponse>();
 
   // Filter state (single selection)
   final Rx<String?> selectedGrade = Rx<String?>(null);
@@ -44,6 +55,11 @@ class StudentController extends GetxController {
   // Branch ID from storage
   final RxString selectedBranchId = ''.obs;
 
+  // Branches available to this user (for the branch switcher on
+  // ClinicStudentListScreen). Mirrors ClinicVisitsController.
+  final RxList<BranchModel> accessibleBranches = <BranchModel>[].obs;
+  Worker? _branchesWorker;
+
   // Debounce timer for search
   Timer? _searchDebounce;
 
@@ -51,6 +67,7 @@ class StudentController extends GetxController {
   void onInit() {
     super.onInit();
     _loadBranchId();
+    _loadAccessibleBranches();
     _updateAvailableLists();
     // Update available grades/classes when ResourcesController loads data
     ever(_resourcesController.classes, (_) => _updateAvailableLists());
@@ -62,8 +79,48 @@ class StudentController extends GetxController {
   @override
   void onClose() {
     _searchDebounce?.cancel();
+    _branchesWorker?.dispose();
     searchTextController.dispose();
     super.onClose();
+  }
+
+  void _loadAccessibleBranches() {
+    final branchData = _storageService.getSelectedBranchData();
+    if (branchData != null && (branchData['id'] ?? '').toString().isNotEmpty) {
+      accessibleBranches.assignAll([
+        BranchModel(
+          id: branchData['id'].toString(),
+          name: (branchData['name'] ?? 'Selected branch').toString(),
+          role: '',
+          icon: '',
+        ),
+      ]);
+    }
+
+    if (Get.isRegistered<BranchManagementController>()) {
+      final branchCtl = Get.find<BranchManagementController>();
+      if (branchCtl.branches.isNotEmpty) {
+        accessibleBranches.assignAll(branchCtl.branches);
+      }
+      _branchesWorker = ever<List<BranchModel>>(branchCtl.branches, (list) {
+        if (list.isNotEmpty) {
+          accessibleBranches.assignAll(list);
+        }
+      });
+    }
+  }
+
+  String get selectedBranchName {
+    final match = accessibleBranches
+        .firstWhereOrNull((b) => b.id == selectedBranchId.value);
+    return match?.name ?? 'Select branch';
+  }
+
+  Future<void> changeBranch(String branchId) async {
+    if (branchId.isEmpty || branchId == selectedBranchId.value) return;
+    selectedBranchId.value = branchId;
+    currentPage.value = 1;
+    await loadStudents();
   }
 
   // Load branch ID from storage
@@ -82,26 +139,104 @@ class StudentController extends GetxController {
     );
   }
 
-  // Method to add defective records
-  void addDefectiveRecords(List<Map<String, dynamic>> records) {
-    defectiveRecords.value = records;
-    hasDefectiveRecords.value = records.isNotEmpty;
-  }
-
-  // Method to clear defective records
   void clearDefectiveRecords() {
     defectiveRecords.clear();
+    defectedRecordsFileBase64.value = null;
+    lastBulkUploadMessage.value = null;
+    lastBulkUploadResponse.value = null;
     hasDefectiveRecords.value = false;
   }
 
-  // Method to download defective records as Excel
-  void downloadDefectiveRecords() {
-    appSnackbar(
-      'Download Started',
-      'Defective records file is being downloaded...',
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
+  void handleBulkUploadResponse(BulkUploadResponse response) {
+    final failed = response.results.where((r) => !r.success).toList();
+    print('📋 handleBulkUploadResponse: total=${response.total} successful=${response.successful} failed=${failed.length} (created=${response.created} updated=${response.updated} transferred=${response.transferred})');
+
+    defectiveRecords.assignAll(failed);
+    defectedRecordsFileBase64.value = response.errorFileBase64;
+    lastBulkUploadMessage.value = response.message;
+    lastBulkUploadResponse.value = response;
+    hasDefectiveRecords.value = failed.isNotEmpty;
+
+    // Refresh the underlying list either way so created/updated rows show up
+    // when the user later returns to the students list.
+    loadStudents();
+
+    final homeController = Get.find<HomeController>();
+    if (failed.isEmpty) {
+      print('✅ All rows processed successfully. Navigating to students list.');
+      appSnackbar(
+        'Upload Complete',
+        response.message,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+      homeController.navigateToStudentsList();
+    } else {
+      print('⚠️ ${failed.length} rows still defected. Staying on results screen.');
+      appSnackbar(
+        'Upload Completed With Issues',
+        response.message,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+      homeController.navigateToBulkUploadResults();
+    }
+  }
+
+  Future<void> downloadDefectedRecordsFile() async {
+    final b64 = defectedRecordsFileBase64.value;
+    print('📥 downloadDefectedRecordsFile invoked. base64 length=${b64?.length ?? 0}');
+    if (b64 == null || b64.isEmpty) {
+      appSnackbar(
+        'No File Available',
+        'There is no defected records file to download.',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      // Strip whitespace just in case the server pretty-printed the base64.
+      final clean = b64.replaceAll(RegExp(r'\s'), '');
+      final bytes = base64Decode(clean);
+      print('📥 decoded ${bytes.length} bytes');
+
+      final savePath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save defected records',
+        fileName: 'defected-records.xlsx',
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+      );
+      print('📥 saveFile returned: $savePath');
+
+      if (savePath == null) {
+        // User cancelled.
+        return;
+      }
+
+      final outPath =
+          savePath.toLowerCase().endsWith('.xlsx') ? savePath : '$savePath.xlsx';
+      await File(outPath).writeAsBytes(bytes, flush: true);
+      print('📥 wrote file to $outPath');
+
+      appSnackbar(
+        'Download Complete',
+        'Defected records saved to $outPath',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e, st) {
+      print('❌ downloadDefectedRecordsFile failed: $e\n$st');
+      appSnackbar(
+        'Download Failed',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   // Getters
@@ -483,10 +618,12 @@ class StudentController extends GetxController {
         firstGuardianPhone: firstGuardian?['phone'],
         firstGuardianEmail: firstGuardian?['email'],
         firstGuardianStatus: firstGuardian?['status'],
+        firstGuardianRelation: firstGuardian?['relation'],
         secondGuardianName: secondGuardian?['fullName'],
         secondGuardianPhone: secondGuardian?['phone'],
         secondGuardianEmail: secondGuardian?['email'],
         secondGuardianStatus: secondGuardian?['status'],
+        secondGuardianRelation: secondGuardian?['relation'],
         goToHospital: null,
         insuranceCompany: null,
         policyNumber: null,
@@ -590,58 +727,77 @@ class StudentController extends GetxController {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 64,
-                color: Colors.red.shade400,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Delete Student',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+        backgroundColor: Colors.white,
+        child: SizedBox(
+          width: Get.width * 0.38,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  'assets/svg/trash.svg',
+                  width: 48,
+                  height: 48,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Are you sure you want to delete "${student.name}"? This action cannot be undone.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Cancel'),
-                    ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Delete student details from school ?',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Do you want to remove the student from the school? '
+                  'This data cannot be recovered.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    ElevatedButton(
                       onPressed: () {
                         Get.back();
                         deleteStudentApi(student.id);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: const Color(0xFFED1F4F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: const Text('Delete'),
+                      child: const Text('Delete student'),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

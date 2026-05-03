@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_getx_app/bindings/app_binding.dart';
 import 'package:flutter_getx_app/controllers/auth_controller.dart';
 import 'package:flutter_getx_app/controllers/calendar_controller.dart';
-import 'package:flutter_getx_app/controllers/communication_controller.dart';
 import 'package:flutter_getx_app/controllers/gardes_controller.dart';
 import 'package:flutter_getx_app/controllers/update_controller.dart';
 import 'package:get/get.dart';
@@ -62,7 +61,8 @@ void main(List<String> args) async {
   Get.put(AuthController());
   Get.put(GardesController());
   // UsersController is registered via lazyPut in AppBinding
-  Get.put(CommunicationController());
+  // CommunicationController is registered via lazyPut(fenix: true) in AppBinding
+  // so it auto-recreates after HomeController.onBranchSwitch deletes it.
   Get.put(CalendarController());
   Get.put(UpdateController());
 

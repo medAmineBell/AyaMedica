@@ -622,7 +622,7 @@ class FeedbackDashboardScreen extends StatelessWidget {
                   ],
                   actions: [
                     TableActionConfig<FeedbackItem>(
-                      icon: Icons.visibility_outlined,
+                      iconAsset: 'assets/svg/view.svg',
                       tooltip: 'View',
                       onPressed: (item, index) {
                         controller.selectedFeedback.value = item;

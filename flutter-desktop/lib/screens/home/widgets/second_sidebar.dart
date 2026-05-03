@@ -3,6 +3,7 @@ import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
+import '../../../controllers/communication_controller.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../models/fhir_organization.dart';
@@ -89,8 +90,11 @@ class SecondSidebar extends GetView<HomeController> {
     int? parentIndex,
   }) {
     return Obx(() {
-      final isActive =
-          contentType != null && controller.currentContent.value == contentType;
+      final current = controller.currentContent.value;
+      final isActive = contentType != null &&
+          (current == contentType ||
+              (contentType == ContentType.studentsList &&
+                  current == ContentType.clinicStudentsList));
       return SizedBox(
         height: 32,
         child: Row(
@@ -223,36 +227,55 @@ class SecondSidebar extends GetView<HomeController> {
         MenuItemWidget(
           icon: 'assets/svg/chart-square.svg',
           title: 'Dashboard',
-          isActive: controller.selectedIndex.value == 0,
+          isActive: controller.currentContent.value == ContentType.dashboard,
           onTap: () {
             controller.changeIndex(0);
             controller.changeContent(ContentType.dashboard);
           },
         ),
 
-        _buildSectionTitle(title: "Appointments management"),
-        MenuItemWidget(
-          icon: 'assets/svg/calendar.svg',
-          title: 'Appointments',
-          isActive: controller.selectedIndex.value == 5,
-          onTap: () {
-            controller.changeIndex(5);
-            controller.changeContent(ContentType.appointmentScheduling);
-          },
-          // badge: '1',
-        ),
+        // Restricted roles (Doctor / Nurse / Teacher) see Appointments.
+        // Everyone else sees Clinic Visits in its place.
+        if (controller.isRoleLoaded.value && controller.isRestrictedRole) ...[
+          _buildSectionTitle(title: "Appointments management"),
+          MenuItemWidget(
+            icon: 'assets/svg/calendar.svg',
+            title: 'Appointments',
+            isActive: controller.selectedIndex.value == 5,
+            onTap: () {
+              controller.changeIndex(5);
+              controller.changeContent(ContentType.appointmentScheduling);
+            },
+          ),
+        ] else if (controller.isRoleLoaded.value) ...[
+          _buildSectionTitle(title: "Clinic"),
+          MenuItemWidget(
+            icon: 'assets/svg/calendar.svg',
+            title: 'Clinic Visits',
+            isActive:
+                controller.currentContent.value == ContentType.clinicVisits,
+            onTap: () {
+              controller.changeContent(ContentType.clinicVisits);
+            },
+          ),
+        ],
 
         if (controller.isRoleLoaded.value && controller.isRestrictedRole) ...[
           _buildSectionTitle(title: "Communication"),
-          MenuItemWidget(
-            icon: 'assets/svg/direct-notification.svg',
-            title: 'Communication',
-            isActive: controller.selectedIndex.value == 2,
-            onTap: () {
-              controller.changeIndex(2);
-              controller.changeContent(ContentType.communication);
-            },
-          ),
+          Obx(() {
+            final unread =
+                Get.find<CommunicationController>().unreadInboxCount.value;
+            return MenuItemWidget(
+              icon: 'assets/svg/direct-notification.svg',
+              title: 'Communication',
+              isActive: controller.selectedIndex.value == 2,
+              onTap: () {
+                controller.changeIndex(2);
+                controller.changeContent(ContentType.communication);
+              },
+              badge: unread > 0 ? unread.toString() : null,
+            );
+          }),
         ],
 
         // School-specific items
@@ -301,7 +324,8 @@ class SecondSidebar extends GetView<HomeController> {
               //     parentIndex: 3),
             ],
           ),
-          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value &&
+              !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',
@@ -382,7 +406,8 @@ class SecondSidebar extends GetView<HomeController> {
                   parentIndex: 3),
             ],
           ),
-          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value &&
+              !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Medical Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',
@@ -427,7 +452,8 @@ class SecondSidebar extends GetView<HomeController> {
               controller.changeContent(ContentType.appointmentScheduling);
             },
           ),
-          if (controller.isRoleLoaded.value && !controller.isRestrictedRole) ...[
+          if (controller.isRoleLoaded.value &&
+              !controller.isRestrictedRole) ...[
             _buildSectionTitle(title: "Resources"),
             ExpandableMenuItem(
               icon: 'assets/svg/data.svg',

@@ -82,6 +82,19 @@ class _PieChartSampleState extends State<PieChartSample> {
                 );
               }
 
+              final sections = _buildSections(controller);
+              if (sections.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No health issues data',
+                    style: TextStyle(
+                      color: Color(0xFF858789),
+                      fontSize: 14,
+                    ),
+                  ),
+                );
+              }
+
               return PieChart(
                 PieChartData(
                   pieTouchData: PieTouchData(
@@ -102,7 +115,7 @@ class _PieChartSampleState extends State<PieChartSample> {
                   borderData: FlBorderData(show: false),
                   sectionsSpace: 2,
                   centerSpaceRadius: 40,
-                  sections: _buildSections(controller),
+                  sections: sections,
                 ),
               );
             }),

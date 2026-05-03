@@ -37,6 +37,10 @@ class GuardianSection extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
+                  if ((student.firstGuardianRelation ?? '').isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    _buildRelationChip(student.firstGuardianRelation!),
+                  ],
                   const SizedBox(width: 8),
                   _buildStatusBadge(student.firstGuardianStatus),
                 ],
@@ -81,6 +85,10 @@ class GuardianSection extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
+                  if ((student.secondGuardianRelation ?? '').isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    _buildRelationChip(student.secondGuardianRelation!),
+                  ],
                   if (student.secondGuardianName != null) ...[
                     const SizedBox(width: 8),
                     _buildStatusBadge(student.secondGuardianStatus),
@@ -91,6 +99,30 @@ class GuardianSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRelationChip(String relation) {
+    final label = relation
+        .split('_')
+        .map((w) => w.isEmpty
+            ? w
+            : w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join(' ');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF1D4ED8),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 

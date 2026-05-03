@@ -8,7 +8,9 @@ import 'custom_dropdown.dart';
 import 'date_time_picker_row_widget.dart';
 
 class CreateAppointmentDialog extends StatefulWidget {
-  const CreateAppointmentDialog({super.key});
+  final String? prefillAid;
+
+  const CreateAppointmentDialog({super.key, this.prefillAid});
 
   @override
   State<CreateAppointmentDialog> createState() =>
@@ -18,6 +20,7 @@ class CreateAppointmentDialog extends StatefulWidget {
 class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
   final LayerLink _searchLayerLink = LayerLink();
   OverlayEntry? _searchOverlayEntry;
+  bool _prefillApplied = false;
 
   @override
   void dispose() {
@@ -149,11 +152,24 @@ class _CreateAppointmentDialogState extends State<CreateAppointmentDialog> {
     });
   }
 
+  void _applyPrefillIfNeeded(CreateAppointmentController controller) {
+    final aid = widget.prefillAid;
+    if (_prefillApplied || aid == null || aid.isEmpty) return;
+    _prefillApplied = true;
+    controller.selectedType.value = 'Walk-In';
+    controller.aidController.text = aid;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.searchByName(aid);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     Get.delete<CreateAppointmentController>(force: true);
     final controller = Get.put(CreateAppointmentController());
     _setupSearchListener(controller);
+    _applyPrefillIfNeeded(controller);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

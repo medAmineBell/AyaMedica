@@ -445,7 +445,7 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
   Widget _buildDrugCard(Map<String, dynamic> drug) {
     final name = drug['drug_name'] as String? ?? '{Drug name}';
     final ingredient = drug['drug_active_ingredient'] as String? ?? '-';
-    final form = drug['drug_administration_form'] as String? ?? 'Oral';
+    final form = drug['drug_administration_form'] as String? ?? '';
     final foodRelation = drug['drug_relation_to_food'];
     final timing = foodRelation is List
         ? foodRelation.join(', ')
@@ -479,8 +479,10 @@ class _CheckedOutWalkInScreenState extends State<CheckedOutWalkInScreen> {
           Row(
             children: [
               _pill(ingredient),
-              const SizedBox(width: 6),
-              _pill(form),
+              if (form.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                _pill(form),
+              ],
             ],
           ),
           const SizedBox(height: 10),

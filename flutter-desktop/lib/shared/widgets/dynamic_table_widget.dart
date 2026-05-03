@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 // Configuration class for table columns
 class TableColumnConfig<T> {
@@ -21,17 +22,22 @@ class TableColumnConfig<T> {
 
 // Configuration for table actions
 class TableActionConfig<T> {
-  final IconData icon;
+  final IconData? icon;
+  final String? iconAsset;
   final Color? color;
   final String? tooltip;
   final void Function(T item, int index) onPressed;
 
   const TableActionConfig({
-    required this.icon,
+    this.icon,
+    this.iconAsset,
     required this.onPressed,
     this.color,
     this.tooltip,
-  });
+  }) : assert(
+          (icon == null) != (iconAsset == null),
+          'Provide exactly one of `icon` or `iconAsset`.',
+        );
 }
 
 // Main dynamic table widget
@@ -218,11 +224,21 @@ class DynamicTableWidget<T> extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 2),
           child: IconButton(
             onPressed: () => action.onPressed(item, index),
-            icon: Icon(
-              action.icon,
-              color: action.color ?? const Color(0xFF6B7280),
-              size: 16,
-            ),
+            icon: action.iconAsset != null
+                ? SvgPicture.asset(
+                    action.iconAsset!,
+                    width: 16,
+                    height: 16,
+                    colorFilter: ColorFilter.mode(
+                      action.color ?? const Color(0xFF6B7280),
+                      BlendMode.srcIn,
+                    ),
+                  )
+                : Icon(
+                    action.icon,
+                    color: action.color ?? const Color(0xFF6B7280),
+                    size: 16,
+                  ),
             padding: const EdgeInsets.all(2),
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             tooltip: action.tooltip,

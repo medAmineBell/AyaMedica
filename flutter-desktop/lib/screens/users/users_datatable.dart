@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import '../../controllers/home_controller.dart';
 import '../../controllers/users_controller.dart';
 import '../../models/user_model.dart';
 import 'widgets/add_edit_user_dialog.dart';
@@ -59,8 +61,7 @@ class UsersDatatable extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.help_outline,
-                    size: 14, color: Colors.grey.shade400),
+                Icon(Icons.help_outline, size: 14, color: Colors.grey.shade400),
               ],
             ),
           ),
@@ -70,7 +71,8 @@ class UsersDatatable extends StatelessWidget {
     );
   }
 
-  Widget _buildDataRow(BuildContext context, UserModel user, UsersController controller) {
+  Widget _buildDataRow(
+      BuildContext context, UserModel user, UsersController controller) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -142,7 +144,7 @@ class UsersDatatable extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              user.branchNames.isNotEmpty ? user.branchNames : '-',
+              user.branchNames.isNotEmpty ? user.branchNames : 'All',
               style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
               overflow: TextOverflow.ellipsis,
             ),
@@ -217,8 +219,13 @@ class UsersDatatable extends StatelessWidget {
                     context: context,
                     builder: (_) => DeleteUserDialog(user: user),
                   ),
-                  icon: const Icon(Icons.delete_outline,
-                      size: 18, color: Color(0xFFEF4444)),
+                  icon: SvgPicture.asset(
+                    'assets/svg/note-remove.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFFEF4444), BlendMode.srcIn),
+                  ),
                   padding: EdgeInsets.zero,
                   constraints:
                       const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -230,15 +237,98 @@ class UsersDatatable extends StatelessWidget {
                     context: context,
                     builder: (_) => AddEditUserDialog(user: user),
                   ),
-                  icon: const Icon(Icons.edit_outlined,
-                      size: 18, color: Color(0xFF6B7280)),
+                  icon: SvgPicture.asset(
+                    'assets/svg/edit-2.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF6B7280), BlendMode.srcIn),
+                  ),
                   padding: EdgeInsets.zero,
                   constraints:
                       const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
+                // Promote to Owner (only visible to owner / full_control)
+                if (_canPromoteToOwner())
+                  IconButton(
+                    tooltip: 'Promote to Owner',
+                    onPressed: () => _confirmPromoteToOwner(
+                      context,
+                      user,
+                      controller,
+                    ),
+                    icon: SvgPicture.asset(
+                      'assets/svg/crown.svg',
+                      width: 18,
+                      height: 18,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF1339FF),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  bool _canPromoteToOwner() {
+    final role = Get.find<HomeController>().userRole.value.toLowerCase().trim();
+    return role == 'owner' || role == 'full_control';
+  }
+
+  void _confirmPromoteToOwner(
+    BuildContext context,
+    UserModel user,
+    UsersController controller,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Promote to Owner'),
+        content: Text(
+          'Promote "${user.name}" (${user.email}) to Owner role? '
+          'Owner is the primary administrative role and this action cannot be undone from this screen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
+          ),
+          Obx(() => ElevatedButton(
+                onPressed: controller.isSubmitting.value
+                    ? null
+                    : () async {
+                        final ok = await controller.promoteToOwner(user.email);
+                        if (ok && dialogCtx.mounted) {
+                          Navigator.of(dialogCtx).pop();
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1339FF),
+                  foregroundColor: Colors.white,
+                ),
+                child: controller.isSubmitting.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Text('Promote'),
+              )),
         ],
       ),
     );

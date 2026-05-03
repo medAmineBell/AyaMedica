@@ -141,7 +141,7 @@ class FavoriteDrugsScreen extends StatelessWidget {
                   ],
                   actions: [
                     TableActionConfig<Map<String, dynamic>>(
-                      icon: Icons.delete_outline,
+                      iconAsset: 'assets/svg/note-remove.svg',
                       color: const Color(0xFFEF4444),
                       tooltip: 'Remove from favorites',
                       onPressed: (drug, _) => controller.removeFavorite(drug),

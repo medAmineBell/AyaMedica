@@ -391,15 +391,25 @@ class ReportsListWidget extends GetView<ReportsController> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline,
-              size: 20, color: Color(0xFF6B7280)),
+          icon: SvgPicture.asset(
+            'assets/svg/note-remove.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           onPressed: () {
             _showDeleteConfirmation(context, report);
           },
         ),
         IconButton(
-          icon: const Icon(Icons.visibility_outlined,
-              size: 20, color: Color(0xFF6B7280)),
+          icon: SvgPicture.asset(
+            'assets/svg/view.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           onPressed: () {
             // TODO: View report
             print('View report: ${report.id}');

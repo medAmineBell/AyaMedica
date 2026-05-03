@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/storage_service.dart';
 import 'package:flutter_getx_app/utils/app_snackbar.dart';
+import 'communication_controller.dart';
 
 enum AppointmentScreenState { loading, error, success, empty }
 
@@ -750,6 +751,12 @@ class AppointmentSchedulingController extends GetxController {
             screenState.value = AppointmentScreenState.success;
           } else {
             screenState.value = AppointmentScreenState.empty;
+          }
+
+          // Piggy-back a silent inbox unread-count refresh so the sidebar
+          // badge stays in sync without disturbing the user's current tab.
+          if (Get.isRegistered<CommunicationController>()) {
+            Get.find<CommunicationController>().refreshInboxUnreadCount();
           }
         } else {
           throw Exception('API returned success: false');

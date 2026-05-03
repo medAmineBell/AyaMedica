@@ -4,10 +4,13 @@ import 'package:get/get.dart';
 import '../../../controllers/upload_controller.dart';
 
 class UploadStudentsDialog extends StatelessWidget {
+  static const String _tag = 'upload';
+
+  const UploadStudentsDialog({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    final uploadController = UploadController();
-    Get.put(uploadController, tag: 'upload');
+    final controller = Get.put(UploadController(), tag: _tag);
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -15,30 +18,26 @@ class UploadStudentsDialog extends StatelessWidget {
       ),
       child: Container(
         width: 600,
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: GetBuilder<UploadController>(
-          tag: 'upload',
-          builder: (uploadController) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _UploadDialogHeader(),
-                SizedBox(height: 24),
-                _UploadInstructions(),
-                SizedBox(height: 24),
-                _UploadArea(controller: uploadController),
-                SizedBox(height: 24),
-                _UploadedFilesList(controller: uploadController),
-                SizedBox(height: 32),
-                _UploadDialogActions(controller: uploadController),
-              ],
-            );
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _UploadDialogHeader(tag: _tag),
+            const SizedBox(height: 24),
+            _UploadInstructions(controller: controller),
+            const SizedBox(height: 24),
+            _UploadArea(controller: controller),
+            const SizedBox(height: 16),
+            _UploadErrorBanner(controller: controller),
+            _UploadedFilesList(controller: controller),
+            const SizedBox(height: 32),
+            _UploadDialogActions(controller: controller, tag: _tag),
+          ],
         ),
       ),
     );
@@ -46,12 +45,15 @@ class UploadStudentsDialog extends StatelessWidget {
 }
 
 class _UploadDialogHeader extends StatelessWidget {
+  final String tag;
+  const _UploadDialogHeader({required this.tag});
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
+        const Text(
           'Upload student details',
           style: TextStyle(
             fontSize: 24,
@@ -61,13 +63,13 @@ class _UploadDialogHeader extends StatelessWidget {
         ),
         IconButton(
           onPressed: () {
-            Get.delete<UploadController>(tag: 'upload');
+            Get.delete<UploadController>(tag: tag);
             Get.back();
           },
           icon: Icon(Icons.close, color: Colors.grey.shade600),
           style: IconButton.styleFrom(
             backgroundColor: Colors.grey.shade100,
-            shape: CircleBorder(),
+            shape: const CircleBorder(),
           ),
         ),
       ],
@@ -76,11 +78,37 @@ class _UploadDialogHeader extends StatelessWidget {
 }
 
 class _UploadInstructions extends StatelessWidget {
+  final UploadController controller;
+  const _UploadInstructions({required this.controller});
+
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'You may download ayamedica_students_template.xlsx fill it, and upload it here',
-      style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Don't have the template? Download it, fill in your students, and upload it here. "
+          "documentType is filled in automatically based on the branch and each student's nationality.",
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 12),
+        Obx(() => OutlinedButton.icon(
+              onPressed: controller.isUploading.value
+                  ? null
+                  : () => controller.downloadTemplate(),
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: const Text('Download template'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1339FF),
+                side: const BorderSide(color: Color(0xFF1339FF)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            )),
+      ],
     );
   }
 }
@@ -92,49 +120,95 @@ class _UploadArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 120,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey.shade300,
-          style: BorderStyle.solid,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
-      ),
-      child: InkWell(
-        onTap: () => controller.pickFiles(),
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.add,
-                color: Colors.grey.shade600,
-                size: 24,
-              ),
+    return Obx(() {
+      final hasFile = controller.uploadedFiles.isNotEmpty;
+      final disabled = controller.isUploading.value || hasFile;
+      return Opacity(
+        opacity: disabled ? 0.5 : 1.0,
+        child: Container(
+          width: double.infinity,
+          height: 120,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.grey.shade50,
+          ),
+          child: InkWell(
+            onTap: disabled ? null : () => controller.pickFiles(),
+            borderRadius: BorderRadius.circular(8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.add,
+                    color: Colors.grey.shade600,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  hasFile
+                      ? 'Remove the current file to pick another'
+                      : 'Upload file',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            SizedBox(height: 12),
-            Text(
-              'Upload file',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    });
+  }
+}
+
+class _UploadErrorBanner extends StatelessWidget {
+  final UploadController controller;
+
+  const _UploadErrorBanner({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final msg = controller.errorMessage.value;
+      if (msg == null || msg.isEmpty) return const SizedBox.shrink();
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEE2E2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFECACA)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline,
+                color: Color(0xFFB91C1C), size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                msg,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF7F1D1D),
+                ),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -145,44 +219,34 @@ class _UploadedFilesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<UploadController>(
-      tag: 'upload',
-      builder: (controller) {
-        if (controller.uploadedFiles.isEmpty) {
-          return SizedBox.shrink();
-        }
-
-        return Container(
-          constraints: BoxConstraints(maxHeight: 300),
-          child: Column(
-            children: controller.uploadedFiles
-                .map((file) => UploadFileItem(
-                      file: file,
-                      controller: controller,
-                    ))
-                .toList(),
-          ),
-        );
-      },
-    );
+    return Obx(() {
+      if (controller.uploadedFiles.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Container(
+        constraints: const BoxConstraints(maxHeight: 220),
+        child: Column(
+          children: controller.uploadedFiles
+              .map((file) =>
+                  _UploadFileItem(file: file, controller: controller))
+              .toList(),
+        ),
+      );
+    });
   }
 }
 
-class UploadFileItem extends StatelessWidget {
-  final dynamic file; // Replace with your actual file type
+class _UploadFileItem extends StatelessWidget {
+  final UploadFile file;
   final UploadController controller;
 
-  const UploadFileItem({
-    Key? key,
-    required this.file,
-    required this.controller,
-  }) : super(key: key);
+  const _UploadFileItem({required this.file, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      margin: EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -190,174 +254,158 @@ class UploadFileItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _FileIcon(),
-          SizedBox(width: 16),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.description_outlined,
+              color: Colors.grey.shade600,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   file.name,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 6),
-                _FileStatus(file: file, controller: controller),
+                const SizedBox(height: 6),
+                _FileStatus(file: file),
               ],
             ),
           ),
-          _RemoveFileButton(
-            onPressed: () => controller.removeFile(file),
-          ),
+          Obx(() {
+            if (controller.isUploading.value) {
+              return const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            }
+            return IconButton(
+              onPressed: () => controller.removeFile(file),
+              icon: const Icon(Icons.close, color: Colors.white, size: 16),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: const CircleBorder(),
+                minimumSize: const Size(28, 28),
+                padding: EdgeInsets.zero,
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-class _FileIcon extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        Icons.description_outlined,
-        color: Colors.grey.shade600,
-        size: 20,
-      ),
-    );
-  }
-}
-
 class _FileStatus extends StatelessWidget {
-  final dynamic file;
-  final UploadController controller;
+  final UploadFile file;
 
-  const _FileStatus({required this.file, required this.controller});
+  const _FileStatus({required this.file});
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<UploadController>(
-      tag: 'upload',
-      builder: (controller) {
-        final currentFile = controller.uploadedFiles.firstWhere(
-          (f) => f.name == file.name,
-          orElse: () => file,
+    return Obx(() {
+      if (file.hasError.value) {
+        return Text(
+          'Error processing file',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.red.shade600,
+            fontWeight: FontWeight.w500,
+          ),
         );
-
-        if (currentFile.hasError.value) {
-          return Text(
-            'Error processing file',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.red.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          );
-        } else if (currentFile.isCompleted.value) {
-          return Text(
-            'Upload completed successfully',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.green.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          );
-        } else {
-          return _FileProgress(file: currentFile);
-        }
-      },
-    );
+      }
+      if (file.isCompleted.value) {
+        return Text(
+          'Upload completed successfully',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.green.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+      }
+      return _FileProgress(file: file);
+    });
   }
 }
 
 class _FileProgress extends StatelessWidget {
-  final dynamic file;
+  final UploadFile file;
 
   const _FileProgress({required this.file});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: file.progress.value.clamp(0.0, 1.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(4),
+    return Obx(() {
+      final progress = file.progress.value;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: progress.clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(width: 12),
-            Text(
-              '${(file.progress.value * 100).toInt()}%',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: 4),
-        Text(
-          'Processing...',
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.blue.shade600,
+            ],
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RemoveFileButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const _RemoveFileButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(Icons.close, color: Colors.white, size: 16),
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.red,
-        shape: CircleBorder(),
-        minimumSize: Size(28, 28),
-        padding: EdgeInsets.zero,
-      ),
-    );
+          const SizedBox(height: 4),
+          Text(
+            progress >= 1.0 ? 'Done' : 'Ready to upload',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.blue.shade600,
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
 class _UploadDialogActions extends StatelessWidget {
   final UploadController controller;
+  final String tag;
 
-  const _UploadDialogActions({required this.controller});
+  const _UploadDialogActions({required this.controller, required this.tag});
 
   @override
   Widget build(BuildContext context) {
@@ -366,11 +414,11 @@ class _UploadDialogActions extends StatelessWidget {
         Expanded(
           child: OutlinedButton(
             onPressed: () {
-              Get.delete<UploadController>(tag: 'upload');
+              Get.delete<UploadController>(tag: tag);
               Get.back();
             },
             style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               side: BorderSide(color: Colors.grey.shade300),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -386,38 +434,40 @@ class _UploadDialogActions extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         Expanded(
-          child: GetBuilder<UploadController>(
-            tag: 'upload',
-            builder: (controller) {
-              final hasCompleted = controller.uploadedFiles
-                  .any((f) => f.isCompleted.value);
-              return ElevatedButton(
-                onPressed: hasCompleted
-                    ? () {
-                        Get.delete<UploadController>(tag: 'upload');
-                        Get.back();
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+          child: Obx(() {
+            final enabled = controller.canSubmit;
+            return ElevatedButton(
+              onPressed: enabled ? () => controller.submit() : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1339FF),
+                disabledBackgroundColor: Colors.grey.shade300,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Complete',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-          ),
+              ),
+              child: controller.isUploading.value
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Complete',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+            );
+          }),
         ),
       ],
     );

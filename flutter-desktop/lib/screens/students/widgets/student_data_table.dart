@@ -14,6 +14,9 @@ import 'student_table_pagination.dart';
 class StudentDataTable extends StatelessWidget {
   final StudentController controller = Get.put(StudentController());
   final HomeController homeController = Get.find<HomeController>();
+  final bool fromClinic;
+
+  StudentDataTable({Key? key, this.fromClinic = false}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +54,7 @@ class StudentDataTable extends StatelessWidget {
               return StudentTable(
                 controller: controller,
                 onStudentTap: _showStudentDetails,
+                fromClinic: fromClinic,
               );
             }),
           ),
@@ -68,7 +72,10 @@ class StudentDataTable extends StatelessWidget {
   }
 
   void _showStudentDetails(Student student) {
-    // Navigate to student profile using HomeController
+    if (fromClinic) {
+      homeController.navigateToClinicStudentProfile(student);
+      return;
+    }
     homeController.navigateToStudentProfile(
       student,
       appointmentType: 'View Profile',

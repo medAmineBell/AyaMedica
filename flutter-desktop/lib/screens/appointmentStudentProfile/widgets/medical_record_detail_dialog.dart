@@ -1,220 +1,419 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+
+import '../../../models/student.dart';
 
 class MedicalRecordDetailDialog extends StatelessWidget {
   final Map<String, dynamic> record;
+  final Student? student;
 
-  const MedicalRecordDetailDialog({super.key, required this.record});
+  const MedicalRecordDetailDialog({
+    super.key,
+    required this.record,
+    this.student,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        constraints: const BoxConstraints(maxWidth: 800),
-        child: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE4E9ED),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: const Icon(Icons.close, size: 20),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildHeader(context),
-                const SizedBox(height: 24),
-                _buildCreatedBySection(),
-                const SizedBox(height: 24),
-                _buildRecordDetailsSection(),
-                const SizedBox(height: 24),
-                _buildDrugsSection(),
-                const SizedBox(height: 24),
-                _buildAttachmentsSection(),
-              ],
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _buildContent(),
+              ),
             ),
-          ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(100),
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE4E9ED),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: const Icon(Icons.close, size: 20),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final createdDate = _formatDateTime(record['createdDate'] as String?);
+  Widget _buildContent() {
+    final fullName = student?.name ?? '-';
+    final grade = student?.grade ?? '';
+    final studentClass = student?.className ?? '';
+    final initials = fullName.split(' ').length >= 2
+        ? '${fullName.split(' ')[0][0]}${fullName.split(' ')[1][0]}'.toUpperCase()
+        : fullName.isNotEmpty
+            ? fullName[0].toUpperCase()
+            : '?';
+
+    final rawDate = (record['effectiveDateTime'] as String?) ??
+        (record['createdDate'] as String?) ??
+        (record['date'] as String?);
+    final formattedTime = _formatHeaderTime(rawDate);
+
+    final specialtyRaw = (record['specialty'] as String?) ??
+        (record['type'] as String?) ??
+        (record['doctor_aid'] != null ? 'School' : 'General');
+    final specialty = specialtyRaw.isNotEmpty
+        ? '${specialtyRaw[0].toUpperCase()}${specialtyRaw.substring(1).toLowerCase()}'
+        : '-';
+
+    final clinicAddress = (record['clinicAddress'] as String?) ?? '';
+    final doctorAid = (record['doctor_aid'] as String?) ??
+        (record['doctorName'] as String?) ??
+        (record['created_by_aid'] as String?) ??
+        '';
+
+    final signs = record['signs'] as Map<String, dynamic>?;
+    final hasVitals =
+        signs != null && signs.values.any((v) => v != null && '$v'.isNotEmpty);
+
+    final assessment = record['assessment'] as Map<String, dynamic>? ?? {};
+    final complaints = assessment['chief_complaints'] as List? ?? [];
+    final examination = assessment['examination_details'] as String?;
+    final diseases = assessment['suspected_diseases'] as List? ?? [];
+    final recommendations = assessment['recommendation'] as List? ?? [];
+    final note = (record['note'] as String?) ??
+        (assessment['assessment_note'] as String?);
+
+    final drugs = record['drugs'] as List? ?? [];
+    final sickLeave = record['sick_leave'] as Map<String, dynamic>?;
+    final attachments = record['attachments'] as List? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Student header
+        if (student != null) ...[
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFFC4A84E),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(fullName,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('$grade - $studentClass',
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF6B7280))),
+                ],
+              ),
+              const Spacer(),
+              const SizedBox(width: 40),
+              Text(formattedTime,
+                  style:
+                      const TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+              const SizedBox(width: 40),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // Specialty
+        Text(specialty,
+            style:
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+
+        // Created by
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Text('Created by',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+              const SizedBox(width: 16),
+              const Icon(Icons.local_hospital,
+                  size: 16, color: Color(0xFF2563EB)),
+              const SizedBox(width: 6),
+              Text(clinicAddress, style: const TextStyle(fontSize: 13)),
+              const SizedBox(width: 16),
+              const Icon(Icons.medical_services,
+                  size: 16, color: Color(0xFF6B7280)),
+              const SizedBox(width: 6),
+              Text(doctorAid, style: const TextStyle(fontSize: 13)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Vitals
+        if (hasVitals) ...[
+          _buildVitalsRow(
+            signs['heart_rate'],
+            signs['blood_pressure'],
+            signs['temperature'],
+            signs['respiratory_rate'],
+            signs['blood_glucose'],
+            signs['oxygen_saturation'],
+            signs['height'],
+            signs['weight'],
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // Chief complaint
+        _buildSectionTitle('Chief complaint'),
+        const SizedBox(height: 8),
+        _buildInfoRow('Chief complaint',
+            complaints.isNotEmpty ? complaints.join(', ') : '-'),
+        _buildInfoRow('Examination details', examination ?? '-'),
+
+        const SizedBox(height: 24),
+
+        // Assessment
+        _buildSectionTitle('Assessment'),
+        const SizedBox(height: 8),
+        _buildInfoRow('Suspected disease(s)',
+            diseases.isNotEmpty ? diseases.join(', ') : '-'),
+        _buildInfoRow('Recommendations(s)',
+            recommendations.isNotEmpty ? recommendations.join(', ') : '-'),
+
+        const SizedBox(height: 24),
+
+        // Plan
+        if (drugs.isNotEmpty) ...[
+          _buildSectionTitle('Plan'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: drugs
+                .map((d) => _buildDrugCard(d as Map<String, dynamic>))
+                .toList(),
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // General Notes & sick leave
+        _buildSectionTitle('General Notes & sick leave (if applicable)'),
+        const SizedBox(height: 8),
+        _buildInfoRow('General note', note ?? '-'),
+        if (sickLeave != null)
+          _buildInfoRow(
+            'Sick leave details',
+            '${sickLeave['days']} Days | From ${sickLeave['start_date'] ?? '-'} To ${_calcEndDate(sickLeave)}',
+          ),
+
+        // Attachments
+        if (attachments.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildSectionTitle('Attachments'),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1,
+            ),
+            itemCount: attachments.length,
+            itemBuilder: (context, index) => Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFD9D9D9),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Center(
+                child: Icon(Icons.image, color: Color(0xFF9CA3AF), size: 32),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildVitalsRow(
+    dynamic heartRate,
+    dynamic bloodPressure,
+    dynamic temperature,
+    dynamic respiratoryRate,
+    dynamic bloodGlucose,
+    dynamic oxygenSaturation,
+    dynamic height,
+    dynamic weight,
+  ) {
+    final vitals = [
+      {
+        'title': 'Heart Rate',
+        'value': heartRate?.toString() ?? '-',
+        'svg': 'assets/svg/heart_rate_01.svg'
+      },
+      {
+        'title': 'Blood Pressure',
+        'value': bloodPressure?.toString() ?? '-',
+        'svg': 'assets/svg/blood_pressure_02.svg'
+      },
+      {
+        'title': 'Temperature',
+        'value': temperature?.toString() ?? '-',
+        'svg': 'assets/svg/blood_pressure_01.svg'
+      },
+      {
+        'title': 'Respiratory Rate',
+        'value': respiratoryRate?.toString() ?? '-',
+        'svg': 'assets/svg/lungs.svg'
+      },
+      {
+        'title': 'Blood Glucose',
+        'value': bloodGlucose?.toString() ?? '-',
+        'svg': 'assets/svg/blood_glucose.svg'
+      },
+      {
+        'title': 'Oxygen Saturation',
+        'value': oxygenSaturation != null ? '$oxygenSaturation%' : '-',
+        'svg': 'assets/svg/Heading.svg'
+      },
+      {
+        'title': 'Height & weight',
+        'value': '${height ?? '-'} / ${weight ?? '-'}',
+        'svg': 'assets/svg/weight.svg'
+      },
+    ];
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Medical record details',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF2D2E2E),
+      children: vitals
+          .map((v) => Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE4E9ED)),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  createdDate,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF707579),
+                  child: Column(
+                    children: [
+                      SvgPicture.asset(v['svg']!,
+                          width: 22,
+                          height: 22,
+                          colorFilter: const ColorFilter.mode(
+                              Color(0xFF1339FF), BlendMode.srcIn)),
+                      const SizedBox(height: 4),
+                      Text(v['title']!,
+                          style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFFA6A9AC),
+                              fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: const Color(0xFFE4E9ED), width: 0.5),
+                        ),
+                        child: Text(v['value']!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w500)),
                       ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(width: 100, height: 40),
-      ],
+              ))
+          .toList(),
     );
   }
 
-  Widget _buildCreatedBySection() {
-    final doctorName = record['doctorName'] as String? ?? '-';
-    final clinicAddress = record['clinicAddress'] as String? ?? '-';
-    final date = _formatDateTime(record['date'] as String?);
-    final createdByAid = record['created_by_aid'] as String? ?? '-';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Created by',
-          style: TextStyle(
-            color: Color(0xFF747677),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildHistoryItem(
-          avatarColor: const Color(0xFFD8FAE4),
-          name: createdByAid,
-          date: _formatDateTime(record['createdDate'] as String?),
-        ),
-        _buildHistoryItem(
-          avatarColor: const Color(0xFFCDF7FF),
-          name: doctorName,
-          date: date,
-        ),
-        _buildInfoRow('Appointment date', date),
-        _buildInfoRow('Clinic / School details', doctorName),
-        _buildInfoRow('Address', clinicAddress),
-      ],
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF2D2E2E),
+      ),
     );
   }
 
-  Widget _buildRecordDetailsSection() {
-    final type = record['type'] as String? ?? '-';
-    final specialty = record['specialty'] as String? ?? type;
-    final assessment = record['assessment'] as Map<String, dynamic>?;
-
-    final complaints = assessment?['chief_complaints'] as List?;
-    final examination = assessment?['examination_details'] as String?;
-    final diseases = assessment?['suspected_diseases'] as List?;
-    final recommendations = assessment?['recommendation'] as List?;
-    final assessmentNote = assessment?['assessment_note'] as String?;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Record details',
-          style: TextStyle(
-            color: Color(0xFF747677),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
+  Widget _buildInfoRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
+          const SizedBox(width: 24),
+          Flexible(
+            child: Text(value,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827)),
+                textAlign: TextAlign.right),
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildInfoRow('Type', specialty),
-        if (complaints != null && complaints.isNotEmpty)
-          _buildInfoRow('Chief Complaints', complaints.join(', ')),
-        if (examination != null && examination.isNotEmpty)
-          _buildInfoRow('Examination', examination),
-        if (diseases != null && diseases.isNotEmpty)
-          _buildInfoRow('Suspected Diseases', diseases.join(', ')),
-        if (recommendations != null && recommendations.isNotEmpty)
-          _buildInfoRow('Recommendation', recommendations.join(', ')),
-        if (assessmentNote != null && assessmentNote.isNotEmpty)
-          _buildInfoRow('Note', assessmentNote),
-      ],
-    );
-  }
-
-  Widget _buildDrugsSection() {
-    final drugs = record['drugs'] as List?;
-    if (drugs == null || drugs.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Drugs details',
-          style: TextStyle(
-            color: Color(0xFF747677),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          alignment: WrapAlignment.start,
-          children: drugs.map((drug) {
-            return SizedBox(
-              width: 240,
-              child: _buildDrugCard(drug as Map<String, dynamic>),
-            );
-          }).toList(),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildDrugCard(Map<String, dynamic> drug) {
-    final name = drug['drug_name'] as String? ?? '-';
+    final name = drug['drug_name'] as String? ?? '{Drug name}';
     final ingredient = drug['drug_active_ingredient'] as String? ?? '-';
-    final form = drug['drug_administration_form'] as String? ?? '-';
-    final hours = drug['drug_hours'] as String? ?? '-';
-    final days = drug['drug_days'] as String? ?? '-';
-    final startDate = drug['drug_start_date'] as String? ?? '-';
-    final endDate = drug['drug_end_date'] as String? ?? '-';
-
-    // drug_relation_to_food can be a list or string
+    final form = drug['drug_administration_form'] as String? ?? '';
     final foodRelation = drug['drug_relation_to_food'];
     final timing = foodRelation is List
         ? foodRelation.join(', ')
         : foodRelation?.toString() ?? '-';
+    final dose = drug['dose']?.toString() ?? '-';
+    final doseType = drug['dose_type']?.toString() ?? '';
+    final drugNote = drug['drug_note'] as String?;
+    final days = drug['drug_days']?.toString() ?? '-';
+    final hours = drug['drug_hours']?.toString() ?? '-';
+    final startDate = drug['drug_start_date']?.toString() ?? '-';
+    final endDate = drug['drug_end_date']?.toString() ?? '-';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: 220,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFFBFCFD),
         borderRadius: BorderRadius.circular(8),
@@ -224,253 +423,159 @@ class MedicalRecordDetailDialog extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2D2E2E),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 12),
+          Text(name,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 8,
+            spacing: 6,
+            runSpacing: 4,
             children: [
-              _buildDrugTag(ingredient),
-              _buildDrugTag(form),
+              _pill(ingredient),
+              if (form.isNotEmpty) _pill(form),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hours != '-' ? 'Every $hours hrs' : '-',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF595A5B),
-                    ),
-                  ),
-                  Text(
-                    timing,
-                    style: const TextStyle(
-                      color: Color(0xFF747677),
-                      fontSize: 10,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$dose $doseType',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF595A5B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    Text(timing,
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFF747677)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    days != '-' ? '$days days' : '-',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF595A5B),
-                    ),
-                  ),
+                  Text('$days days',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF595A5B))),
+                  Text('Every $hours hours',
+                      style: const TextStyle(
+                          fontSize: 10, color: Color(0xFF747677))),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: const Color(0xFFEDF1F5),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildDateInfo('Starting date', startDate),
-                _buildDateInfo('End date', endDate),
+                _dateCol('Starting date', _formatDate(startDate)),
+                _dateCol('End date', _formatDate(endDate)),
               ],
             ),
           ),
+          if (drugNote != null && drugNote.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(drugNote,
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF747677),
+                    fontStyle: FontStyle.italic),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildAttachmentsSection() {
-    final attachments = record['attachments'] as List?;
-    if (attachments == null || attachments.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Attachments',
-          style: TextStyle(
-            color: Color(0xFF747677),
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+  Widget _pill(String text) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 180),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF1F5),
+          borderRadius: BorderRadius.circular(64),
         ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1,
-          ),
-          itemCount: attachments.length,
-          itemBuilder: (context, index) => Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFD9D9D9),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Center(
-              child: Icon(Icons.image, color: Color(0xFF9CA3AF), size: 32),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistoryItem({
-    required Color avatarColor,
-    required String name,
-    required String date,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(width: 1, color: Color(0xFFDCE0E4)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: avatarColor,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Text(name),
-            ],
-          ),
-          Text(
-            date,
+        child: Text(text,
             style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2D2E2E),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String title, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(width: 1, color: Color(0xFFDCE0E4)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFF595A5B),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 24),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Color(0xFF2D2E2E),
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
+                color: Color(0xFF595A5B)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
       ),
     );
   }
 
-  Widget _buildDrugTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEDF1F5),
-        borderRadius: BorderRadius.circular(64),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF595A5B),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Widget _buildDateInfo(String title, String date) {
+  Widget _dateCol(String label, String date) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF747677),
-            fontSize: 10,
-          ),
-        ),
-        Text(
-          date,
-          style: const TextStyle(
-            color: Color(0xFF1339FF),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF747677))),
+        Text(date,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1339FF))),
       ],
     );
   }
 
-  String _formatDateTime(String? dateStr) {
-    if (dateStr == null) return '-';
+  String _formatDate(String dateStr) {
+    if (dateStr.isEmpty || dateStr == '-') return '-';
     try {
       final d = DateTime.parse(dateStr);
-      return DateFormat('dd/MM/yyyy | hh:mm a').format(d);
+      return DateFormat('dd/MM/yyyy').format(d);
     } catch (_) {
       return dateStr;
+    }
+  }
+
+  String _formatHeaderTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final d = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final isToday =
+          d.year == now.year && d.month == now.month && d.day == now.day;
+      return isToday
+          ? 'Today at ${DateFormat('hh:mm a').format(d)}'
+          : DateFormat('dd/MM/yyyy \'at\' hh:mm a').format(d);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String _calcEndDate(Map<String, dynamic> sickLeave) {
+    final startStr = sickLeave['start_date'] as String?;
+    final days = sickLeave['days'] as int? ?? 0;
+    if (startStr == null) return '-';
+    try {
+      final start = DateTime.parse(startStr);
+      final end = start.add(Duration(days: days));
+      return DateFormat('dd/MM/yyyy').format(end);
+    } catch (_) {
+      return '-';
     }
   }
 }

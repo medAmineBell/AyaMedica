@@ -16,8 +16,11 @@ class CommunicationController extends GetxController {
   /// Currently selected message (for detail view)
   Rxn<MessageModel> selectedMessage = Rxn<MessageModel>();
 
-  /// "" = no filter, or one of "Received records", etc.
-  var selectedStatusFilter = 'Received records'.obs;
+  /// "" = no filter, or one of "Inbox", "Sent", "Received records", "Vaccination requests"
+  var selectedStatusFilter = 'Inbox'.obs;
+
+  /// Active API type: 'inbox' | 'sent' | 'records' | 'vaccination'
+  final RxString selectedType = 'inbox'.obs;
 
   /// (Optional) search query
   var searchQuery = ''.obs;
@@ -31,6 +34,11 @@ class CommunicationController extends GetxController {
   /// Loading state
   RxBool isLoading = false.obs;
 
+  /// Inbox unread count — refreshed silently (e.g. from loadAppointments)
+  /// without touching [messages], so the sidebar badge stays accurate even
+  /// when the user is viewing a non-inbox tab.
+  RxInt unreadInboxCount = 0.obs;
+
   /// Sick leave state for selected record
   RxBool isLoadingSickLeave = true.obs;
   Rxn<Map<String, dynamic>> sickLeaveData = Rxn<Map<String, dynamic>>();
@@ -43,7 +51,109 @@ class CommunicationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchReceivedRecords();
+    fetchInboxMessages();
+  }
+
+  /// Fetch the list for the currently selected type.
+  Future<void> _fetchForCurrentType(int page) {
+    switch (selectedType.value) {
+      case 'records':
+        return fetchReceivedRecords(page: page);
+      case 'vaccination':
+        messages.clear();
+        filteredMessages.clear();
+        currentPage.value = 1;
+        totalPages.value = 1;
+        totalItems.value = 0;
+        return Future.value();
+      case 'sent':
+      case 'inbox':
+      default:
+        return fetchInboxMessages(page: page);
+    }
+  }
+
+  /// Fetch messages from /api/messages?type=<inbox|sent>
+  Future<void> fetchInboxMessages({int page = 1, String? type}) async {
+    final effectiveType = type ?? selectedType.value;
+    try {
+      isLoading.value = true;
+
+      final storageService = Get.find<StorageService>();
+      final accessToken = storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final url =
+          '${AppConfig.newBackendUrl}/api/messages?type=$effectiveType&page=$page&limit=$itemsPerPage';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'] as Map<String, dynamic>;
+          final list = data['messages'] as List;
+          final pagination = data['pagination'] as Map<String, dynamic>;
+
+          final parsed =
+              list.map((r) => MessageModel.fromInboxApi(r)).toList();
+
+          messages.assignAll(parsed);
+          filteredMessages.assignAll(parsed);
+          currentPage.value = pagination['page'] ?? 1;
+          totalItems.value = pagination['total'] ?? 0;
+          totalPages.value = pagination['totalPages'] ?? 1;
+
+          if (effectiveType == 'inbox' && page == 1) {
+            unreadInboxCount.value = parsed.where((m) => !m.read).length;
+          }
+        }
+      }
+    } catch (e) {
+      print('[CommunicationController] Error fetching inbox: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Silently refresh the inbox unread count (used by other controllers to
+  /// keep the sidebar badge fresh). Does NOT mutate [messages] or loading
+  /// state, so the user's current tab view is left intact.
+  Future<void> refreshInboxUnreadCount() async {
+    try {
+      final storageService = Get.find<StorageService>();
+      final accessToken = storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final url =
+          '${AppConfig.newBackendUrl}/api/messages?type=inbox&page=1&limit=$itemsPerPage';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'] as Map<String, dynamic>;
+          final list = data['messages'] as List;
+          unreadInboxCount.value =
+              list.where((m) => m is Map && m['read'] == false).length;
+        }
+      }
+    } catch (e) {
+      print('[CommunicationController] Error refreshing unread count: $e');
+    }
   }
 
   /// Fetch received medical records from API
@@ -102,7 +212,7 @@ class CommunicationController extends GetxController {
 
       final url = '${AppConfig.newBackendUrl}/api/messages/$messageId/read';
 
-      await http.patch(
+      await http.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
@@ -114,8 +224,13 @@ class CommunicationController extends GetxController {
       final idx = messages.indexWhere((m) => m.id == messageId);
       if (idx != -1) {
         final msg = messages[idx];
-        messages[idx] = msg.copyWith(read: true);
-        _applyFilter();
+        if (!msg.read) {
+          messages[idx] = msg.copyWith(read: true);
+          _applyFilter();
+          if (selectedType.value == 'inbox' && unreadInboxCount.value > 0) {
+            unreadInboxCount.value = unreadInboxCount.value - 1;
+          }
+        }
       }
     } catch (e) {
       print('[CommunicationController] Error marking as read: $e');
@@ -130,39 +245,55 @@ class CommunicationController extends GetxController {
   /// Move to next page if possible
   void nextPage() {
     if (currentPage.value < totalPages.value) {
-      fetchReceivedRecords(page: currentPage.value + 1);
+      _fetchForCurrentType(currentPage.value + 1);
     }
   }
 
   /// Move to previous page if possible
   void previousPage() {
     if (currentPage.value > 1) {
-      fetchReceivedRecords(page: currentPage.value - 1);
+      _fetchForCurrentType(currentPage.value - 1);
     }
   }
 
   /// Jump to a specific page
   void goToPage(int page) {
     final clamped = page.clamp(1, totalPages.value);
-    fetchReceivedRecords(page: clamped);
+    _fetchForCurrentType(clamped);
   }
 
-  /// Toggles the status filter on/off
+  /// Toggles the status filter on/off and switches the active API type
   void toggleStatusFilter(String status) {
     if (selectedStatusFilter.value == status) {
-      selectedStatusFilter.value = '';
-    } else {
-      selectedStatusFilter.value = status;
+      // Re-selecting the active tab is a no-op so we never land on an empty state.
+      return;
     }
+    selectedStatusFilter.value = status;
+    selectedMessage.value = null;
+    switch (status) {
+      case 'Inbox':
+        selectedType.value = 'inbox';
+        break;
+      case 'Sent':
+        selectedType.value = 'sent';
+        break;
+      case 'Received records':
+        selectedType.value = 'records';
+        break;
+      case 'Vaccination requests':
+        selectedType.value = 'vaccination';
+        break;
+    }
+    _fetchForCurrentType(1);
   }
 
   /// Selects a message for detail view and marks it as read
   void selectMessage(MessageModel msg) {
     selectedMessage.value = msg;
-    if (!msg.read) {
+    if (!msg.read && selectedType.value != 'sent') {
       markAsRead(msg.id);
     }
-    if (msg.recordId != null) {
+    if (selectedType.value == 'records' && msg.recordId != null) {
       fetchSickLeaveStatus(msg.recordId!);
     } else {
       isLoadingSickLeave.value = false;

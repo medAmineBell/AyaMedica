@@ -20,6 +20,7 @@ import 'package:flutter_getx_app/controllers/medical_records_controller.dart';
 import 'package:flutter_getx_app/controllers/communication_controller.dart';
 import 'package:flutter_getx_app/controllers/reports_controller.dart';
 import 'package:flutter_getx_app/controllers/dashboard_controller.dart';
+import 'package:flutter_getx_app/controllers/clinic_visits_controller.dart';
 
 enum ContentType {
   dashboard,
@@ -28,6 +29,8 @@ enum ContentType {
   calendar,
   studentsOverview,
   studentsList,
+  studentsBulkUploadResults,
+  clinicStudentsList,
   medicalCheckups,
   medicalCheckupTable,
   reports,
@@ -36,6 +39,7 @@ enum ContentType {
   schoolYear,
   users,
   studentProfile,
+  clinicStudentProfile,
   appointmentStudentProfile,
   checkedOutWalkInSummary,
   studentForm,
@@ -45,6 +49,7 @@ enum ContentType {
   feedbackDetails,
   notifications,
   favoriteDrugs,
+  clinicVisits,
 }
 
 class HomeController extends GetxController {
@@ -132,6 +137,10 @@ class HomeController extends GetxController {
   }
 
   void changeContent(ContentType content) {
+    if (content == ContentType.studentsList && !isRestrictedRole) {
+      currentContent.value = ContentType.clinicStudentsList;
+      return;
+    }
     currentContent.value = content;
   }
 
@@ -143,6 +152,16 @@ class HomeController extends GetxController {
     patientMedicalRecords.clear();
     patientMedicalHistory.clear();
     currentContent.value = ContentType.studentProfile;
+  }
+
+  void navigateToClinicStudentProfile(Student student,
+      {String appointmentType = 'View Profile'}) {
+    currentStudent.value = student;
+    currentAppointmentType.value = appointmentType;
+    selectedProfileMenuItem.value = 'Profile';
+    patientMedicalRecords.clear();
+    patientMedicalHistory.clear();
+    currentContent.value = ContentType.clinicStudentProfile;
   }
 
   void navigateToAppointmentStudentProfile(Student student,
@@ -355,6 +374,14 @@ class HomeController extends GetxController {
     currentContent.value = ContentType.studentForm;
   }
 
+  void navigateToStudentsList() {
+    currentContent.value = ContentType.studentsList;
+  }
+
+  void navigateToBulkUploadResults() {
+    currentContent.value = ContentType.studentsBulkUploadResults;
+  }
+
   void navigateToEditStudent(Student student) {
     studentToEdit.value = student;
     isEditingStudent.value = true;
@@ -364,7 +391,9 @@ class HomeController extends GetxController {
   void exitStudentForm() {
     studentToEdit.value = null;
     isEditingStudent.value = false;
-    currentContent.value = ContentType.studentsList;
+    currentContent.value = isRestrictedRole
+        ? ContentType.studentsList
+        : ContentType.clinicStudentsList;
   }
 
   void navigateToAddBranch() {
@@ -384,7 +413,9 @@ class HomeController extends GetxController {
   }
 
   void exitFavoriteDrugs() {
-    currentContent.value = ContentType.studentsList;
+    currentContent.value = isRestrictedRole
+        ? ContentType.studentsList
+        : ContentType.clinicStudentsList;
   }
 
   void exitBranchForm() {
@@ -452,6 +483,7 @@ class HomeController extends GetxController {
     _deleteSafely<DashboardController>();
     _deleteSafely<AppointmentSchedulingController>();
     _deleteSafely<AppointmentHistoryController>();
+    _deleteSafely<ClinicVisitsController>();
     _deleteSafely<BranchManagementController>();
     _deleteSafely<UsersController>();
     _deleteSafely<MobileAppUserController>();

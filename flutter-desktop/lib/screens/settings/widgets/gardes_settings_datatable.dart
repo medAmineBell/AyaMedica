@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/resources_controller.dart';
 import 'package:flutter_getx_app/screens/settings/widgets/create_class_grade.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 class GardesSettingsDatatable extends StatelessWidget {
@@ -262,7 +263,12 @@ class GardesSettingsDatatable extends StatelessWidget {
           onPressed: () {
             _showDeleteConfirmation(classItem, controller);
           },
-          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+          icon: SvgPicture.asset(
+            'assets/svg/note-remove.svg',
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(Colors.red, BlendMode.srcIn),
+          ),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           tooltip: 'Delete',
@@ -271,8 +277,13 @@ class GardesSettingsDatatable extends StatelessWidget {
           onPressed: () {
             _showEditDialog(classItem);
           },
-          icon: const Icon(Icons.edit_outlined,
-              color: Color(0xFF6B7280), size: 18),
+          icon: SvgPicture.asset(
+            'assets/svg/edit-2.svg',
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           tooltip: 'Edit',
@@ -281,8 +292,13 @@ class GardesSettingsDatatable extends StatelessWidget {
           onPressed: () {
             controller.loadClassDetails(classItem['id']);
           },
-          icon: const Icon(Icons.visibility_outlined,
-              color: Color(0xFF6B7280), size: 18),
+          icon: SvgPicture.asset(
+            'assets/svg/view.svg',
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           tooltip: 'View Details',

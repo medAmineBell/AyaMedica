@@ -21,11 +21,13 @@ class Student {
   final String? firstGuardianPhone;
   final String? firstGuardianEmail;
   final String? firstGuardianStatus;
+  final String? firstGuardianRelation;
 
   final String? secondGuardianName;
   final String? secondGuardianPhone;
   final String? secondGuardianEmail;
   final String? secondGuardianStatus;
+  final String? secondGuardianRelation;
 
   final String? city;
   final String? street;
@@ -71,10 +73,12 @@ class Student {
     this.firstGuardianPhone,
     this.firstGuardianEmail,
     this.firstGuardianStatus,
+    this.firstGuardianRelation,
     this.secondGuardianName,
     this.secondGuardianPhone,
     this.secondGuardianEmail,
     this.secondGuardianStatus,
+    this.secondGuardianRelation,
     this.city,
     this.street,
     this.zipCode,
@@ -116,10 +120,12 @@ class Student {
       firstGuardianPhone: json['firstGuardianPhone'] as String?,
       firstGuardianEmail: json['firstGuardianEmail'] as String?,
       firstGuardianStatus: json['firstGuardianStatus'] as String?,
+      firstGuardianRelation: json['firstGuardianRelation'] as String?,
       secondGuardianName: json['secondGuardianName'] as String?,
       secondGuardianPhone: json['secondGuardianPhone'] as String?,
       secondGuardianEmail: json['secondGuardianEmail'] as String?,
       secondGuardianStatus: json['secondGuardianStatus'] as String?,
+      secondGuardianRelation: json['secondGuardianRelation'] as String?,
       city: json['city'] as String?,
       street: json['street'] as String?,
       zipCode: json['zipCode'] as String?,
@@ -166,10 +172,12 @@ class Student {
       'firstGuardianPhone': firstGuardianPhone,
       'firstGuardianEmail': firstGuardianEmail,
       'firstGuardianStatus': firstGuardianStatus,
+      'firstGuardianRelation': firstGuardianRelation,
       'secondGuardianName': secondGuardianName,
       'secondGuardianPhone': secondGuardianPhone,
       'secondGuardianEmail': secondGuardianEmail,
       'secondGuardianStatus': secondGuardianStatus,
+      'secondGuardianRelation': secondGuardianRelation,
       'city': city,
       'street': street,
       'zipCode': zipCode,

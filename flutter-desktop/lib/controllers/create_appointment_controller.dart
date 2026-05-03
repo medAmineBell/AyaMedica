@@ -113,8 +113,13 @@ class CreateAppointmentController extends GetxController {
     // Ensure classes are loaded
     _resourcesController.loadClasses();
 
-    // Load students from API
+    // Load students from API (initial bulk). Skip the assignAll if by the
+    // time it resolves a search / user selection has already scoped the list,
+    // otherwise we'd clobber the selected student out of the dropdown items.
     _loadStudentsFromApi().then((_) {
+      if (walkInSelectedStudent.value != null) return;
+      if (searchResults.isNotEmpty) return;
+      if (filteredStudentsForWalkIn.isNotEmpty) return;
       filteredStudentsForWalkIn.assignAll(_students);
     });
 

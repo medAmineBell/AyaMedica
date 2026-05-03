@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_getx_app/models/create_branch_request.dart';
 import 'package:flutter_getx_app/utils/location_service.dart';
+import 'package:flutter_getx_app/utils/storage_service.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
@@ -38,7 +40,49 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
 
   // Grade selection - Multiple grades
   List<String> _selectedGrades = [];
-  final List<String> _allGrades = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'];
+
+  // Grade options per education type. Order here is the order shown in the
+  // dropdown.
+  static const Map<String, List<String>> _gradesByEducationType = {
+    'British': [
+      'Pre-KG',
+      'FS1',
+      'FS2',
+      'Y1',
+      'Y2',
+      'Y3',
+      'Y4',
+      'Y5',
+      'Y6',
+      'Y7',
+      'Y8',
+      'Y9',
+      'Y10',
+      'Y11',
+      'Y12',
+    ],
+    'American': [
+      'Pre-KG',
+      'KG1',
+      'KG2',
+      'G1',
+      'G2',
+      'G3',
+      'G4',
+      'G5',
+      'G6',
+      'G7',
+      'G8',
+      'G9',
+      'G10',
+      'G11',
+      'G12',
+    ],
+  };
+
+  List<String> get _allGrades =>
+      _gradesByEducationType[_selectedEducationType] ??
+      const ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'];
 
   // Custom grade controllers (for Custom education type)
   List<TextEditingController> _customGradeControllers = [];
@@ -47,13 +91,21 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   static const Map<String, String> _educationTypeFromApi = {
     'AMERICAN': 'American',
     'BRITISH': 'British',
-    'NATIONAL': 'National',
     'CUSTOM': 'Custom',
   };
 
   late HomeController homeController;
   late BranchManagementController branchController;
   late LocationService locationService;
+  late StorageService _storageService;
+
+  /// Country code for the currently selected organization/branch.
+  /// Falls back to 'EG' when no branch is selected yet.
+  String get _country {
+    final branchData = _storageService.getSelectedBranchData();
+    final code = branchData?['country'] as String?;
+    return (code != null && code.isNotEmpty) ? code : 'EG';
+  }
 
   @override
   void initState() {
@@ -61,6 +113,10 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     homeController = Get.find();
     branchController = Get.find();
     locationService = Get.find();
+    _storageService = Get.find();
+    // Refresh governorates for the organization's country (service is shared
+    // across the app and may have been primed with a different country).
+    locationService.fetchGovernorates(country: _country);
     _initializeForm();
   }
 
@@ -88,7 +144,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         final govKey =
             locationService.getGovernorateKey(_selectedGovernorate!) ??
                 branch.governorate!.toUpperCase();
-        locationService.fetchCities(govKey).then((_) {
+        locationService.fetchCities(govKey, country: _country).then((_) {
           // Resolve city name after cities are loaded
           if (branch.city != null && branch.city!.isNotEmpty) {
             final cityName = locationService.getCityNameFromKey(branch.city!);
@@ -558,7 +614,8 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                     if (value != null) {
                       final govKey = locationService.getGovernorateKey(value);
                       if (govKey != null) {
-                        locationService.fetchCities(govKey);
+                        locationService.fetchCities(govKey,
+                            country: _country);
                       }
                     }
                   },
@@ -622,7 +679,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           value: _selectedEducationType,
           isRequired: true,
           icon: Icons.school_outlined,
-          items: const ['American', 'British', 'National', 'Custom'],
+          items: const ['American', 'British', 'Custom'],
           onChanged: (value) {
             setState(() {
               final oldType = _selectedEducationType;
@@ -959,8 +1016,13 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                       _syncCustomGradesToSelectedGrades();
                     });
                   },
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  color: const Color(0xFFEF4444),
+                  icon: SvgPicture.asset(
+                    'assets/svg/note-remove.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFFEF4444), BlendMode.srcIn),
+                  ),
                   tooltip: 'Delete',
                 ),
                 IconButton(
@@ -974,8 +1036,13 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                       );
                     });
                   },
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  color: const Color(0xFF6B7280),
+                  icon: SvgPicture.asset(
+                    'assets/svg/edit-2.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF6B7280), BlendMode.srcIn),
+                  ),
                   tooltip: 'Edit',
                 ),
                 IconButton(

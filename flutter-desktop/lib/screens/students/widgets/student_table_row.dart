@@ -3,18 +3,21 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 class StudentTableRow extends StatelessWidget {
   final Student student;
   final int index;
   final VoidCallback? onTap;
+  final bool fromClinic;
 
   const StudentTableRow({
     Key? key,
     required this.student,
     required this.index,
     this.onTap,
+    this.fromClinic = false,
   }) : super(key: key);
 
   @override
@@ -81,63 +84,88 @@ class StudentTableRow extends StatelessWidget {
               ),
             ),
 
-            // 4. First Guardian (flex: 3)
+            // 4. Actions (flex: 2)
             Expanded(
-              flex: 3,
-              child: _buildGuardianCell(
-                name: student.firstGuardianName,
-                phone: student.firstGuardianPhone,
-                status: student.firstGuardianStatus,
-                isFirst: true,
-              ),
-            ),
-
-            // 5. 2nd Guardian (flex: 3)
-            Expanded(
-              flex: 3,
-              child: _buildGuardianCell(
-                name: student.secondGuardianName,
-                phone: student.secondGuardianPhone,
-                status: student.secondGuardianStatus,
-                isFirst: false,
-              ),
-            ),
-
-            // 6. EMR (flex: 1)
-            // Expanded(
-            //   flex: 1,
-            //   child: Center(
-            //     child: Text(
-            //       student.emrNumber?.toString() ?? '0',
-            //       style: const TextStyle(
-            //         fontSize: 14,
-            //         fontWeight: FontWeight.w600,
-            //       ),
-            //     ),
-            //   ),
-            // ),
-
-            // 8. Actions (flex: 1)
-            Expanded(
-              flex: 1,
-              child: Center(
-                child: IconButton(
-                  onPressed: () {
-                    homeController.navigateToStudentProfile(
-                      student,
-                      appointmentType: 'View Profile',
-                    );
-                  },
-                  icon: const Icon(Icons.visibility_outlined),
-                  iconSize: 18,
-                  tooltip: 'View Details',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  style: IconButton.styleFrom(
-                    foregroundColor: Colors.grey.shade600,
-                    minimumSize: const Size(32, 32),
-                    padding: const EdgeInsets.all(6),
-                  ),
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (fromClinic) {
+                          homeController
+                              .navigateToClinicStudentProfile(student);
+                        } else {
+                          homeController.navigateToStudentProfile(
+                            student,
+                            appointmentType: 'View Profile',
+                          );
+                        }
+                      },
+                      icon: SvgPicture.asset(
+                        'assets/svg/view.svg',
+                        width: 18,
+                        height: 18,
+                        colorFilter: ColorFilter.mode(
+                            Colors.grey.shade600, BlendMode.srcIn),
+                      ),
+                      iconSize: 18,
+                      tooltip: 'View Details',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      style: IconButton.styleFrom(
+                        foregroundColor: Colors.grey.shade600,
+                        minimumSize: const Size(32, 32),
+                        padding: const EdgeInsets.all(6),
+                      ),
+                    ),
+                    if (!homeController.isRestrictedRole) ...[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: () =>
+                            homeController.navigateToEditStudent(student),
+                        icon: SvgPicture.asset(
+                          'assets/svg/edit-2.svg',
+                          width: 18,
+                          height: 18,
+                          colorFilter: ColorFilter.mode(
+                              Colors.blue.shade600, BlendMode.srcIn),
+                        ),
+                        iconSize: 18,
+                        tooltip: 'Edit',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.blue.shade600,
+                          minimumSize: const Size(32, 32),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: () =>
+                            controller.showDeleteConfirmation(student),
+                        icon: SvgPicture.asset(
+                          'assets/svg/note-remove.svg',
+                          width: 18,
+                          height: 18,
+                          colorFilter: ColorFilter.mode(
+                              Colors.red.shade600, BlendMode.srcIn),
+                        ),
+                        iconSize: 18,
+                        tooltip: 'Delete',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.red.shade600,
+                          minimumSize: const Size(32, 32),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -174,70 +202,4 @@ class StudentTableRow extends StatelessWidget {
     );
   }
 
-  Widget _buildGuardianCell({
-    String? name,
-    String? phone,
-    String? status,
-    required bool isFirst,
-  }) {
-    if (name == null || name.isEmpty) {
-      return Text(
-        '-',
-        style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-      );
-    }
-
-    // Determine status color
-    Color statusColor;
-    if (status == 'active' || status == 'verified') {
-      statusColor = Colors.green;
-    } else if (status == 'inactive' || status == 'unverified') {
-      statusColor = Colors.red;
-    } else {
-      statusColor = Colors.grey;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: statusColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ),
-        if (phone != null && phone.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            phone,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ],
-    );
-  }
 }

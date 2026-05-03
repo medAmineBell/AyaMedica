@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/dashboard_controller.dart';
+import 'package:flutter_getx_app/controllers/home_controller.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/bar_chart_widget.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/line_chart_widget.dart';
 import 'package:flutter_getx_app/screens/dashboard/widgets/charts/pie_chart_sample.dart';
@@ -154,6 +155,8 @@ class DashboardScreen extends StatelessWidget {
               // Stats cards row
               Obx(() {
                 final c = Get.find<DashboardController>();
+                final home = Get.find<HomeController>();
+                final hideOrgCards = home.isRestrictedRole;
                 return Row(
                   children: [
                     Expanded(
@@ -179,22 +182,24 @@ class DashboardScreen extends StatelessWidget {
                             bgColor: const Color(0xFFFFF5DC),
                             label: 'Total Visits',
                             value: '${c.totalVisits.value}')),
-                    const SizedBox(width: 16),
-                    Expanded(
-                        child: _StatCard(
-                            icon: Icons.business_outlined,
-                            iconColor: const Color(0xFF1397FF),
-                            bgColor: const Color(0xFFE3F2FD),
-                            label: 'Total Branches',
-                            value: '${c.totalBranches.value}')),
-                    const SizedBox(width: 16),
-                    Expanded(
-                        child: _StatCard(
-                            icon: Icons.people_outlined,
-                            iconColor: const Color(0xFFFF6B6B),
-                            bgColor: const Color(0xFFFFE8E8),
-                            label: 'Total Users',
-                            value: '${c.totalUsers.value}')),
+                    if (!hideOrgCards) ...[
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.business_outlined,
+                              iconColor: const Color(0xFF1397FF),
+                              bgColor: const Color(0xFFE3F2FD),
+                              label: 'Total Branches',
+                              value: '${c.totalBranches.value}')),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _StatCard(
+                              icon: Icons.people_outlined,
+                              iconColor: const Color(0xFFFF6B6B),
+                              bgColor: const Color(0xFFFFE8E8),
+                              label: 'Total Users',
+                              value: '${c.totalUsers.value}')),
+                    ],
                   ],
                 );
               }),

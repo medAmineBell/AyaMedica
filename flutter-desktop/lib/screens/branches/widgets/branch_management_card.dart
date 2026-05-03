@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../models/branch_model.dart';
 
 class BranchManagementCard extends StatelessWidget {
@@ -109,23 +110,34 @@ class BranchManagementCard extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'edit',
                 child: Row(
                   children: [
-                    Icon(Icons.edit, size: 16),
-                    SizedBox(width: 8),
-                    Text('Edit'),
+                    SvgPicture.asset(
+                      'assets/svg/edit-2.svg',
+                      width: 16,
+                      height: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Edit'),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete, size: 16, color: Color(0xFFDC2626)),
-                    SizedBox(width: 8),
-                    Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
+                    SvgPicture.asset(
+                      'assets/svg/note-remove.svg',
+                      width: 16,
+                      height: 16,
+                      colorFilter: const ColorFilter.mode(
+                          Color(0xFFDC2626), BlendMode.srcIn),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Delete',
+                        style: TextStyle(color: Color(0xFFDC2626))),
                   ],
                 ),
               ),
@@ -291,7 +303,13 @@ class BranchManagementCard extends StatelessWidget {
         Expanded(
           child: OutlinedButton.icon(
             onPressed: onEdit,
-            icon: const Icon(Icons.edit, size: 16),
+            icon: SvgPicture.asset(
+              'assets/svg/edit-2.svg',
+              width: 16,
+              height: 16,
+              colorFilter: const ColorFilter.mode(
+                  Color(0xFF595A5B), BlendMode.srcIn),
+            ),
             label: const Text('Edit'),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF595A5B),
@@ -306,7 +324,13 @@ class BranchManagementCard extends StatelessWidget {
             onPressed: () {
               // Navigate to branch details
             },
-            icon: const Icon(Icons.visibility, size: 16),
+            icon: SvgPicture.asset(
+              'assets/svg/view.svg',
+              width: 16,
+              height: 16,
+              colorFilter: const ColorFilter.mode(
+                  Color(0xFF2D2E2E), BlendMode.srcIn),
+            ),
             label: const Text('View'),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF2D2E2E),

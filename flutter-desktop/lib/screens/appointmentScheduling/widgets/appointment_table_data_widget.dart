@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../../controllers/appointment_scheduling_controller.dart';
 import '../../../controllers/home_controller.dart';
@@ -346,7 +347,13 @@ Widget _buildStatusBadge(AppointmentStatus status) {
             // Handle view details
             _showStudentDetails(appointment);
           },
-          icon: const Icon(Icons.visibility_outlined, color: Color(0xFF6B7280), size: 18),
+          icon: SvgPicture.asset(
+            'assets/svg/view.svg',
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           padding: const EdgeInsets.all(4),
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -362,7 +369,12 @@ Widget _buildStatusBadge(AppointmentStatus status) {
         onPressed: () {
           _showDeleteConfirmation(appointment);
         },
-        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+        icon: SvgPicture.asset(
+          'assets/svg/note-remove.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(Colors.red, BlendMode.srcIn),
+        ),
         padding: const EdgeInsets.all(4),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
@@ -370,7 +382,13 @@ Widget _buildStatusBadge(AppointmentStatus status) {
         onPressed: () {
           // Handle edit
         },
-        icon: const Icon(Icons.edit_outlined, color: Color(0xFF6B7280), size: 18),
+        icon: SvgPicture.asset(
+          'assets/svg/edit-2.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(
+              Color(0xFF6B7280), BlendMode.srcIn),
+        ),
         padding: const EdgeInsets.all(4),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
@@ -396,7 +414,12 @@ Widget _buildStatusBadge(AppointmentStatus status) {
         onPressed: () {
           _showDeleteConfirmation(appointment);
         },
-        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+        icon: SvgPicture.asset(
+          'assets/svg/note-remove.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(Colors.red, BlendMode.srcIn),
+        ),
         padding: const EdgeInsets.all(4),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
@@ -404,7 +427,13 @@ Widget _buildStatusBadge(AppointmentStatus status) {
         onPressed: () {
           // Handle edit
         },
-        icon: const Icon(Icons.edit_outlined, color: Color(0xFF6B7280), size: 18),
+        icon: SvgPicture.asset(
+          'assets/svg/edit-2.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(
+              Color(0xFF6B7280), BlendMode.srcIn),
+        ),
         padding: const EdgeInsets.all(4),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
@@ -412,7 +441,13 @@ Widget _buildStatusBadge(AppointmentStatus status) {
         onPressed: () {
           _showStudentDetails(appointment);
         },
-        icon: const Icon(Icons.visibility_outlined, color: Color(0xFF6B7280), size: 18),
+        icon: SvgPicture.asset(
+          'assets/svg/view.svg',
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(
+              Color(0xFF6B7280), BlendMode.srcIn),
+        ),
         padding: const EdgeInsets.all(4),
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
       ),
@@ -462,7 +497,13 @@ void _showDeleteConfirmation(Appointment appointment) {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.delete_outline, size: 48, color: Colors.redAccent),
+              SvgPicture.asset(
+                'assets/svg/note-remove.svg',
+                width: 48,
+                height: 48,
+                colorFilter: const ColorFilter.mode(
+                    Colors.redAccent, BlendMode.srcIn),
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Delete Appointment?',

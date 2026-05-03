@@ -58,9 +58,12 @@ class ProfileSidebar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'G4 Lions',
-                    style: TextStyle(
+                  Text(
+                    [student.grade, student.className]
+                        .whereType<String>()
+                        .where((s) => s.isNotEmpty)
+                        .join(' '),
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xFF6B7280),
                     ),

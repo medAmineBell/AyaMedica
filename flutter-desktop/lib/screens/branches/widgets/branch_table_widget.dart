@@ -312,19 +312,19 @@ class BranchTableWidget extends StatelessWidget {
   List<TableActionConfig<BranchModel>> _buildActionConfigs() {
     return [
       TableActionConfig<BranchModel>(
-        icon: Icons.delete_outline,
+        iconAsset: 'assets/svg/note-remove.svg',
         color: const Color(0xFFDC2626),
         tooltip: 'Delete branch',
         onPressed: (branch, index) => _showDeleteConfirmation(branch),
       ),
       TableActionConfig<BranchModel>(
-        icon: Icons.edit_outlined,
+        iconAsset: 'assets/svg/edit-2.svg',
         color: const Color(0xFF747677),
         tooltip: 'Edit branch',
         onPressed: (branch, index) => _showEditBranchDialog(branch),
       ),
       TableActionConfig<BranchModel>(
-        icon: Icons.settings_outlined,
+        icon: Icons.airplanemode_active,
         color: const Color(0xFFD6A100),
         tooltip: 'Manage branch',
         onPressed: (branch, index) => _activateDeactivateBranch(branch),

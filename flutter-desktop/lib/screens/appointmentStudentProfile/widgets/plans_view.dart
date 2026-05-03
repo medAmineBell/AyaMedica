@@ -77,6 +77,7 @@ class _PlansViewState extends State<PlansView> {
   void initState() {
     super.initState();
     _controller = Get.find<AssessmentController>();
+    _sickLeaveDate = _controller.sickLeaveStartDate;
   }
 
   @override

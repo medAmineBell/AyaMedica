@@ -5,7 +5,8 @@ import 'package:flutter_getx_app/controllers/communication_controller.dart';
 import 'package:flutter_getx_app/screens/communication/add_message_dialog.dart';
 import 'package:flutter_getx_app/screens/communication/communication_datatable.dart';
 import 'package:flutter_getx_app/screens/communication/comunication_filter_widget.dart';
-import 'package:flutter_getx_app/screens/communication/emptydata.dart';
+import 'package:flutter_getx_app/screens/communication/inbox_datatable.dart';
+import 'package:flutter_getx_app/screens/communication/message_detail_page.dart';
 import 'package:flutter_getx_app/screens/communication/received_record_detail_page.dart';
 import 'package:flutter_getx_app/screens/users/assign_role_screen.dart';
 import 'package:flutter_getx_app/shared/widgets/primary_button.dart';
@@ -20,7 +21,7 @@ class CommunicationScreen extends GetView<CommunicationController> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fetchReceivedRecords();
+      controller.fetchInboxMessages();
     });
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
@@ -36,17 +37,28 @@ class CommunicationScreen extends GetView<CommunicationController> {
               // BOUND the table/detail area with Expanded
               Expanded(
                 child: Obx(() {
-                  if (!controller.isLoading.value && controller.messages.isEmpty) {
-                    return CommunicationEmpty();
-                  }
                   final selected = controller.selectedMessage.value;
+                  final isRecords = controller.selectedType.value == 'records';
                   return AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     switchInCurve: Curves.easeOut,
                     switchOutCurve: Curves.easeIn,
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.topLeft,
+                        children: [
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
                     child: selected == null
-                        ? const _UserTableBlock()
-                        : const ReceivedRecordDetailPage(),
+                        ? (isRecords
+                            ? const _UserTableBlock()
+                            : const _InboxTableBlock())
+                        : (isRecords
+                            ? const ReceivedRecordDetailPage()
+                            : const MessageDetailPage()),
                   );
                 }),
               ),
@@ -86,18 +98,18 @@ class _Header extends StatelessWidget {
             ),
           ],
         ),
-        // PrimaryButton(
-        //   text: 'New message',
-        //   icon: Icons.add,
-        //   variant: ButtonVariant.primary,
-        //   backgroundColor: const Color(0xFF1339FF),
-        //   onPressed: () {
-        //     showDialog(
-        //       context: context,
-        //       builder: (context) => AddMessageDialog(),
-        //     );
-        //   },
-        // )
+        PrimaryButton(
+          text: 'New message',
+          icon: Icons.add,
+          variant: ButtonVariant.primary,
+          backgroundColor: const Color(0xFF1339FF),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => const AddMessageDialog(),
+            );
+          },
+        )
       ],
     );
   }
@@ -134,6 +146,27 @@ class _UserTableBlock extends StatelessWidget {
           key: ValueKey('communication-filters'),
         ),
         CommunicationDatatable(),
+      ],
+    );
+  }
+}
+
+class _InboxTableBlock extends StatelessWidget {
+  const _InboxTableBlock({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('inbox-table'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        CommunicationFiltersWidget(
+          key: ValueKey('communication-filters'),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: InboxDatatable(),
+          ),
+        ),
       ],
     );
   }

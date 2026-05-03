@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import '../models/appointment.dart';
@@ -417,6 +418,49 @@ class ApiService extends GetxService {
     }
   }
 
+  // Create message API request (new backend: POST /api/messages)
+  Future<Map<String, dynamic>> createMessage(
+      Map<String, dynamic> payload) async {
+    try {
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/messages');
+      final token = await getToken();
+      final headers = token != null ? _headersWithAuth(token) : _headers;
+
+      final response = await http
+          .post(
+            url,
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': responseData['success'] ?? true,
+          'data': responseData['data'] ?? responseData,
+          'message': responseData['message'] ?? 'Message created successfully',
+        };
+      }
+
+      String? errorMessage;
+      try {
+        final errorData = jsonDecode(response.body);
+        errorMessage = errorData['message']?.toString();
+      } catch (_) {}
+      return {
+        'success': false,
+        'error': errorMessage ?? 'Failed to create message',
+        'statusCode': response.statusCode,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
   // Create appointment API request
   Future<Map<String, dynamic>> createAppointment(
       Appointment appointment) async {
@@ -775,6 +819,108 @@ class ApiService extends GetxService {
       }
     } catch (e) {
       print('💥 API Service: Fetch Social Links Error: $e');
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Fetch raw organizations list (used by OneRoster import demo)
+  Future<Map<String, dynamic>> fetchOrganizationsList() async {
+    try {
+      final url = Uri.parse(AppConfig.organizationsUrl);
+      final token = _storageService.getAccessToken();
+      final headers = token != null ? _headersWithAuth(token) : _headers;
+
+      final response = await http.get(url, headers: headers).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'success': true,
+          'data': responseData['data'] ?? const [],
+        };
+      }
+      return {
+        'success': false,
+        'error': 'Failed to fetch organizations (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      print('💥 API Service: Fetch Organizations Error: $e');
+      return {
+        'success': false,
+        'error': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Import OneRoster v1.1 bundle (multipart upload of a JSON file)
+  Future<Map<String, dynamic>> importOneRoster({
+    required String organizationId,
+    required String fileName,
+    String? filePath,
+    Uint8List? fileBytes,
+    bool dryRun = true,
+  }) async {
+    try {
+      final url = Uri.parse(AppConfig.oneRosterImportUrl);
+      final token = _storageService.getAccessToken();
+
+      final request = http.MultipartRequest('POST', url);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.fields['organizationId'] = organizationId;
+      request.fields['dryRun'] = dryRun.toString();
+
+      if (fileBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+        ));
+      } else if (filePath != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          filename: fileName,
+        ));
+      } else {
+        return {
+          'success': false,
+          'error': 'No file content provided',
+        };
+      }
+
+      final streamed = await request.send().timeout(timeout);
+      final response = await http.Response.fromStream(streamed);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'success': true,
+          'data': decoded,
+        };
+      }
+
+      String errorMessage =
+          'Import failed (HTTP ${response.statusCode})';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['error'] is String) {
+          errorMessage = decoded['error'] as String;
+        } else if (decoded is Map && decoded['message'] is String) {
+          errorMessage = decoded['message'] as String;
+        }
+      } catch (_) {}
+      return {
+        'success': false,
+        'error': errorMessage,
+        'statusCode': response.statusCode,
+      };
+    } catch (e) {
+      print('💥 API Service: OneRoster Import Error: $e');
       return {
         'success': false,
         'error': 'Network error: ${e.toString()}',

@@ -250,13 +250,14 @@ class UsersController extends GetxController {
     }
   }
 
-  /// Create a new staff user via API
-  Future<bool> createUser({
+  /// Assign a staff role to an EXISTING user across one or more branches.
+  /// Backend: POST /api/school-admin/users
+  /// The user must already have an account; the request fails if the email
+  /// isn't found.
+  Future<bool> assignUserRole({
     required String email,
-    required String givenName,
-    required String familyName,
     required String role,
-    String? phone,
+    required List<String> branchIds,
   }) async {
     try {
       isSubmitting.value = true;
@@ -264,24 +265,15 @@ class UsersController extends GetxController {
       final accessToken = _storageService.getAccessToken();
       if (accessToken == null) throw Exception('No access token found');
 
-      final branchData = _storageService.getSelectedBranchData();
-      final branchId = branchData?['id'] ?? '';
-      final organizationId = branchData?['id'] ?? '';
-
       final url = Uri.parse(
         '${AppConfig.newBackendUrl}/api/school-admin/users',
       );
 
       final body = {
         'email': email,
-        'name': {'given': givenName, 'family': familyName},
         'role': role,
-        'organizationId': organizationId,
-        'branchId': branchId,
+        'branchIds': branchIds,
       };
-      if (phone != null && phone.isNotEmpty) {
-        body['phone'] = phone;
-      }
 
       final response = await http.post(
         url,
@@ -292,10 +284,10 @@ class UsersController extends GetxController {
         body: jsonEncode(body),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         appSnackbar(
           'Success',
-          'User created successfully',
+          'User assigned successfully',
           backgroundColor: const Color(0xFF10B981),
           colorText: Colors.white,
         );
@@ -308,7 +300,7 @@ class UsersController extends GetxController {
     } catch (e) {
       appSnackbar(
         'Error',
-        'Failed to create user: ${e.toString()}',
+        'Failed to assign user: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -376,6 +368,54 @@ class UsersController extends GetxController {
       appSnackbar(
         'Error',
         'Failed to update user: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Promote an existing user to Owner role via API.
+  /// Caller must have 'owner' or 'full_control' role (gated in UI).
+  Future<bool> promoteToOwner(String email) async {
+    try {
+      isSubmitting.value = true;
+
+      final accessToken = _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/admin/promote-to-owner',
+      );
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        appSnackbar(
+          'Success',
+          'User promoted to owner successfully',
+          backgroundColor: const Color(0xFF10B981),
+          colorText: Colors.white,
+        );
+        await fetchUsers();
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      appSnackbar(
+        'Error',
+        'Failed to promote user: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

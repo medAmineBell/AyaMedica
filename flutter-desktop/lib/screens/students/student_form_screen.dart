@@ -4,8 +4,12 @@ import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/models/create_student_request.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_getx_app/controllers/resources_controller.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
+import 'package:flutter_getx_app/utils/location_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_getx_app/utils/app_snackbar.dart';
 
@@ -35,6 +39,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   final StudentController _studentController = Get.find<StudentController>();
   final HomeController _homeController = Get.find<HomeController>();
   final StorageService _storageService = Get.find<StorageService>();
+  final ResourcesController _resourcesController =
+      Get.find<ResourcesController>();
+  final LocationService _locationService = Get.find<LocationService>();
 
   // Image picker state
   Uint8List? _selectedImageBytes;
@@ -44,59 +51,72 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   // Controllers for form fields
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _nationalIdController = TextEditingController();
-  final _passportController = TextEditingController();
+  final _documentNumberController = TextEditingController();
 
   // Guardian 1 controllers
-  final _guardian1FirstNameController = TextEditingController();
-  final _guardian1LastNameController = TextEditingController();
+  final _guardian1FullNameController = TextEditingController();
   final _guardian1EmailController = TextEditingController();
   final _guardian1PhoneController = TextEditingController();
 
   // Guardian 2 controllers
-  final _guardian2FirstNameController = TextEditingController();
-  final _guardian2LastNameController = TextEditingController();
+  final _guardian2FullNameController = TextEditingController();
   final _guardian2EmailController = TextEditingController();
   final _guardian2PhoneController = TextEditingController();
 
+  // Document types accepted by the API (api value -> display label).
+  static const Map<String, String> _documentTypeLabels = {
+    'passport': 'Passport',
+    'national_id': 'National ID',
+    'residence_id': 'Residence ID',
+  };
+
+  // Relationship enum values expected by the API.
+  // Keep this list aligned with the bulk-upload XLS template — both single
+  // add/edit and bulk upload should accept the same set.
+  static const List<String> _relationOptions = [
+    'FATHER',
+    'MOTHER',
+    'HUSBAND',
+    'WIFE',
+    'SON',
+    'DAUGHTER',
+    'BROTHER',
+    'SISTER',
+    'GRANDFATHER',
+    'GRANDMOTHER',
+    'GRANDSON',
+    'GRANDDAUGHTER',
+    'UNCLE',
+    'AUNT',
+    'NEPHEW',
+    'NIECE',
+    'COUSIN',
+    'FRIEND',
+    'OTHER',
+  ];
+
+  static String _relationLabel(String key) {
+    if (key.isEmpty) return key;
+    return key[0].toUpperCase() + key.substring(1).toLowerCase();
+  }
+
   // Dropdown values
-  String? _selectedCountry = 'Egypt';
+  String? _selectedNationalityKey; // ISO country key -> payload `nationality`
+  String? _selectedDocumentType = 'national_id';
   String? _selectedGender = 'male';
   String? _selectedGrade;
-  String? _selectedClass;
-  String? _guardian1Relationship = 'mother';
-  String? _guardian2Relationship = 'father';
+  String? _selectedClass; // class name shown in dropdown
+  String? _selectedClassId; // resolved class UUID (sent to API)
+  String? _guardian1Relationship = 'MOTHER';
+  String? _guardian2Relationship = 'FATHER';
 
   DateTime? _dateOfBirth;
-
-  final List<String> _grades = [
-    'G1',
-    'G2',
-    'G3',
-    'G4',
-    'G5',
-    'G6',
-    'G7',
-    'G8',
-    'G9',
-    'G10',
-    'G11',
-    'G12'
-  ];
-  final List<String> _classes = [
-    'Lions',
-    'Tigers',
-    'Eagles',
-    'Bears',
-    'Wolves',
-    'Panthers'
-  ];
 
   @override
   void initState() {
     super.initState();
+    _resourcesController.loadClasses();
+    _locationService.fetchCountries();
     if (widget.isEditing && widget.student != null) {
       _populateFieldsForEditing();
     }
@@ -109,34 +129,47 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     _lastNameController.text =
         nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-    _emailController.text = student.email ?? '';
-    _phoneController.text = student.phoneNumber ?? '';
-    _nationalIdController.text = student.nationalId ?? '';
-    _passportController.text = student.passportIdNumber ?? '';
+    if ((student.documentNumber?.isNotEmpty ?? false)) {
+      _documentNumberController.text = student.documentNumber!;
+    } else if ((student.nationalId?.isNotEmpty ?? false)) {
+      _documentNumberController.text = student.nationalId!;
+    } else if ((student.passportIdNumber?.isNotEmpty ?? false)) {
+      _documentNumberController.text = student.passportIdNumber!;
+    }
+
+    if ((student.documentType ?? '').isNotEmpty) {
+      _selectedDocumentType = student.documentType;
+    } else if ((student.passportIdNumber?.isNotEmpty ?? false) &&
+        (student.nationalId?.isEmpty ?? true)) {
+      _selectedDocumentType = 'passport';
+    }
+
     _dateOfBirth = student.dateOfBirth;
-    _selectedCountry = student.nationality ?? 'Egypt';
+    _selectedNationalityKey = student.nationality;
+    if ((student.gender ?? '').isNotEmpty) {
+      _selectedGender = student.gender!.toLowerCase();
+    }
     _selectedGrade = student.grade;
     _selectedClass = student.className;
+    _selectedClassId = student.classId;
 
     if (student.firstGuardianName != null) {
-      final guardian1Parts = student.firstGuardianName!.split(' ');
-      _guardian1FirstNameController.text =
-          guardian1Parts.isNotEmpty ? guardian1Parts.first : '';
-      _guardian1LastNameController.text =
-          guardian1Parts.length > 1 ? guardian1Parts.sublist(1).join(' ') : '';
+      _guardian1FullNameController.text = student.firstGuardianName!;
     }
     _guardian1EmailController.text = student.firstGuardianEmail ?? '';
     _guardian1PhoneController.text = student.firstGuardianPhone ?? '';
+    if ((student.firstGuardianRelation ?? '').isNotEmpty) {
+      _guardian1Relationship = student.firstGuardianRelation!.toUpperCase();
+    }
 
     if (student.secondGuardianName != null) {
-      final guardian2Parts = student.secondGuardianName!.split(' ');
-      _guardian2FirstNameController.text =
-          guardian2Parts.isNotEmpty ? guardian2Parts.first : '';
-      _guardian2LastNameController.text =
-          guardian2Parts.length > 1 ? guardian2Parts.sublist(1).join(' ') : '';
+      _guardian2FullNameController.text = student.secondGuardianName!;
     }
     _guardian2EmailController.text = student.secondGuardianEmail ?? '';
     _guardian2PhoneController.text = student.secondGuardianPhone ?? '';
+    if ((student.secondGuardianRelation ?? '').isNotEmpty) {
+      _guardian2Relationship = student.secondGuardianRelation!.toUpperCase();
+    }
   }
 
   void _showErrorSnackbar(String message) {
@@ -182,6 +215,15 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       _selectedImageBytes = null;
       _selectedImageName = null;
     });
+  }
+
+  /// Full URL of the existing photo on the server (edit mode only).
+  /// The API returns a relative path like `/api/files/gcs/EG/avatars/....jpg`.
+  String? _existingPhotoUrl() {
+    final url = widget.student?.imageUrl;
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '${AppConfig.newBackendUrl}$url';
   }
 
   @override
@@ -247,7 +289,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         ElevatedButton(
           onPressed: isSaving ? null : _saveStudent,
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSaving ? Colors.grey : Colors.blue,
+            backgroundColor: isSaving ? Colors.grey : Color(0xFF1339FF),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -324,6 +366,102 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       return;
     }
 
+    // In edit mode the user may not touch the class dropdown, and the loaded
+    // student record may not carry classId (or classes loaded after init), so
+    // the dropdown shows the class name without _selectedClassId being set.
+    // Resolve the id from the cached classes when we have the name + grade.
+    if ((_selectedClassId == null || _selectedClassId!.isEmpty) &&
+        _selectedClass != null &&
+        _selectedGrade != null) {
+      final match = _resourcesController.getClassByNameAndGrade(
+          _selectedClass!, _selectedGrade!);
+      _selectedClassId = match?['id']?.toString();
+    }
+
+    if (_selectedClassId == null || _selectedClassId!.isEmpty) {
+      _showErrorSnackbar('Class is required');
+      return;
+    }
+
+    if (_documentNumberController.text.trim().isEmpty) {
+      _showErrorSnackbar('Document number is required');
+      return;
+    }
+
+    if (_selectedNationalityKey == null || _selectedNationalityKey!.isEmpty) {
+      _showErrorSnackbar('Nationality is required');
+      return;
+    }
+
+    // Country of residence is derived from the selected branch, not picked.
+    final branchCountryKey = (branchData['country'] as String?)?.toUpperCase();
+    if (branchCountryKey == null || branchCountryKey.isEmpty) {
+      _showErrorSnackbar('Selected branch is missing a country');
+      return;
+    }
+
+    final docNum = _documentNumberController.text.trim();
+    final natKey = _selectedNationalityKey;
+    final resKey = branchCountryKey;
+    if (_selectedDocumentType == 'national_id' &&
+        natKey == 'EG' &&
+        resKey == 'EG') {
+      final error = _validateEgyptianNationalId(
+        docNum,
+        _selectedGender ?? 'male',
+        _dateOfBirth,
+      );
+      if (error != null) {
+        _showErrorSnackbar(error);
+        return;
+      }
+    } else if (_selectedDocumentType == 'national_id' &&
+        natKey == 'SA' &&
+        resKey == 'SA') {
+      if (!RegExp(r'^\d{10}$').hasMatch(docNum)) {
+        _showErrorSnackbar('Must be exactly 10 digits');
+        return;
+      }
+      if (docNum[0] != '1') {
+        _showErrorSnackbar('Saudi National ID must start with 1');
+        return;
+      }
+    } else if (_selectedDocumentType == 'residence_id' && resKey == 'SA') {
+      if (!RegExp(r'^\d{10}$').hasMatch(docNum)) {
+        _showErrorSnackbar('Must be exactly 10 digits');
+        return;
+      }
+      if (natKey == 'SA' && docNum[0] != '1') {
+        _showErrorSnackbar('Saudi Residence ID must start with 1');
+        return;
+      }
+      if (natKey != 'SA' && docNum[0] == '1') {
+        _showErrorSnackbar('Non-Saudi Residence ID must not start with 1');
+        return;
+      }
+    }
+
+    String? orNull(TextEditingController c) {
+      final v = c.text.trim();
+      return v.isEmpty ? null : v;
+    }
+
+    String? photoBase64;
+    String? photoContentType;
+    if (_selectedImageBytes != null) {
+      photoBase64 = base64Encode(_selectedImageBytes!);
+      final name = (_selectedImageName ?? '').toLowerCase();
+      if (name.endsWith('.png')) {
+        photoContentType = 'image/png';
+      } else if (name.endsWith('.webp')) {
+        photoContentType = 'image/webp';
+      } else if (name.endsWith('.gif')) {
+        photoContentType = 'image/gif';
+      } else {
+        photoContentType = 'image/jpeg';
+      }
+    }
+
     // Create request object
     final request = CreateStudentRequest.fromFormData(
       branchId: branchId,
@@ -333,49 +471,33 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       dateOfBirth: _dateOfBirth!,
       gender: _selectedGender ?? 'male',
       grade: _selectedGrade!,
-      email: _emailController.text.trim().isNotEmpty
-          ? _emailController.text.trim()
-          : null,
-      phone: _phoneController.text.trim().isNotEmpty
-          ? _phoneController.text.trim()
-          : null,
-      nationalId: _nationalIdController.text.trim().isNotEmpty
-          ? _nationalIdController.text.trim()
-          : null,
-      passportNumber: _passportController.text.trim().isNotEmpty
-          ? _passportController.text.trim()
-          : null,
-      country: _selectedCountry,
-      guardian1FirstName: _guardian1FirstNameController.text.trim().isNotEmpty
-          ? _guardian1FirstNameController.text.trim()
-          : null,
-      guardian1LastName: _guardian1LastNameController.text.trim().isNotEmpty
-          ? _guardian1LastNameController.text.trim()
-          : null,
-      guardian1Email: _guardian1EmailController.text.trim().isNotEmpty
-          ? _guardian1EmailController.text.trim()
-          : null,
-      guardian1Phone: _guardian1PhoneController.text.trim().isNotEmpty
-          ? _guardian1PhoneController.text.trim()
-          : null,
-      guardian1Relationship: _guardian1Relationship,
-      guardian2FirstName: _guardian2FirstNameController.text.trim().isNotEmpty
-          ? _guardian2FirstNameController.text.trim()
-          : null,
-      guardian2LastName: _guardian2LastNameController.text.trim().isNotEmpty
-          ? _guardian2LastNameController.text.trim()
-          : null,
-      guardian2Email: _guardian2EmailController.text.trim().isNotEmpty
-          ? _guardian2EmailController.text.trim()
-          : null,
-      guardian2Phone: _guardian2PhoneController.text.trim().isNotEmpty
-          ? _guardian2PhoneController.text.trim()
-          : null,
-      guardian2Relationship: _guardian2Relationship,
+      classId: _selectedClassId!,
+      nationality: _selectedNationalityKey,
+      documentType: _selectedDocumentType,
+      documentNumber: orNull(_documentNumberController),
+      addressCountry: branchCountryKey,
+      fgFullName: orNull(_guardian1FullNameController),
+      fgRelation: _guardian1Relationship,
+      fgEmail: orNull(_guardian1EmailController),
+      fgPhone: orNull(_guardian1PhoneController),
+      sgFullName: orNull(_guardian2FullNameController),
+      sgRelation: _guardian2Relationship,
+      sgEmail: orNull(_guardian2EmailController),
+      sgPhone: orNull(_guardian2PhoneController),
+      photoBase64: photoBase64,
+      photoContentType: photoContentType,
     );
 
-    // Call controller method
-    final success = await _studentController.createStudent(request);
+    // Call controller method (create vs update)
+    final bool success;
+    if (widget.isEditing && widget.student != null) {
+      success = await _studentController.updateStudent(
+        widget.student!.id,
+        request.toUpdateJson(),
+      );
+    } else {
+      success = await _studentController.createStudent(request);
+    }
 
     if (success) {
       // Navigate back
@@ -416,6 +538,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         ImagePickerWidget(
           selectedImageBytes: _selectedImageBytes,
           selectedImageName: _selectedImageName,
+          existingImageUrl: _existingPhotoUrl(),
           isLoading: _isImageLoading,
           onPickImage: _pickImage,
           onRemoveImage: _removeImage,
@@ -435,7 +558,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         const SizedBox(height: 4),
         Text(
           widget.isEditing
-              ? (widget.student!.studentId ?? 'No ID')
+              ? (widget.student!.aid ??
+                  widget.student!.studentId ??
+                  'No ID')
               : 'ID will be generated',
           style: TextStyle(
             fontSize: 14,
@@ -484,8 +609,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           const SizedBox(height: 12),
           _buildQuickInfoItem(
             icon: Icons.flag_outlined,
-            label: 'Country',
-            value: _selectedCountry ?? 'Not selected',
+            label: 'Nationality',
+            value: _countryDisplay(_selectedNationalityKey),
           ),
         ],
       ),
@@ -581,6 +706,22 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 selectedDate: _dateOfBirth,
                 onDateSelected: (date) => setState(() => _dateOfBirth = date),
                 isRequired: true,
+                readOnly: widget.isEditing,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: CustomDropdownField(
+                label: 'Gender',
+                value: _selectedGender,
+                items: const ['male', 'female'],
+                onChanged: (value) =>
+                    setState(() => _selectedGender = value ?? 'male'),
+                isRequired: true,
+                icon: Icons.person_outline,
+                itemLabel: (item) =>
+                    '${item[0].toUpperCase()}${item.substring(1)}',
+                readOnly: widget.isEditing,
               ),
             ),
           ],
@@ -589,36 +730,187 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         Row(
           children: [
             Expanded(
-              child: CustomDropdownField(
-                label: 'Country of citizenship',
-                value: _selectedCountry,
-                items: const [
-                  'Egypt',
-                  'Tunisia',
-                  'Morocco',
-                  'Algeria',
-                  'Saudi Arabia',
-                  'UAE'
-                ],
-                onChanged: (value) => setState(() => _selectedCountry = value),
-                isRequired: true,
+              child: _buildCountryDropdown(
+                label: 'Nationality',
+                currentKey: _selectedNationalityKey,
+                onKeySelected: (key) => setState(() {
+                  _selectedNationalityKey = key;
+                  _reconcileDocumentType();
+                }),
                 icon: Icons.flag,
+                readOnly: widget.isEditing,
               ),
             ),
+            const SizedBox(width: 16),
+            Expanded(child: _buildDocumentTypeDropdown()),
             const SizedBox(width: 16),
             Expanded(
               child: CustomTextField(
-                label: 'National ID number',
-                controller: _nationalIdController,
+                label: 'Document number',
+                controller: _documentNumberController,
                 isRequired: true,
-                keyboardType: TextInputType.number,
+                readOnly: widget.isEditing,
               ),
             ),
-            const SizedBox(width: 16),
-            const Expanded(child: SizedBox()),
           ],
         ),
       ],
+    );
+  }
+
+  String _countryDisplay(String? key) {
+    if (key == null || key.isEmpty) return 'Not selected';
+    return _locationService.getCountryNameFromKey(key) ?? key;
+  }
+
+  Widget _buildCountryDropdown({
+    required String label,
+    required String? currentKey,
+    required ValueChanged<String?> onKeySelected,
+    required IconData icon,
+    bool readOnly = false,
+  }) {
+    return Obx(() {
+      final names = _locationService.countryNames;
+      String? currentName;
+      if (currentKey != null && currentKey.isNotEmpty) {
+        currentName = _locationService.getCountryNameFromKey(currentKey);
+        if (currentName == null) {
+          final match = names.firstWhereOrNull(
+              (n) => n.toLowerCase() == currentKey.toLowerCase());
+          if (match != null) currentName = match;
+        }
+      }
+      final value = names.contains(currentName) ? currentName : null;
+      return CustomDropdownField(
+        label: label,
+        value: value,
+        items: names,
+        onChanged: (name) => onKeySelected(
+          name == null ? null : _locationService.getCountryKey(name),
+        ),
+        isRequired: true,
+        icon: icon,
+        readOnly: readOnly,
+      );
+    });
+  }
+
+  // Branch country (residence). Derived from the selected branch in storage
+  // so the student inherits the branch's country without a UI control.
+  String? get _branchCountryKey {
+    final data = _storageService.getSelectedBranchData();
+    final key = (data?['country'] as String?)?.toUpperCase();
+    return (key == null || key.isEmpty) ? null : key;
+  }
+
+  // Document types allowed given current nationality / branch country.
+  // Mirrors RegisterScreen._getDocumentTypeItems on mobile.
+  Map<String, String> _allowedDocumentTypes() {
+    final nat = _selectedNationalityKey;
+    final res = _branchCountryKey;
+    if (nat != null && res != null && nat == res) {
+      return const {'national_id': 'National ID'};
+    }
+    if (res == 'SA') {
+      return const {'residence_id': 'Residence ID'};
+    }
+    if (res == 'EG') {
+      return const {
+        'passport': 'Passport',
+        'residence_id': 'Residence ID',
+      };
+    }
+    return _documentTypeLabels;
+  }
+
+  // Reconcile _selectedDocumentType against the currently allowed set.
+  // Call inside setState after changing nationality.
+  void _reconcileDocumentType() {
+    final allowed = _allowedDocumentTypes();
+    final nat = _selectedNationalityKey;
+    final res = _branchCountryKey;
+    if (nat != null && res != null && nat == res) {
+      _selectedDocumentType = 'national_id';
+      return;
+    }
+    if (_selectedDocumentType != null &&
+        !allowed.containsKey(_selectedDocumentType)) {
+      _selectedDocumentType = null;
+    }
+  }
+
+  // Egyptian National ID validator ported from mobile RegisterScreen.
+  String? _validateEgyptianNationalId(
+      String id, String gender, DateTime? selectedDob) {
+    if (id.length != 14) return 'Must be exactly 14 digits';
+    if (!RegExp(r'^\d{14}$').hasMatch(id)) return 'Must contain only digits';
+
+    final century = int.parse(id[0]);
+    if (century != 2 && century != 3) return 'Invalid Egyptian National ID';
+
+    final yearPrefix = century == 2 ? 1900 : 2000;
+    final year = yearPrefix + int.parse(id.substring(1, 3));
+    final month = int.parse(id.substring(3, 5));
+    final day = int.parse(id.substring(5, 7));
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return 'Invalid birth date in ID';
+    }
+    try {
+      final idDate = DateTime(year, month, day);
+      if (idDate.month != month || idDate.day != day) {
+        return 'Invalid birth date in ID';
+      }
+      if (idDate.isAfter(DateTime.now())) {
+        return 'Birth date in ID is in the future';
+      }
+      if (selectedDob != null) {
+        if (idDate.year != selectedDob.year ||
+            idDate.month != selectedDob.month ||
+            idDate.day != selectedDob.day) {
+          return 'ID birth date does not match selected date of birth';
+        }
+      }
+    } catch (_) {
+      return 'Invalid Egyptian National ID';
+    }
+
+    final genderDigit = int.parse(id[12]);
+    final isMaleFromId = genderDigit.isOdd;
+    if (gender == 'male' && !isMaleFromId) {
+      return 'ID gender does not match selected gender';
+    }
+    if (gender == 'female' && isMaleFromId) {
+      return 'ID gender does not match selected gender';
+    }
+
+    return null;
+  }
+
+  Widget _buildDocumentTypeDropdown() {
+    final allowed = Map<String, String>.from(_allowedDocumentTypes());
+    if (widget.isEditing &&
+        _selectedDocumentType != null &&
+        !allowed.containsKey(_selectedDocumentType) &&
+        _documentTypeLabels.containsKey(_selectedDocumentType)) {
+      allowed[_selectedDocumentType!] =
+          _documentTypeLabels[_selectedDocumentType!]!;
+    }
+    final labels = allowed.values.toList();
+    final currentLabel =
+        _selectedDocumentType == null ? null : allowed[_selectedDocumentType!];
+    return CustomDropdownField(
+      label: 'Document type',
+      value: currentLabel,
+      items: labels,
+      onChanged: (label) => setState(() {
+        _selectedDocumentType = label == null
+            ? null
+            : allowed.entries.firstWhere((e) => e.value == label).key;
+      }),
+      isRequired: true,
+      icon: Icons.badge_outlined,
+      readOnly: widget.isEditing,
     );
   }
 
@@ -629,25 +921,51 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
         Row(
           children: [
             Expanded(
-              child: CustomDropdownField(
-                label: 'Grade',
-                value: _selectedGrade,
-                items: _grades,
-                onChanged: (value) => setState(() => _selectedGrade = value),
-                isRequired: true,
-                icon: Icons.school,
-              ),
+              child: Obx(() {
+                final grades = _resourcesController.availableGrades;
+                final current =
+                    grades.contains(_selectedGrade) ? _selectedGrade : null;
+                return CustomDropdownField(
+                  label: 'Grade',
+                  value: current,
+                  items: grades,
+                  onChanged: (value) => setState(() {
+                    _selectedGrade = value;
+                    _selectedClass = null;
+                    _selectedClassId = null;
+                  }),
+                  isRequired: true,
+                  icon: Icons.school,
+                );
+              }),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: CustomDropdownField(
-                label: 'Class',
-                value: _selectedClass,
-                items: _classes,
-                onChanged: (value) => setState(() => _selectedClass = value),
-                isRequired: false,
-                icon: Icons.class_,
-              ),
+              child: Obx(() {
+                // Read .classes so Obx re-runs when data loads.
+                _resourcesController.classes.length;
+                final classes =
+                    _resourcesController.getClassNamesForGrade(_selectedGrade);
+                final current =
+                    classes.contains(_selectedClass) ? _selectedClass : null;
+                return CustomDropdownField(
+                  label: 'Class',
+                  value: current,
+                  items: classes,
+                  onChanged: (value) => setState(() {
+                    _selectedClass = value;
+                    if (value != null && _selectedGrade != null) {
+                      final match = _resourcesController.getClassByNameAndGrade(
+                          value, _selectedGrade!);
+                      _selectedClassId = match?['id']?.toString();
+                    } else {
+                      _selectedClassId = null;
+                    }
+                  }),
+                  isRequired: true,
+                  icon: Icons.class_,
+                );
+              }),
             ),
             const SizedBox(width: 16),
             const Expanded(child: SizedBox()),
@@ -657,94 +975,58 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     );
   }
 
-  Widget _buildFirstGuardianSection() {
-    return FormSection(
-      title: 'First guardian details',
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: CustomTextField(
-                label: 'Full name',
-                controller: _guardian1FirstNameController,
-                isRequired: true,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: CustomDropdownField(
-                label: 'Relationship with student',
-                value: _guardian1Relationship,
-                items: const [
-                  'mother',
-                  'father',
-                  'guardian',
-                  'relative',
-                  'other'
-                ],
-                onChanged: (value) =>
-                    setState(() => _guardian1Relationship = value),
-                isRequired: true,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: CustomTextField(
-                label: 'Email',
-                controller: _guardian1EmailController,
-                isRequired: true,
-                keyboardType: TextInputType.emailAddress,
-                prefixIcon: Icons.email_outlined,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: CustomTextField(
-                label: 'Phone number',
-                controller: _guardian1PhoneController,
-                isRequired: true,
-                keyboardType: TextInputType.phone,
-                prefixIcon: Icons.phone_outlined,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  Widget _buildFirstGuardianSection() => _buildGuardianSection(
+        title: 'First guardian details',
+        fullNameController: _guardian1FullNameController,
+        emailController: _guardian1EmailController,
+        phoneController: _guardian1PhoneController,
+        relationship: _guardian1Relationship,
+        onRelationshipChanged: (value) =>
+            setState(() => _guardian1Relationship = value),
+        required: true,
+      );
 
-  Widget _buildSecondGuardianSection() {
+  Widget _buildSecondGuardianSection() => _buildGuardianSection(
+        title: 'Second guardian details',
+        fullNameController: _guardian2FullNameController,
+        emailController: _guardian2EmailController,
+        phoneController: _guardian2PhoneController,
+        relationship: _guardian2Relationship,
+        onRelationshipChanged: (value) =>
+            setState(() => _guardian2Relationship = value),
+        required: false,
+      );
+
+  Widget _buildGuardianSection({
+    required String title,
+    required TextEditingController fullNameController,
+    required TextEditingController emailController,
+    required TextEditingController phoneController,
+    required String? relationship,
+    required ValueChanged<String?> onRelationshipChanged,
+    required bool required,
+  }) {
     return FormSection(
-      title: 'Second guardian details',
+      title: title,
       children: [
         Row(
           children: [
             Expanded(
               child: CustomTextField(
                 label: 'Full name',
-                controller: _guardian2FirstNameController,
-                isRequired: false,
+                controller: fullNameController,
+                isRequired: required,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: CustomDropdownField(
                 label: 'Relationship with student',
-                value: _guardian2Relationship,
-                items: const [
-                  'mother',
-                  'father',
-                  'guardian',
-                  'relative',
-                  'other'
-                ],
-                onChanged: (value) =>
-                    setState(() => _guardian2Relationship = value),
-                isRequired: false,
+                value: relationship,
+                items: _relationOptions,
+                onChanged: onRelationshipChanged,
+                isRequired: required,
+                itemLabel: _relationLabel,
               ),
             ),
           ],
@@ -755,8 +1037,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
             Expanded(
               child: CustomTextField(
                 label: 'Email',
-                controller: _guardian2EmailController,
-                isRequired: false,
+                controller: emailController,
+                isRequired: required,
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: Icons.email_outlined,
               ),
@@ -765,8 +1047,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
             Expanded(
               child: CustomTextField(
                 label: 'Phone number',
-                controller: _guardian2PhoneController,
-                isRequired: false,
+                controller: phoneController,
+                isRequired: required,
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
               ),
@@ -781,16 +1063,11 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _nationalIdController.dispose();
-    _passportController.dispose();
-    _guardian1FirstNameController.dispose();
-    _guardian1LastNameController.dispose();
+    _documentNumberController.dispose();
+    _guardian1FullNameController.dispose();
     _guardian1EmailController.dispose();
     _guardian1PhoneController.dispose();
-    _guardian2FirstNameController.dispose();
-    _guardian2LastNameController.dispose();
+    _guardian2FullNameController.dispose();
     _guardian2EmailController.dispose();
     _guardian2PhoneController.dispose();
     _scrollController.dispose();
@@ -851,6 +1128,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final IconData? prefixIcon;
   final Function(String)? onChanged;
+  final bool readOnly;
 
   const CustomTextField({
     Key? key,
@@ -860,6 +1138,7 @@ class CustomTextField extends StatelessWidget {
     this.keyboardType,
     this.prefixIcon,
     this.onChanged,
+    this.readOnly = false,
   }) : super(key: key);
 
   @override
@@ -889,6 +1168,7 @@ class CustomTextField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          readOnly: readOnly,
           decoration: InputDecoration(
             hintText: label,
             hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -908,7 +1188,7 @@ class CustomTextField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           ),
           validator: isRequired
               ? (value) {
@@ -931,6 +1211,8 @@ class CustomDropdownField extends StatelessWidget {
   final Function(String?) onChanged;
   final bool isRequired;
   final IconData? icon;
+  final String Function(String item)? itemLabel;
+  final bool readOnly;
 
   const CustomDropdownField({
     Key? key,
@@ -940,6 +1222,8 @@ class CustomDropdownField extends StatelessWidget {
     required this.onChanged,
     this.isRequired = false,
     this.icon,
+    this.itemLabel,
+    this.readOnly = false,
   }) : super(key: key);
 
   @override
@@ -967,7 +1251,8 @@ class CustomDropdownField extends StatelessWidget {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
-          onChanged: onChanged,
+          onChanged: readOnly ? null : onChanged,
+          isExpanded: true,
           decoration: InputDecoration(
             prefixIcon: icon != null ? Icon(icon, size: 20) : null,
             border: OutlineInputBorder(
@@ -985,12 +1270,15 @@ class CustomDropdownField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           ),
           items: items.map((item) {
             return DropdownMenuItem(
               value: item,
-              child: Text(item),
+              child: Text(
+                itemLabel?.call(item) ?? item,
+                overflow: TextOverflow.ellipsis,
+              ),
             );
           }).toList(),
           validator: isRequired
@@ -1012,6 +1300,7 @@ class CustomDateField extends StatelessWidget {
   final DateTime? selectedDate;
   final Function(DateTime) onDateSelected;
   final bool isRequired;
+  final bool readOnly;
 
   const CustomDateField({
     Key? key,
@@ -1019,6 +1308,7 @@ class CustomDateField extends StatelessWidget {
     required this.selectedDate,
     required this.onDateSelected,
     this.isRequired = false,
+    this.readOnly = false,
   }) : super(key: key);
 
   @override
@@ -1045,23 +1335,25 @@ class CustomDateField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: () async {
-            final date = await showDatePicker(
-              context: context,
-              initialDate: selectedDate ?? DateTime.now(),
-              firstDate: DateTime(1900),
-              lastDate: DateTime.now(),
-            );
-            if (date != null) {
-              onDateSelected(date);
-            }
-          },
+          onTap: readOnly
+              ? null
+              : () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate ?? DateTime.now(),
+                    firstDate: DateTime(1900),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    onDateSelected(date);
+                  }
+                },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
+              color: readOnly ? Colors.grey.shade100 : Colors.white,
             ),
             child: Row(
               children: [
@@ -1094,6 +1386,7 @@ class CustomDateField extends StatelessWidget {
 class ImagePickerWidget extends StatelessWidget {
   final Uint8List? selectedImageBytes;
   final String? selectedImageName;
+  final String? existingImageUrl;
   final bool isLoading;
   final VoidCallback onPickImage;
   final VoidCallback onRemoveImage;
@@ -1103,6 +1396,7 @@ class ImagePickerWidget extends StatelessWidget {
     Key? key,
     required this.selectedImageBytes,
     required this.selectedImageName,
+    this.existingImageUrl,
     required this.isLoading,
     required this.onPickImage,
     required this.onRemoveImage,
@@ -1140,11 +1434,21 @@ class ImagePickerWidget extends StatelessWidget {
           child: ClipOval(
             child: selectedImageBytes != null
                 ? Image.memory(selectedImageBytes!, fit: BoxFit.cover)
-                : Container(
-                    color: Colors.grey.shade200,
-                    child:
-                        const Icon(Icons.person, size: 60, color: Colors.grey),
-                  ),
+                : (existingImageUrl != null && existingImageUrl!.isNotEmpty)
+                    ? Image.network(
+                        existingImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.person,
+                              size: 60, color: Colors.grey),
+                        ),
+                      )
+                    : Container(
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.person,
+                            size: 60, color: Colors.grey),
+                      ),
           ),
         ),
         if (isLoading)
@@ -1170,7 +1474,7 @@ class ImagePickerWidget extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: Color(0xFF1339FF),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),

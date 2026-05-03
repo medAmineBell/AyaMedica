@@ -8,47 +8,57 @@ import 'student_table_row.dart';
 class StudentTable extends StatelessWidget {
   final StudentController controller;
   final Function(Student) onStudentTap;
+  final bool fromClinic;
 
   const StudentTable({
     Key? key,
     required this.controller,
     required this.onStudentTap,
+    this.fromClinic = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Container(
-          width: Get.width > 1200 ? Get.width : 1200,
-          child: Column(
-            children: [
-              _StudentTableHeaderRow(),
-              Expanded(
-                child: Obx(() {
-                  if (controller.paginatedStudents.isEmpty) {
-                    return _EmptyState();
-                  }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tableWidth =
+              constraints.maxWidth < 900 ? 900.0 : constraints.maxWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                children: [
+                  _StudentTableHeaderRow(),
+                  Expanded(
+                    child: Obx(() {
+                      if (controller.paginatedStudents.isEmpty) {
+                        return _EmptyState();
+                      }
 
-                  return ListView.builder(
-                    itemCount: controller.paginatedStudents.length,
-                    itemBuilder: (context, index) {
-                      final student = controller.paginatedStudents[index];
-                      return StudentTableRow(
-                        student: student,
-                        index: index,
-                        //controller: controller,
-                        onTap: () => onStudentTap(student),
+                      return ListView.builder(
+                        itemCount: controller.paginatedStudents.length,
+                        itemBuilder: (context, index) {
+                          final student =
+                              controller.paginatedStudents[index];
+                          return StudentTableRow(
+                            student: student,
+                            index: index,
+                            //controller: controller,
+                            onTap: () => onStudentTap(student),
+                            fromClinic: fromClinic,
+                          );
+                        },
                       );
-                    },
-                  );
-                }),
+                    }),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -67,10 +77,8 @@ class _StudentTableHeaderRow extends StatelessWidget {
           _HeaderCell('Student full name', flex: 3),
           _HeaderCell('AID', flex: 2, hasTooltip: true),
           _HeaderCell('Grade & Class', flex: 2),
-          _HeaderCell('First Guardian', flex: 3, hasTooltip: true),
-          _HeaderCell('2nd Guardian', flex: 3, hasTooltip: true),
           //_HeaderCell('EMR', flex: 1, hasTooltip: true),
-          _HeaderCell('Actions', flex: 1),
+          _HeaderCell('Actions', flex: 2),
         ],
       ),
     );
@@ -95,9 +103,11 @@ class _HeaderCell extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
               title,
+              textAlign: TextAlign.left,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,

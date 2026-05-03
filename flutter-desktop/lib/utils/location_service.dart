@@ -3,6 +3,32 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
+class CountryModel {
+  final String id;
+  final String key;
+  final String code;
+  final String nameAr;
+  final String nameEn;
+
+  CountryModel({
+    required this.id,
+    required this.key,
+    required this.code,
+    required this.nameAr,
+    required this.nameEn,
+  });
+
+  factory CountryModel.fromJson(Map<String, dynamic> json) {
+    return CountryModel(
+      id: (json['id'] ?? '').toString(),
+      key: (json['key'] ?? '').toString(),
+      code: (json['code'] ?? '').toString(),
+      nameAr: (json['nameAr'] ?? '').toString(),
+      nameEn: (json['nameEn'] ?? '').toString(),
+    );
+  }
+}
+
 class GovernorateModel {
   final String id;
   final String key;
@@ -58,8 +84,10 @@ class CityModel {
 class LocationService extends GetxService {
   static const String _baseUrl = AppConfig.newBackendUrl;
 
+  final RxList<CountryModel> countries = <CountryModel>[].obs;
   final RxList<GovernorateModel> governorates = <GovernorateModel>[].obs;
   final RxList<CityModel> cities = <CityModel>[].obs;
+  final RxBool isLoadingCountries = false.obs;
   final RxBool isLoadingGovernorates = false.obs;
   final RxBool isLoadingCities = false.obs;
 
@@ -67,8 +95,55 @@ class LocationService extends GetxService {
   final Map<String, List<CityModel>> _citiesCache = {};
 
   Future<LocationService> init() async {
-    await fetchGovernorates();
+    await Future.wait([fetchCountries(), fetchGovernorates()]);
     return this;
+  }
+
+  /// Fetch the list of countries (GET /api/organizations/countries).
+  Future<void> fetchCountries() async {
+    if (countries.isNotEmpty) return;
+    isLoadingCountries.value = true;
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/organizations/countries'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          countries.value = (data['data'] as List)
+              .map((item) => CountryModel.fromJson(item))
+              .toList();
+          countries.sort((a, b) => a.nameEn.compareTo(b.nameEn));
+        }
+      }
+    } catch (e) {
+      print('Failed to fetch countries: $e');
+    } finally {
+      isLoadingCountries.value = false;
+    }
+  }
+
+  List<String> get countryNames => countries.map((c) => c.nameEn).toList();
+
+  String? getCountryKey(String nameEn) {
+    final country =
+        countries.firstWhereOrNull((c) => c.nameEn == nameEn);
+    if (country == null) return null;
+    return country.key.isNotEmpty ? country.key : country.code;
+  }
+
+  String? getCountryNameFromKey(String key) {
+    final upper = key.toUpperCase();
+    return countries
+        .firstWhereOrNull((c) =>
+            c.key.toUpperCase() == upper ||
+            c.code.toUpperCase() == upper)
+        ?.nameEn;
   }
 
   /// Fetch governorates for a given country (defaults to EG)
@@ -103,9 +178,10 @@ class LocationService extends GetxService {
   /// Fetch cities for a given governorate key and country
   Future<void> fetchCities(String governorateKey,
       {String country = 'EG'}) async {
+    final cacheKey = '$country:$governorateKey';
     // Check cache first
-    if (_citiesCache.containsKey(governorateKey)) {
-      cities.value = _citiesCache[governorateKey]!;
+    if (_citiesCache.containsKey(cacheKey)) {
+      cities.value = _citiesCache[cacheKey]!;
       return;
     }
 
@@ -128,7 +204,7 @@ class LocationService extends GetxService {
               .toList();
           // Sort alphabetically by English name
           cityList.sort((a, b) => a.nameEn.compareTo(b.nameEn));
-          _citiesCache[governorateKey] = cityList;
+          _citiesCache[cacheKey] = cityList;
           cities.value = cityList;
         }
       }

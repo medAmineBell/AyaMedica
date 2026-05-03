@@ -5,6 +5,7 @@ import '../../../controllers/appointment_history_controller.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../models/appointment_history_model.dart';
 import '../../../models/student.dart';
+import 'cancelled_appointment_dialog.dart';
 import 'delete_appointment_dialog.dart';
 import 'edit_appointment_dialog.dart';
 
@@ -159,6 +160,15 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
 
   void _onViewAppointment(AppointmentHistory appointment) {
     if (appointment.isWalkIn && appointment.onePatientAid != null) {
+      final status = appointment.appointmentStatus.toLowerCase();
+      if (status == 'cancelled' || status == 'expired') {
+        CancelledAppointmentDialog.show(
+          Get.context!,
+          status: status,
+          reason: appointment.cancelReason,
+        );
+        return;
+      }
       final student = Student(
         id: appointment.onePatientAid!,
         name: appointment.fullName ?? '',
@@ -169,8 +179,7 @@ class AppointmentHistoryTableWidget extends StatelessWidget {
         classId: appointment.classId,
       );
       final homeController = Get.find<HomeController>();
-      final isFulfilled =
-          appointment.appointmentStatus.toLowerCase() == 'fulfilled';
+      final isFulfilled = status == 'fulfilled';
       if (isFulfilled) {
         homeController.currentStudent.value = student;
         homeController.currentAppointmentHistory.value = appointment;

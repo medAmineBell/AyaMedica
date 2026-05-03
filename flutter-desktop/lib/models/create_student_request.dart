@@ -4,13 +4,21 @@ class CreateStudentRequest {
   final StudentName name;
   final String dateOfBirth;
   final String gender;
-  final String? email;
-  final String? phone;
-  final String? nationalId;
-  final String? passportNumber;
   final String grade;
+  final String classId;
+  final String? nationality;
+  final String? documentType;
+  final String? documentNumber;
   final Address? address;
-  final List<ParentInfo>? parents;
+  final String? fgFullName;
+  final String? fgRelation;
+  final String? fgEmail;
+  final String? fgPhone;
+  final String? sgFullName;
+  final String? sgRelation;
+  final String? sgEmail;
+  final String? sgPhone;
+  final Photo? photo;
 
   CreateStudentRequest({
     required this.branchId,
@@ -18,13 +26,21 @@ class CreateStudentRequest {
     required this.name,
     required this.dateOfBirth,
     required this.gender,
-    this.email,
-    this.phone,
-    this.nationalId,
-    this.passportNumber,
     required this.grade,
+    required this.classId,
+    this.nationality,
+    this.documentType,
+    this.documentNumber,
     this.address,
-    this.parents,
+    this.fgFullName,
+    this.fgRelation,
+    this.fgEmail,
+    this.fgPhone,
+    this.sgFullName,
+    this.sgRelation,
+    this.sgEmail,
+    this.sgPhone,
+    this.photo,
   });
 
   Map<String, dynamic> toJson() {
@@ -35,33 +51,41 @@ class CreateStudentRequest {
       'dateOfBirth': dateOfBirth,
       'gender': gender,
       'grade': grade,
+      'classId': classId,
     };
 
-    if (email != null && email!.isNotEmpty) {
-      json['email'] = email;
+    void putIfSet(String key, String? value) {
+      if (value != null && value.isNotEmpty) json[key] = value;
     }
 
-    if (phone != null && phone!.isNotEmpty) {
-      json['phone'] = phone;
-    }
-
-    if (nationalId != null && nationalId!.isNotEmpty) {
-      json['nationalId'] = nationalId;
-    }
-
-    if (passportNumber != null && passportNumber!.isNotEmpty) {
-      json['passportNumber'] = passportNumber;
-    }
+    putIfSet('nationality', nationality);
+    putIfSet('documentType', documentType);
+    putIfSet('documentNumber', documentNumber);
+    putIfSet('fgFullName', fgFullName);
+    putIfSet('fgRelation', fgRelation);
+    putIfSet('fgEmail', fgEmail);
+    putIfSet('fgPhone', fgPhone);
+    putIfSet('sgFullName', sgFullName);
+    putIfSet('sgRelation', sgRelation);
+    putIfSet('sgEmail', sgEmail);
+    putIfSet('sgPhone', sgPhone);
 
     if (address != null) {
-      json['address'] = address!.toJson();
+      final addrJson = address!.toJson();
+      if (addrJson.isNotEmpty) json['address'] = addrJson;
     }
 
-    if (parents != null && parents!.isNotEmpty) {
-      json['parents'] = parents!.map((p) => p.toJson()).toList();
-    }
+    if (photo != null) json['photo'] = photo!.toJson();
 
     return json;
+  }
+
+  /// Same as [toJson] but strips fields that the PUT
+  /// `/api/school-admin/students/{id}` endpoint does not accept.
+  Map<String, dynamic> toUpdateJson() {
+    return toJson()
+      ..remove('branchId')
+      ..remove('organizationId');
   }
 
   factory CreateStudentRequest.fromFormData({
@@ -72,94 +96,78 @@ class CreateStudentRequest {
     required DateTime dateOfBirth,
     required String gender,
     required String grade,
-    String? email,
-    String? phone,
-    String? nationalId,
-    String? passportNumber,
-    String? country,
-    String? guardian1FirstName,
-    String? guardian1LastName,
-    String? guardian1Email,
-    String? guardian1Phone,
-    String? guardian1Relationship,
-    String? guardian2FirstName,
-    String? guardian2LastName,
-    String? guardian2Email,
-    String? guardian2Phone,
-    String? guardian2Relationship,
+    required String classId,
+    String? nationality,
+    String? documentType,
+    String? documentNumber,
+    String? addressLine,
+    String? addressCity,
+    String? addressState,
+    String? addressCountry,
+    String? fgFullName,
+    String? fgRelation,
+    String? fgEmail,
+    String? fgPhone,
+    String? sgFullName,
+    String? sgRelation,
+    String? sgEmail,
+    String? sgPhone,
+    String? photoBase64,
+    String? photoContentType,
   }) {
-    // Build parents list
-    final List<ParentInfo> parents = [];
-
-    if (guardian1FirstName != null &&
-        guardian1FirstName.isNotEmpty &&
-        guardian1LastName != null &&
-        guardian1LastName.isNotEmpty) {
-      parents.add(ParentInfo(
-        name: StudentName(
-          given: guardian1FirstName,
-          family: guardian1LastName,
-        ),
-        email: guardian1Email ?? '',
-        phone: guardian1Phone ?? '',
-        relationship: guardian1Relationship ?? 'mother',
-      ));
+    Address? address;
+    final hasAddress = (addressLine?.isNotEmpty ?? false) ||
+        (addressCity?.isNotEmpty ?? false) ||
+        (addressState?.isNotEmpty ?? false) ||
+        (addressCountry?.isNotEmpty ?? false);
+    if (hasAddress) {
+      address = Address(
+        line: (addressLine != null && addressLine.isNotEmpty)
+            ? [addressLine]
+            : null,
+        city: addressCity,
+        state: addressState,
+        country: addressCountry,
+      );
     }
 
-    if (guardian2FirstName != null &&
-        guardian2FirstName.isNotEmpty &&
-        guardian2LastName != null &&
-        guardian2LastName.isNotEmpty) {
-      parents.add(ParentInfo(
-        name: StudentName(
-          given: guardian2FirstName,
-          family: guardian2LastName,
-        ),
-        email: guardian2Email ?? '',
-        phone: guardian2Phone ?? '',
-        relationship: guardian2Relationship ?? 'father',
-      ));
+    Photo? photo;
+    if (photoBase64 != null &&
+        photoBase64.isNotEmpty &&
+        photoContentType != null &&
+        photoContentType.isNotEmpty) {
+      photo = Photo(fileBase64: photoBase64, contentType: photoContentType);
     }
 
     return CreateStudentRequest(
       branchId: branchId,
       organizationId: organizationId,
-      name: StudentName(
-        given: firstName,
-        family: lastName,
-      ),
-      dateOfBirth:
-          _formatDateForApi(dateOfBirth), // Fixed: Format date as YYYY-MM-DD
+      name: StudentName(given: firstName, family: lastName),
+      dateOfBirth: _formatDateForApi(dateOfBirth),
       gender: gender,
-      email: email,
-      phone: phone,
-      nationalId: nationalId,
-      passportNumber: passportNumber,
       grade: grade,
-      address:
-          country != null ? Address(country: _mapCountryToCode(country)) : null,
-      parents: parents.isNotEmpty ? parents : null,
+      classId: classId,
+      nationality: nationality,
+      documentType: documentType,
+      documentNumber: documentNumber,
+      address: address,
+      fgFullName: fgFullName,
+      fgRelation: fgRelation,
+      fgEmail: fgEmail,
+      fgPhone: fgPhone,
+      sgFullName: sgFullName,
+      sgRelation: sgRelation,
+      sgEmail: sgEmail,
+      sgPhone: sgPhone,
+      photo: photo,
     );
   }
 
-  // Helper method to format date as YYYY-MM-DD
   static String _formatDateForApi(DateTime date) {
     final year = date.year.toString();
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
-  }
-
-  static String _mapCountryToCode(String country) {
-    final countryMap = {
-      'Egypt': 'EG',
-      'Tunisia': 'TN',
-      'Morocco': 'MA',
-      'Algeria': 'DZ',
-      'Saudi Arabia': 'SA',
-      'UAE': 'AE',
-    };
-    return countryMap[country] ?? 'EG';
   }
 }
 
@@ -167,90 +175,49 @@ class StudentName {
   final String given;
   final String family;
 
-  StudentName({
-    required this.given,
-    required this.family,
-  });
+  StudentName({required this.given, required this.family});
 
-  Map<String, dynamic> toJson() {
-    return {
-      'given': given,
-      'family': family,
-    };
-  }
+  Map<String, dynamic> toJson() => {'given': given, 'family': family};
 
-  factory StudentName.fromJson(Map<String, dynamic> json) {
-    return StudentName(
-      given: json['given'] ?? '',
-      family: json['family'] ?? '',
-    );
-  }
+  factory StudentName.fromJson(Map<String, dynamic> json) => StudentName(
+        given: json['given'] ?? '',
+        family: json['family'] ?? '',
+      );
 }
 
 class Address {
   final List<String>? line;
   final String? city;
-  final String country;
+  final String? state;
+  final String? country;
 
-  Address({
-    this.line,
-    this.city,
-    required this.country,
-  });
+  Address({this.line, this.city, this.state, this.country});
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> json = {
-      'country': country,
-    };
-
-    if (line != null && line!.isNotEmpty) {
-      json['line'] = line;
-    }
-
-    if (city != null && city!.isNotEmpty) {
-      json['city'] = city;
-    }
-
+    final Map<String, dynamic> json = {};
+    if (line != null && line!.isNotEmpty) json['line'] = line;
+    if (city != null && city!.isNotEmpty) json['city'] = city;
+    if (state != null && state!.isNotEmpty) json['state'] = state;
+    if (country != null && country!.isNotEmpty) json['country'] = country;
     return json;
   }
 
-  factory Address.fromJson(Map<String, dynamic> json) {
-    return Address(
-      line: json['line'] != null ? List<String>.from(json['line']) : null,
-      city: json['city'],
-      country: json['country'] ?? 'EG',
-    );
-  }
+  factory Address.fromJson(Map<String, dynamic> json) => Address(
+        line: json['line'] != null ? List<String>.from(json['line']) : null,
+        city: json['city'],
+        state: json['state'],
+        country: json['country'],
+      );
 }
 
-class ParentInfo {
-  final StudentName name;
-  final String email;
-  final String phone;
-  final String relationship;
+class Photo {
+  final String fileBase64;
+  final String contentType;
 
-  ParentInfo({
-    required this.name,
-    required this.email,
-    required this.phone,
-    required this.relationship,
-  });
+  Photo({required this.fileBase64, required this.contentType});
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name.toJson(),
-      'email': email,
-      'phone': phone,
-      'relationship': relationship,
-    };
-  }
-
-  factory ParentInfo.fromJson(Map<String, dynamic> json) {
-    return ParentInfo(
-      name: StudentName.fromJson(json['name']),
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      relationship: json['relationship'] ?? 'mother',
-    );
-  }
+  Map<String, dynamic> toJson() => {
+        'fileBase64': fileBase64,
+        'contentType': contentType,
+      };
 }

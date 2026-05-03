@@ -29,7 +29,7 @@ class CreateBranchRequest {
     };
 
     if (educationType != null && educationType!.isNotEmpty) {
-      json['educationType'] = educationType!.toUpperCase();
+      json['educationType'] = educationType;
     }
 
     if (phone != null && phone!.isNotEmpty) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/models/student.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/controllers/home_controller.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -62,7 +63,13 @@ class StudentDetailsSheet extends StatelessWidget {
                     Get.back(); // Close bottom sheet first
                     homeController.navigateToEditStudent(student);
                   },
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: SvgPicture.asset(
+                    'assets/svg/edit-2.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter:
+                        const ColorFilter.mode(Colors.blue, BlendMode.srcIn),
+                  ),
                   tooltip: 'Edit Student',
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.blue.shade50,
@@ -76,7 +83,13 @@ class StudentDetailsSheet extends StatelessWidget {
                     Get.back();
                     controller.showDeleteConfirmation(student);
                   },
-                  icon: const Icon(Icons.delete_outline),
+                  icon: SvgPicture.asset(
+                    'assets/svg/note-remove.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter:
+                        const ColorFilter.mode(Colors.red, BlendMode.srcIn),
+                  ),
                   tooltip: 'Delete Student',
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.red.shade50,

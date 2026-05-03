@@ -145,6 +145,8 @@ class LineChartWidget extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
                       getTooltipItems: (touchedSpots) {
                         return touchedSpots.map((spot) {
                           final color = spot.bar.color ?? Colors.blue;

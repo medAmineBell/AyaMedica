@@ -1,482 +1,533 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_getx_app/controllers/communication_controller.dart';
-import 'package:flutter_getx_app/models/message_model.dart';
+import 'package:flutter_getx_app/controllers/create_message_controller.dart';
 import 'package:flutter_getx_app/models/student.dart';
+import 'package:flutter_getx_app/screens/appointmentScheduling/widgets/custom_dropdown.dart';
 import 'package:flutter_getx_app/shared/widgets/primary_button.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:multi_select_flutter/multi_select_flutter.dart';
+
+const Color _kActiveBlue = Color(0xFF1339FF);
+const Color _kLimeAvatar = Color(0xFFCDFF1F);
+const Color _kInactivePill = Color(0xFFF3F2F2);
+const Color _kInactiveAvatar = Color(0xFFDCE0E4);
+const Color _kFieldBorder = Color(0xFFE5E7EB);
+const Color _kSubtle = Color(0xFF9CA3AF);
+const Color _kText = Color(0xFF374151);
+const Color _kDangerRed = Color(0xFFEF4444);
 
 class AddMessageDialog extends StatefulWidget {
+  const AddMessageDialog({super.key});
+
   @override
-  _AddMessageDialogState createState() => _AddMessageDialogState();
+  State<AddMessageDialog> createState() => _AddMessageDialogState();
 }
 
 class _AddMessageDialogState extends State<AddMessageDialog> {
-  int selectedAudience = 2; // 0: All, 1: Grade/Class, 2: Selected
-  final controller = Get.find<CommunicationController>();
+  late final CreateMessageController controller;
 
-  // for “grade/class” mode
-  final List<String> grades = ['Grade 1', 'Grade 2', 'Grade 3'];
-  final List<String> classes = ['Class A', 'Class B', 'Class C'];
-  String? selectedGrade;
-  String? selectedClass;
-
-  // for “selected students” mode
-  final List<String> students = [
-    'Emily Johnson',
-    'John Doe',
-    'Alice Smith',
-    'Bob Lee',
-    'Carol King'
-  ];
-  List<String> selectedStudents = [];
-
-  // common fields
-  final TextEditingController subjectController = TextEditingController();
-  final TextEditingController messageController = TextEditingController();
-  final TextEditingController examinationController = TextEditingController();
-
-  // file uploads
-  final List<_UploadedFile> uploadedFiles = [];
-
-  void pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null) {
-      final file = result.files.first;
-      final upload = _UploadedFile(file: file, progress: 0.0);
-      setState(() => uploadedFiles.add(upload));
-      // simulate upload progress
-      Future.delayed(Duration(milliseconds: 200), () {
-        _simulateProgress(upload);
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(CreateMessageController(), permanent: false);
   }
 
-  void _simulateProgress(_UploadedFile upload) {
-    if (upload.progress < 1.0) {
-      setState(() => upload.progress += 0.1);
-      Future.delayed(Duration(milliseconds: 200), () {
-        _simulateProgress(upload);
-      });
-    }
+  @override
+  void dispose() {
+    Get.delete<CreateMessageController>();
+    super.dispose();
   }
 
-  void removeFile(int index) {
-    setState(() => uploadedFiles.removeAt(index));
-  }
-
-  Widget buildAudienceSelector() {
-    final titles = ['All students', 'A grade or class', 'Selected student(s)'];
-    final icons = ["users-group", "teacher", "user-avatar"];
-
-    return Row(
-      children: List.generate(3, (i) {
-        final isSelected = selectedAudience == i;
-        return Expanded(
-          child: ChoiceChip(
-            showCheckmark: false,
-            label: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  backgroundColor: isSelected
-                      ? const Color(0xFFCDFF1F)
-                      : const Color(0xFFDCE0E4),
-                  child: SvgPicture.asset(
-                    "assets/svg/${icons[i]}.svg",
-                    width: 18,
-                    color: const Color(0xFF595A5B),
-                  ),
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 820),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 20, 28, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 16),
+              _buildAudiencePills(),
+              const SizedBox(height: 20),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Obx(() => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (controller.selectedMode.value ==
+                              MessageAudience.gradeClass) ...[
+                            const _SectionLabel('Select Grades and classes'),
+                            const SizedBox(height: 12),
+                            _buildGradeClassRow(),
+                            const SizedBox(height: 20),
+                          ],
+                          if (controller.selectedMode.value ==
+                              MessageAudience.selected) ...[
+                            const _SectionLabel('Select student(s)'),
+                            const SizedBox(height: 12),
+                            _buildGradeClassRow(),
+                            const SizedBox(height: 16),
+                            _buildStudentsField(context),
+                            const SizedBox(height: 12),
+                            _buildStudentChips(),
+                            const SizedBox(height: 20),
+                          ],
+                          const _SectionLabel('Message content'),
+                          const SizedBox(height: 12),
+                          _buildSubjectField(),
+                          const SizedBox(height: 12),
+                          _buildBodyField(),
+                          const SizedBox(height: 12),
+                          _buildUploadBox(),
+                          const SizedBox(height: 12),
+                          _buildAttachmentsList(),
+                        ],
+                      )),
                 ),
-                SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    titles[i],
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            selected: isSelected,
-            onSelected: (_) => setState(() => selectedAudience = i),
-            selectedColor: const Color(0xFF1339FF),
-            backgroundColor: const Color.fromARGB(255, 243, 242, 242),
-            side: BorderSide(color: const Color.fromARGB(255, 255, 255, 255)),
-            shape: StadiumBorder(),
+              ),
+              const SizedBox(height: 16),
+              _buildFooter(context),
+            ],
           ),
-        );
-      }),
+        ),
+      ),
     );
   }
 
-  Widget buildStudentDropdown() {
-    return Column(
+  // ─── Header ──────────────────────────────────────────────────────────
+  Widget _buildHeader(BuildContext context) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Select student(s):", style: TextStyle(fontSize: 16)),
-        SizedBox(height: 8),
-        MultiSelectDialogField<String>(
-          items: students.map((s) => MultiSelectItem(s, s)).toList(),
-          initialValue: selectedStudents,
-          title: Text("Students"),
-          buttonText: Text(
-            selectedStudents.isEmpty ? "All students" : "Select...",
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Create new message',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Create new broadcast or a specific message',
+                style: TextStyle(fontSize: 13, color: _kSubtle),
+              ),
+            ],
           ),
-          listType: MultiSelectListType.LIST,
-          chipDisplay: MultiSelectChipDisplay(
-            onTap: (item) => setState(() => selectedStudents.remove(item)),
-          ),
-          onConfirm: (values) => setState(() => selectedStudents = values),
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 236, 236, 236),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color.fromARGB(255, 216, 216, 216),
+        ),
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F4F6),
+              shape: BoxShape.circle,
             ),
+            child: const Icon(Icons.close, size: 18, color: _kText),
           ),
         ),
       ],
     );
   }
 
-  Widget buildUploadedFiles() {
-    return Column(
-      children: uploadedFiles.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final upload = entry.value;
-        return Container(
-          margin: EdgeInsets.symmetric(vertical: 8),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.folder, size: 24, color: Colors.grey),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(upload.file.name,
-                        style: TextStyle(fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: upload.progress,
-                        minHeight: 4,
-                        backgroundColor: Colors.grey.shade300,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                      ),
-                    ),
-                  ],
-                ),
+  // ─── Audience pills ──────────────────────────────────────────────────
+  Widget _buildAudiencePills() {
+    return Obx(() => Row(
+          children: [
+            Expanded(
+              child: _AudiencePill(
+                label: 'For All students',
+                iconAsset: 'assets/svg/users-group.svg',
+                fallbackIcon: Icons.groups_rounded,
+                isActive:
+                    controller.selectedMode.value == MessageAudience.all,
+                onTap: () => controller.setMode(MessageAudience.all),
               ),
-              SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => removeFile(idx),
-                child: Icon(Icons.close, color: Colors.grey),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _AudiencePill(
+                label: 'For a grade or class',
+                iconAsset: 'assets/svg/teacher.svg',
+                fallbackIcon: Icons.school_rounded,
+                isActive: controller.selectedMode.value ==
+                    MessageAudience.gradeClass,
+                onTap: () => controller.setMode(MessageAudience.gradeClass),
               ),
-            ],
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _AudiencePill(
+                label: 'For selected student(s)',
+                iconAsset: 'assets/svg/user-avatar.svg',
+                fallbackIcon: Icons.person_rounded,
+                isActive: controller.selectedMode.value ==
+                    MessageAudience.selected,
+                onTap: () => controller.setMode(MessageAudience.selected),
+              ),
+            ),
+          ],
+        ));
+  }
+
+  // ─── Grade + Class row ───────────────────────────────────────────────
+  Widget _buildGradeClassRow() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildLabeledField(
+            label: 'Grade(s)',
+            required: true,
+            child: Obx(() => CustomDropdown<String>(
+                  hint: 'Grade',
+                  value: controller.selectedGrade.value,
+                  items: DropdownHelper.createStringItems(
+                      controller.grades.toList()),
+                  onChanged: (v) => controller.setGrade(v),
+                )),
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildLabeledField(
+            label: 'Class(s)',
+            required: true,
+            child: Obx(() => CustomDropdown<String>(
+                  hint: 'Class name',
+                  value: controller.selectedClass.value,
+                  items: DropdownHelper.createStringItems(
+                      controller.classes.toList()),
+                  onChanged: (v) => controller.setClass(v),
+                  enabled: controller.selectedGrade.value != null,
+                )),
+          ),
+        ),
+      ],
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 600),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // title row
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      "Create new message",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
+  // ─── Students selector ───────────────────────────────────────────────
+  Widget _buildStudentsField(BuildContext context) {
+    return _buildLabeledField(
+      label: 'Students (Multi selection)',
+      required: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openStudentPicker(context),
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBFCFD),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _kFieldBorder),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Obx(() {
+                  final count = controller.selectedStudents.length;
+                  final label = count == 0
+                      ? 'All students'
+                      : '$count selected';
+                  return Text(
+                    label,
+                    style: const TextStyle(fontSize: 16, color: _kSubtle),
+                  );
+                }),
               ),
-            ),
+              const Icon(Icons.keyboard_arrow_down,
+                  color: _kActiveBlue, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            Divider(height: 1),
+  Widget _buildStudentChips() {
+    return Obx(() {
+      final selected = controller.selectedStudents;
+      if (selected.isEmpty) return const SizedBox.shrink();
+      const displayLimit = 4;
+      final toShow = selected.length > displayLimit
+          ? selected.take(displayLimit).toList()
+          : selected.toList();
+      final remaining = selected.length - toShow.length;
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ...toShow.map((s) => _StudentChip(
+                student: s,
+                onRemove: () => controller.removeStudent(s),
+              )),
+          if (remaining > 0) _OverflowChip(count: remaining),
+        ],
+      );
+    });
+  }
 
-            // content
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    buildAudienceSelector(),
-                    SizedBox(height: 20),
+  Future<void> _openStudentPicker(BuildContext context) async {
+    final result = await showDialog<List<Student>>(
+      context: context,
+      builder: (_) => _StudentPickerDialog(
+        students: controller.students.toList(),
+        selected: controller.selectedStudents.toList(),
+        isLoading: controller.isLoadingStudents.value,
+      ),
+    );
+    if (result != null) controller.replaceSelectedStudents(result);
+  }
 
-                    // inside your build(...) where you handle selectedAudience == 1:
-                    if (selectedAudience == 1) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Select grade:",
-                                    style: TextStyle(fontSize: 16)),
-                                SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  value: selectedGrade,
-                                  items: grades
-                                      .map((g) => DropdownMenuItem(
-                                          value: g, child: Text(g)))
-                                      .toList(),
-                                  onChanged: (v) =>
-                                      setState(() => selectedGrade = v),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: const Color.fromARGB(
-                                        255, 236, 236, 236),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                          color: const Color.fromARGB(
-                                              255, 216, 216, 216)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Select class:",
-                                    style: TextStyle(fontSize: 16)),
-                                SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  value: selectedClass,
-                                  items: classes
-                                      .map((c) => DropdownMenuItem(
-                                          value: c, child: Text(c)))
-                                      .toList(),
-                                  onChanged: (v) =>
-                                      setState(() => selectedClass = v),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: const Color.fromARGB(
-                                        255, 236, 236, 236),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                          color: const Color.fromARGB(
-                                              255, 216, 216, 216)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 20),
-                    ]
+  // ─── Text fields ─────────────────────────────────────────────────────
+  Widget _buildSubjectField() {
+    return _buildLabeledField(
+      label: 'Subject',
+      required: true,
+      child: TextField(
+        controller: controller.subjectController,
+        decoration: _inputDecoration('Message subject'),
+      ),
+    );
+  }
 
-                    // selected students mode
-                    else if (selectedAudience == 2) ...[
-                      buildStudentDropdown(),
-                      SizedBox(height: 20),
-                    ],
-                    Text(
-                      "Message content",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    // common fields
-                    TextField(
-                      controller: subjectController,
-                      decoration: InputDecoration(
-                        labelText: "Subject *",
-                        filled: true,
-                        fillColor: const Color.fromARGB(255, 236, 236, 236),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: const Color.fromARGB(255, 216, 216, 216)),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: messageController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: "Message body",
-                        filled: true,
-                        fillColor: const Color.fromARGB(255, 236, 236, 236),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: const Color.fromARGB(255, 216, 216, 216)),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    InkWell(
-                      onTap: pickFile,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 80,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.folder_open,
-                                  size: 32, color: Colors.grey),
-                              SizedBox(height: 8),
-                              Text(
-                                'Upload file',
-                                style:
-                                    TextStyle(color: Colors.grey, fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    buildUploadedFiles(),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: examinationController,
-                      decoration: InputDecoration(
-                        labelText: "Examination",
-                        filled: true,
-                        fillColor: const Color.fromARGB(255, 236, 236, 236),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color: const Color.fromARGB(255, 216, 216, 216)),
-                        ),
-                      ),
-                    ),
-                  ],
+  Widget _buildBodyField() {
+    return TextField(
+      controller: controller.bodyController,
+      maxLines: 4,
+      decoration: _inputDecoration('Message body'),
+    );
+  }
+
+  // ─── Upload box ──────────────────────────────────────────────────────
+  Widget _buildUploadBox() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: controller.pickAttachments,
+      child: Container(
+        height: 96,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBFCFD),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _kFieldBorder,
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.create_new_folder_outlined,
+                  size: 28, color: _kText),
+              SizedBox(height: 6),
+              Text(
+                'Upload file',
+                style: TextStyle(
+                  color: _kText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            // actions
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      text: 'Cancel',
-                      variant: ButtonVariant.secondary,
-                      backgroundColor: const Color(0xFFF3F4F6),
-                      onPressed: () {
-                        // Handle save as draft logic
-                        Navigator.of(context).pop();
+  // ─── Attachments list ────────────────────────────────────────────────
+  Widget _buildAttachmentsList() {
+    return Obx(() => Column(
+          children: [
+            for (int i = 0; i < controller.attachments.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              _AttachmentRow(
+                file: controller.attachments[i],
+                onRemove: () => controller.removeAttachment(i),
+              ),
+            ],
+          ],
+        ));
+  }
+
+  // ─── Footer ──────────────────────────────────────────────────────────
+  Widget _buildFooter(BuildContext context) {
+    return Obx(() => Row(
+          children: [
+            Expanded(
+              child: PrimaryButton(
+                text: 'Cancel',
+                variant: ButtonVariant.outline,
+                backgroundColor: Colors.white,
+                textColor: _kText,
+                onPressed: controller.isSending.value
+                    ? null
+                    : () => Navigator.of(context).pop(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: PrimaryButton(
+                text: controller.isSending.value ? 'Sending...' : 'Send',
+                variant: ButtonVariant.primary,
+                backgroundColor: _kActiveBlue,
+                onPressed: controller.isSending.value
+                    ? null
+                    : () async {
+                        final navigator = Navigator.of(context);
+                        final ok = await controller.send();
+                        if (!mounted) return;
+                        if (ok) navigator.pop();
                       },
+              ),
+            ),
+          ],
+        ));
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────
+  Widget _buildLabeledField({
+    required String label,
+    required Widget child,
+    bool required = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            text: label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: _kText,
+              fontWeight: FontWeight.w500,
+            ),
+            children: required
+                ? const [
+                    TextSpan(
+                      text: '*',
+                      style: TextStyle(color: _kDangerRed),
                     ),
-                  ),
-                  Expanded(
-                    child: PrimaryButton(
-                      text: 'Send',
-                      variant: ButtonVariant.primary,
-                      backgroundColor: const Color(0xFF1339FF),
-                      onPressed: () {
-                        controller.addMessage(
-                          MessageModel(
-                            subject: subjectController.text,
-                            messageBody: messageController.text,
-                            dateTime: DateTime.now(),
-                            from: 'You',
-                            studentIds: [
-                              Student(
-                                id: '8EG3960J65A',
-                                name: 'Jhon smith',
-                                avatarColor: Color(0xFF10B981),
-                                dateOfBirth: DateTime.parse('2011-03-15'),
-                                bloodType: 'A-',
-                                weightKg: 35.2,
-                                heightCm: 132,
-                                goToHospital: 'Ain Shams Hospital',
-                                firstGuardianName: 'Amine Riahi',
-                                firstGuardianPhone: '+21693719091',
-                                firstGuardianEmail: 'amine@example.com',
-                                firstGuardianStatus: 'Online',
-                                secondGuardianName: 'Sarah Ben Ali',
-                                secondGuardianPhone: '+21612345678',
-                                secondGuardianEmail: 'sarah@example.com',
-                                secondGuardianStatus: 'Offline',
-                                city: 'Tunis',
-                                street: '123 Rue de Marseille',
-                                zipCode: '1000',
-                                province: 'Tunis',
-                                insuranceCompany: 'Saham',
-                                policyNumber: 'POL1234567',
-                                passportIdNumber: 'TN987654321',
-                                nationality: 'Tunisian',
-                                nationalId: '0123456789',
-                                gender: 'Female',
-                                phoneNumber: '+21698765432',
-                                email: 'fatma@example.com',
-                              ),
-                            ],
-                            status: 'Sent',
-                            id: '',
-                            fileUrls: [],
-                            examination: '',
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                ],
+                  ]
+                : null,
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: _kSubtle, fontSize: 15),
+      filled: true,
+      fillColor: const Color(0xFFFBFCFD),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _kFieldBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _kFieldBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _kActiveBlue),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: _kText,
+        ),
+      ),
+    );
+  }
+}
+
+class _AudiencePill extends StatelessWidget {
+  final String label;
+  final String iconAsset;
+  final IconData fallbackIcon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _AudiencePill({
+    required this.label,
+    required this.iconAsset,
+    required this.fallbackIcon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: isActive ? _kActiveBlue : _kInactivePill,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isActive ? _kLimeAvatar : _kInactiveAvatar,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: _buildIcon(),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isActive ? Colors.white : const Color(0xFF111827),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -484,10 +535,359 @@ class _AddMessageDialogState extends State<AddMessageDialog> {
       ),
     );
   }
+
+  Widget _buildIcon() {
+    return SvgPicture.asset(
+      iconAsset,
+      width: 18,
+      height: 18,
+      colorFilter: const ColorFilter.mode(
+        Color(0xFF1F2937),
+        BlendMode.srcIn,
+      ),
+      placeholderBuilder: (_) =>
+          Icon(fallbackIcon, size: 18, color: const Color(0xFF1F2937)),
+    );
+  }
 }
 
-class _UploadedFile {
+class _StudentChip extends StatelessWidget {
+  final Student student;
+  final VoidCallback onRemove;
+  const _StudentChip({required this.student, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _kFieldBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: student.avatarColor,
+            child: Text(
+              student.initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            student.name,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: _kText,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF43F5E),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 10, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverflowChip extends StatelessWidget {
+  final int count;
+  const _OverflowChip({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: _kActiveBlue,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '+$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachmentRow extends StatelessWidget {
   final PlatformFile file;
-  double progress;
-  _UploadedFile({required this.file, this.progress = 0.0});
+  final VoidCallback onRemove;
+
+  const _AttachmentRow({required this.file, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final sizeKb = file.bytes != null
+        ? (file.bytes!.lengthInBytes / 1024).toStringAsFixed(1)
+        : '0';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kFieldBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.folder_rounded,
+                size: 18, color: _kText),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kText,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$sizeKb KB',
+                  style: const TextStyle(fontSize: 11, color: _kSubtle),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF43F5E),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 12, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Student picker dialog ───────────────────────────────────────────
+class _StudentPickerDialog extends StatefulWidget {
+  final List<Student> students;
+  final List<Student> selected;
+  final bool isLoading;
+
+  const _StudentPickerDialog({
+    required this.students,
+    required this.selected,
+    required this.isLoading,
+  });
+
+  @override
+  State<_StudentPickerDialog> createState() => _StudentPickerDialogState();
+}
+
+class _StudentPickerDialogState extends State<_StudentPickerDialog> {
+  late List<Student> _selected;
+  final TextEditingController _search = TextEditingController();
+  late List<Student> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<Student>.from(widget.selected);
+    _filtered = List<Student>.from(widget.students);
+    _search.addListener(_applyFilter);
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _applyFilter() {
+    setState(() {
+      final q = _search.text.trim().toLowerCase();
+      if (q.isEmpty) {
+        _filtered = List<Student>.from(widget.students);
+      } else {
+        _filtered = widget.students
+            .where((s) => s.name.toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  void _toggle(Student s) {
+    setState(() {
+      if (_selected.any((x) => x.id == s.id)) {
+        _selected.removeWhere((x) => x.id == s.id);
+      } else {
+        _selected.add(s);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SizedBox(
+        width: 500,
+        height: 600,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Students',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _search,
+                decoration: InputDecoration(
+                  hintText: 'Search students...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: _kFieldBorder),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => setState(
+                        () => _selected = List<Student>.from(_filtered)),
+                    child: const Text('Select All'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => setState(() => _selected.clear()),
+                    child: const Text('Clear All'),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_selected.length} selected',
+                    style: const TextStyle(color: _kSubtle, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: widget.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filtered.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No students found',
+                              style: TextStyle(color: _kSubtle),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _filtered.length,
+                            itemBuilder: (_, i) {
+                              final s = _filtered[i];
+                              final isSelected =
+                                  _selected.any((x) => x.id == s.id);
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: s.avatarColor,
+                                  child: Text(
+                                    s.initials,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(s.name),
+                                trailing: Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) => _toggle(s),
+                                  activeColor: _kActiveBlue,
+                                ),
+                                onTap: () => _toggle(s),
+                              );
+                            },
+                          ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(_selected),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kActiveBlue,
+                      ),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

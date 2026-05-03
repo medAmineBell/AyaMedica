@@ -1,0 +1,66 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../../controllers/home_controller.dart';
+
+class ClinicSidebarNavigationMenu extends StatelessWidget {
+  const ClinicSidebarNavigationMenu({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final homeController = Get.find<HomeController>();
+
+    final menuItems = [
+      {'icon': Icons.person_outline, 'label': 'Profile'},
+    ];
+
+    return Obx(() {
+      return Column(
+        children: menuItems.map((item) {
+          final isActive =
+              homeController.selectedProfileMenuItem.value == item['label'];
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            decoration: BoxDecoration(
+              color: isActive ? const Color(0xFFF3F4F6) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListTile(
+              leading: Icon(
+                item['icon'] as IconData,
+                color: isActive
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFF6B7280),
+                size: 20,
+              ),
+              title: Text(
+                item['label'] as String,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+                  color: isActive
+                      ? const Color(0xFF2563EB)
+                      : const Color(0xFF6B7280),
+                ),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF9CA3AF),
+                size: 16,
+              ),
+              onTap: () {
+                homeController.selectedProfileMenuItem.value =
+                    item['label'] as String;
+                homeController.isMedicalHistoryView.value = false;
+                homeController.isMedicalRecordsView.value = false;
+                homeController.isSummaryMode.value = false;
+                homeController.isAssessmentView.value = false;
+                homeController.isMonitoringSignsView.value = false;
+                homeController.isPlansView.value = false;
+              },
+            ),
+          );
+        }).toList(),
+      );
+    });
+  }
+}

@@ -46,7 +46,17 @@ class MedicalRecordsView extends StatelessWidget {
               ),
             )
           else
-            Container(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const minTableWidth = 1400.0;
+                final tableWidth = constraints.maxWidth > minTableWidth
+                    ? constraints.maxWidth
+                    : minTableWidth;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: tableWidth,
+                    child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -107,6 +117,10 @@ class MedicalRecordsView extends StatelessWidget {
                   ...records.map((record) => _buildRow(context, record)),
                 ],
               ),
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       );
@@ -160,7 +174,8 @@ class MedicalRecordsView extends StatelessWidget {
       onTap: () {
         showDialog(
           context: context,
-          builder: (_) => MedicalRecordDetailDialog(record: record),
+          builder: (_) =>
+              MedicalRecordDetailDialog(record: record, student: student),
         );
       },
       child: Container(

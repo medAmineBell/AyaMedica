@@ -175,8 +175,12 @@ class AuthController extends GetxController {
         print('💾 AuthController: Tokens and data saved to storage');
         print('🏢 AuthController: Navigating to organization selection...');
 
-        // Navigate to organization selection screen
-        Get.offAllNamed(Routes.ORGANISATION);
+        // Navigate to organization selection screen (or OneRoster demo first if enabled)
+        Get.offAllNamed(
+          AppConfig.showOneRosterImport
+              ? Routes.ONEROSTER_IMPORT
+              : Routes.ORGANISATION,
+        );
       } else {
         print('❌ AuthController: Login failed - ${loginResult['error']}');
         _setFieldError(loginResult['error'] ?? 'Login failed');

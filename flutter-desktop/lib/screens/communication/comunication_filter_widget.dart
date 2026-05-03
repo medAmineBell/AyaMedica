@@ -17,7 +17,7 @@ class CommunicationFiltersWidget extends StatelessWidget {
       topLeft: Radius.circular(8),
       bottomLeft: Radius.circular(8),
     );
-    final radiusMiddle = BorderRadius.zero;
+    const radiusMiddle = BorderRadius.zero;
     final radiusEnd = BorderRadius.only(
       topRight: Radius.circular(8),
       bottomRight: Radius.circular(8),
@@ -32,13 +32,22 @@ class CommunicationFiltersWidget extends StatelessWidget {
         children: [
           // status chips
           Obx(() {
+            // Read inside Obx so the badge updates when messages/read flags change.
+            // Suppress while loading so we don't flash the previous tab's count
+            // during the refetch.
+            final inboxBadge = (controller.selectedType.value == 'inbox' &&
+                    !controller.isLoading.value)
+                ? controller.messages.where((m) => !m.read).length
+                : 0;
+            // Touch selectedStatusFilter so chip selection restyles on tab change.
+            controller.selectedStatusFilter.value;
             return Wrap(
               children: [
                 _buildFilterChip(
                   label: 'Inbox',
                   status: 'Inbox',
                   controller: controller,
-                  badgeCount: 0,
+                  badgeCount: inboxBadge,
                   borderRadius: radiusStart,
                 ),
                 _buildFilterChip(
@@ -53,15 +62,15 @@ class CommunicationFiltersWidget extends StatelessWidget {
                   status: 'Received records',
                   controller: controller,
                   badgeCount: 0,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: radiusMiddle,
                 ),
-                // _buildFilterChip(
-                //   label: 'Vaccination requests',
-                //   status: 'Vaccination requests',
-                //   controller: controller,
-                //   badgeCount: 0,
-                //   borderRadius: radiusEnd,
-                // ),
+                _buildFilterChip(
+                  label: 'Vaccination requests',
+                  status: 'Vaccination requests',
+                  controller: controller,
+                  badgeCount: 0,
+                  borderRadius: radiusEnd,
+                ),
               ],
             );
           }),

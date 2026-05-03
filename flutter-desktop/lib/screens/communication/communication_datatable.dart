@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../controllers/communication_controller.dart';
 import '../../models/message_model.dart';
@@ -211,10 +212,12 @@ class _DataRowState extends State<_DataRow> {
               // Actions
               Expanded(
                 flex: 1,
-                child: Icon(
-                  Icons.visibility_outlined,
-                  size: 18,
-                  color: const Color(0xFF6B7280),
+                child: SvgPicture.asset(
+                  'assets/svg/view.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(
+                      Color(0xFF6B7280), BlendMode.srcIn),
                 ),
               ),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../../controllers/users_controller.dart';
 import '../../../models/user_model.dart';
@@ -32,10 +33,12 @@ class _DeleteUserDialogState extends State<DeleteUserDialog> {
                 color: const Color(0xFFFEE2E2),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
-                Icons.delete_outline,
-                color: Color(0xFFEF4444),
-                size: 24,
+              child: SvgPicture.asset(
+                'assets/svg/note-remove.svg',
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(
+                    Color(0xFFEF4444), BlendMode.srcIn),
               ),
             ),
             const SizedBox(height: 16),

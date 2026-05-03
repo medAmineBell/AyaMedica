@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/screens/appointmentScheduling/appointment_history_screen.dart';
+import 'package:flutter_getx_app/screens/clinicVisits/clinic_visits_screen.dart';
 import 'package:flutter_getx_app/screens/calendar/calendar_base.dart';
 import 'package:flutter_getx_app/screens/communication/communication_screen.dart';
 import 'package:flutter_getx_app/screens/dashboard/dashboard_screen.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_getx_app/screens/medicalRecords/medical_records_screen.d
 import 'package:flutter_getx_app/screens/appointmentStudentProfile/appointment_student_profile_screen.dart';
 import 'package:flutter_getx_app/screens/appointmentStudentProfile/checked_out_walkin_screen.dart';
 import 'package:flutter_getx_app/screens/studentProfile/student_profile_screen.dart';
+import 'package:flutter_getx_app/screens/studentProfile/clinic_student_profile_screen.dart';
 import 'package:flutter_getx_app/screens/students/student_overView_screen.dart';
 import 'package:flutter_getx_app/screens/support/support_screen.dart';
 import 'package:flutter_getx_app/screens/notifications/notification_screen.dart';
@@ -22,6 +24,8 @@ import 'package:get/get.dart';
 import '../../../controllers/home_controller.dart';
 import '../../appointmentScheduling/appointment_scheduling_screen.dart';
 
+import '../../students/bulk_upload_results_screen.dart';
+import '../../students/clinic_student_list_screen.dart';
 import '../../students/favorite_drugs_screen.dart';
 import '../../students/student_form_screen.dart';
 import '../../students/students_list_screen.dart';
@@ -58,6 +62,13 @@ class MainContentLayout extends GetView<HomeController> {
         }
         // Fallback to Appointments if no student selected
         return AppointmentSchedulingScreen();
+      case ContentType.clinicStudentProfile:
+        if (controller.currentStudent.value != null) {
+          return ClinicStudentProfileScreen(
+            student: controller.currentStudent.value!,
+          );
+        }
+        return const ClinicStudentListScreen();
       case ContentType.appointmentStudentProfile:
         if (controller.currentStudent.value != null &&
             controller.currentAppointmentHistory.value != null) {
@@ -80,6 +91,10 @@ class MainContentLayout extends GetView<HomeController> {
         return StudentOverviewScreen();
       case ContentType.studentsList:
         return StudentsListScreen();
+      case ContentType.studentsBulkUploadResults:
+        return const BulkUploadResultsScreen();
+      case ContentType.clinicStudentsList:
+        return const ClinicStudentListScreen();
 
       case ContentType.studentForm:
         // Return student form with proper parameters
@@ -118,6 +133,8 @@ class MainContentLayout extends GetView<HomeController> {
         return CommunicationScreen();
       case ContentType.appointmentScheduling:
         return const AppointmentHistoryScreen();
+      case ContentType.clinicVisits:
+        return const ClinicVisitsScreen();
       case ContentType.favoriteDrugs:
         return const FavoriteDrugsScreen();
       default:

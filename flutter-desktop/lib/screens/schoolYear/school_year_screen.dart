@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -1305,8 +1306,13 @@ class _SchoolYearCalendarScreenState extends State<SchoolYearCalendarScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      size: 20, color: Color(0xFFEF4444)),
+                  icon: SvgPicture.asset(
+                    'assets/svg/note-remove.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFFEF4444), BlendMode.srcIn),
+                  ),
                   onPressed: () {
                     // Delete holiday
                   },
@@ -1315,8 +1321,13 @@ class _SchoolYearCalendarScreenState extends State<SchoolYearCalendarScreen> {
                 ),
                 const SizedBox(width: 12),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      size: 20, color: Color(0xFF6B7280)),
+                  icon: SvgPicture.asset(
+                    'assets/svg/edit-2.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF6B7280), BlendMode.srcIn),
+                  ),
                   onPressed: () {
                     // Edit holiday
                   },

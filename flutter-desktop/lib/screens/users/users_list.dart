@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/users_controller.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 class UsersListScreen extends StatelessWidget {
@@ -46,7 +47,11 @@ class UsersListScreen extends StatelessWidget {
                           //     icon: Icon(Icons.edit),
                           //     onPressed: () => controller.onEdit(user)),
                           IconButton(
-                              icon: Icon(Icons.delete),
+                              icon: SvgPicture.asset(
+                                'assets/svg/note-remove.svg',
+                                width: 24,
+                                height: 24,
+                              ),
                               // onPressed: () => controller.onDelete(user)
                               onPressed: () {
                                 // Logic to delete user

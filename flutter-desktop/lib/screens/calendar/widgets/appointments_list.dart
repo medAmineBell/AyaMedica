@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/controllers/calendar_controller.dart';
 import 'package:flutter_getx_app/models/appointment.dart';
 import 'package:flutter_getx_app/models/appointment_models.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -329,23 +330,38 @@ class AppointmentsList extends GetView<CalendarController> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline,
-              size: 20, color: Color(0xFF6B7280)),
+          icon: SvgPicture.asset(
+            'assets/svg/note-remove.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           onPressed: () {
             controller.deleteAppointment(appointment.id!);
           },
         ),
         IconButton(
-          icon: const Icon(Icons.edit_outlined,
-              size: 20, color: Color(0xFF6B7280)),
+          icon: SvgPicture.asset(
+            'assets/svg/edit-2.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           onPressed: () {
             // Handle edit
             print('Edit appointment: ${appointment.id}');
           },
         ),
         IconButton(
-          icon: const Icon(Icons.visibility_outlined,
-              size: 20, color: Color(0xFF6B7280)),
+          icon: SvgPicture.asset(
+            'assets/svg/view.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+                Color(0xFF6B7280), BlendMode.srcIn),
+          ),
           onPressed: () {
             // Handle view
             print('View appointment: ${appointment.id}');

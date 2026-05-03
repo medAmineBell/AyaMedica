@@ -17,5 +17,6 @@ abstract class Routes {
   static const OTP_REST_PASSWORD = '/otp-reset-password';
   static const ORGANISATION = '/organisation';
   static const CREATE_ORGANIZATION = '/create-organization';
+  static const ONEROSTER_IMPORT = '/oneroster-import';
   static const OAUTH2_TEST = '/oauth2-test';
 }

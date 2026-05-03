@@ -34,11 +34,20 @@ class DashboardController extends GetxController {
       <Map<String, dynamic>>[].obs;
   final RxBool isLoadingMonthlyTrend = false.obs;
 
+  // Complaints chart data
+  final RxInt complaintsTotal = 0.obs;
+  final RxList<Map<String, dynamic>> topComplaints =
+      <Map<String, dynamic>>[].obs;
+  final RxBool isLoadingComplaints = false.obs;
+  final RxString selectedComplaintsPeriod = 'This Week'.obs;
+
   // Custom date ranges
   DateTime? customStartDate;
   DateTime? customEndDate;
   DateTime? healthCustomStartDate;
   DateTime? healthCustomEndDate;
+  DateTime? complaintsCustomStartDate;
+  DateTime? complaintsCustomEndDate;
 
   Worker? _branchWorker;
 
@@ -65,6 +74,7 @@ class DashboardController extends GetxController {
     fetchAppointmentsChart();
     fetchHealthIssuesChart();
     fetchMonthlyTrend();
+    fetchComplaintsChart();
   }
 
   Future<void> fetchDashboardStats() async {
@@ -312,6 +322,75 @@ class DashboardController extends GetxController {
       customEndDate = null;
     }
     fetchAppointmentsChart();
+  }
+
+  Future<void> fetchComplaintsChart() async {
+    try {
+      isLoadingComplaints.value = true;
+
+      final storageService = Get.find<StorageService>();
+      final homeController = Get.find<HomeController>();
+
+      final accessToken = storageService.getAccessToken();
+      if (accessToken == null) return;
+
+      final branchId = homeController.getBranchId();
+
+      final queryParams = <String, String>{};
+      if (branchId != null) queryParams['branchId'] = branchId;
+      queryParams['period'] = selectedComplaintsPeriod.value;
+
+      if (selectedComplaintsPeriod.value == 'Custom Date' &&
+          complaintsCustomStartDate != null &&
+          complaintsCustomEndDate != null) {
+        queryParams['startDate'] =
+            complaintsCustomStartDate!.toIso8601String().split('T')[0];
+        queryParams['endDate'] =
+            complaintsCustomEndDate!.toIso8601String().split('T')[0];
+      }
+
+      final uri = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/school-admin/dashboard/medical-records-chart',
+      ).replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final data = jsonData['data'];
+          complaintsTotal.value = data['total'] ?? 0;
+          topComplaints.assignAll(
+            (data['topComplaints'] as List? ?? [])
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList(),
+          );
+        }
+      }
+    } catch (e) {
+      print('📊 Dashboard: Error fetching complaints chart: $e');
+    } finally {
+      isLoadingComplaints.value = false;
+    }
+  }
+
+  void changeComplaintsPeriod(String period,
+      {DateTime? startDate, DateTime? endDate}) {
+    selectedComplaintsPeriod.value = period;
+    if (period == 'Custom Date') {
+      complaintsCustomStartDate = startDate;
+      complaintsCustomEndDate = endDate;
+    } else {
+      complaintsCustomStartDate = null;
+      complaintsCustomEndDate = null;
+    }
+    fetchComplaintsChart();
   }
 
   // Helpers for the pie chart

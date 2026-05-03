@@ -74,22 +74,38 @@ class PieChartWidget extends StatelessWidget {
                 );
               }
 
+              final sections = <PieChartSectionData>[];
+              for (final item in controller.appointmentsByType) {
+                final type = item['type'] as String? ?? '';
+                final percentage =
+                    (item['percentage'] as num?)?.toDouble() ?? 0;
+                if (percentage <= 0) continue;
+                sections.add(PieChartSectionData(
+                  color: controller.getColorForType(type),
+                  value: percentage,
+                  title: '${percentage.round()}%',
+                  radius: 50,
+                  titleStyle: controller.getTitleStyleForType(type),
+                ));
+              }
+
+              if (sections.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No appointment data',
+                    style: TextStyle(
+                      color: Color(0xFF858789),
+                      fontSize: 14,
+                    ),
+                  ),
+                );
+              }
+
               return PieChart(
                 PieChartData(
                   sectionsSpace: 0,
                   centerSpaceRadius: 40,
-                  sections: controller.appointmentsByType.map((item) {
-                    final type = item['type'] as String? ?? '';
-                    final percentage =
-                        (item['percentage'] as num?)?.toDouble() ?? 0;
-                    return PieChartSectionData(
-                      color: controller.getColorForType(type),
-                      value: percentage,
-                      title: '${percentage.round()}%',
-                      radius: 50,
-                      titleStyle: controller.getTitleStyleForType(type),
-                    );
-                  }).toList(),
+                  sections: sections,
                 ),
               );
             }),

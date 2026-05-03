@@ -113,6 +113,27 @@ class AssessmentController extends GetxController {
     appointmentId = aptId;
     medicalRecordId = recordId;
     print('[AssessmentController] init: appointmentId=$aptId, medicalRecordId=$recordId');
+
+    // Clear previous state to avoid duplicates on re-entry
+    selectedComplaints.clear();
+    selectedDiseases.clear();
+    selectedRecommendations.clear();
+    addedDrugs.clear();
+    heartRateController.clear();
+    systolicController.clear();
+    diastolicController.clear();
+    temperatureController.clear();
+    respiratoryRateController.clear();
+    bloodGlucoseController.clear();
+    oxygenSaturationController.clear();
+    heightController.clear();
+    weightController.clear();
+    examinationController.clear();
+    assessmentNoteController.clear();
+    sickLeaveDaysController.clear();
+    sickLeaveNotesController.clear();
+    sickLeaveStartDate = null;
+
     if (recordId != null) {
       fetchMedicalRecord();
     } else {
@@ -158,12 +179,15 @@ class AssessmentController extends GetxController {
   }
 
   void _populateFromRecord(Map<String, dynamic> data) {
-    // Vitals
-    if (data['heart_rate'] != null) {
-      heartRateController.text = data['heart_rate'].toString();
+    final signs = data['signs'] as Map<String, dynamic>? ?? {};
+    final assessment = data['assessment'] as Map<String, dynamic>? ?? {};
+
+    // Vitals (nested under 'signs')
+    if (signs['heart_rate'] != null) {
+      heartRateController.text = signs['heart_rate'].toString();
     }
-    if (data['blood_pressure'] != null) {
-      final bp = data['blood_pressure'].toString();
+    if (signs['blood_pressure'] != null) {
+      final bp = signs['blood_pressure'].toString();
       final parts = bp.split('/');
       if (parts.length == 2) {
         systolicController.text = parts[0].trim();
@@ -172,57 +196,81 @@ class AssessmentController extends GetxController {
         systolicController.text = bp;
       }
     }
-    if (data['temperature'] != null) {
-      temperatureController.text = data['temperature'].toString();
+    if (signs['temperature'] != null) {
+      temperatureController.text = signs['temperature'].toString();
     }
-    if (data['respiratory_rate'] != null) {
-      respiratoryRateController.text = data['respiratory_rate'].toString();
+    if (signs['respiratory_rate'] != null) {
+      respiratoryRateController.text = signs['respiratory_rate'].toString();
     }
-    if (data['blood_glucose'] != null) {
-      bloodGlucoseController.text = data['blood_glucose'].toString();
+    if (signs['blood_glucose'] != null) {
+      bloodGlucoseController.text = signs['blood_glucose'].toString();
     }
-    if (data['oxygen_saturation'] != null) {
-      oxygenSaturationController.text = data['oxygen_saturation'].toString();
+    if (signs['oxygen_saturation'] != null) {
+      oxygenSaturationController.text = signs['oxygen_saturation'].toString();
     }
-    if (data['height'] != null) {
-      heightController.text = data['height'].toString();
+    if (signs['height'] != null) {
+      heightController.text = signs['height'].toString();
     }
-    if (data['weight'] != null) {
-      weightController.text = data['weight'].toString();
+    if (signs['weight'] != null) {
+      weightController.text = signs['weight'].toString();
     }
 
-    // Examination
-    if (data['examination_details'] != null) {
-      examinationController.text = data['examination_details'].toString();
+    // Examination (nested under 'assessment')
+    if (assessment['examination_details'] != null) {
+      examinationController.text = assessment['examination_details'].toString();
     }
 
     // Assessment note
-    if (data['assessment_note'] != null) {
-      assessmentNoteController.text = data['assessment_note'].toString();
+    if (assessment['assessment_note'] != null) {
+      assessmentNoteController.text = assessment['assessment_note'].toString();
     }
 
     // Chief complaints (list of strings)
-    if (data['chief_complaints'] is List) {
-      final list = data['chief_complaints'] as List;
+    if (assessment['chief_complaints'] is List) {
+      final list = assessment['chief_complaints'] as List;
       selectedComplaints.assignAll(
         list.map((c) => <String, dynamic>{'complaint': c, 'name_en': c, 'name_ar': c}).toList(),
       );
     }
 
     // Suspected diseases (list of strings)
-    if (data['suspected_diseases'] is List) {
-      final list = data['suspected_diseases'] as List;
+    if (assessment['suspected_diseases'] is List) {
+      final list = assessment['suspected_diseases'] as List;
       selectedDiseases.assignAll(
         list.map((d) => <String, dynamic>{'key': d, 'name_en': d, 'name_ar': d}).toList(),
       );
     }
 
     // Recommendations (list of strings)
-    if (data['recommendation'] is List) {
-      final list = data['recommendation'] as List;
+    if (assessment['recommendation'] is List) {
+      final list = assessment['recommendation'] as List;
       selectedRecommendations.assignAll(
         list.map((r) => <String, dynamic>{'name': r}).toList(),
       );
+    }
+
+    // Drugs (at root level of medical record)
+    if (data['drugs'] is List) {
+      final drugsList = data['drugs'] as List;
+      addedDrugs.assignAll(
+        drugsList.map((d) => Map<String, dynamic>.from(d as Map)).toList(),
+      );
+    }
+
+    // Sick leave (at root level of medical record)
+    final sickLeave = data['sick_leave'] as Map<String, dynamic>?;
+    if (sickLeave != null) {
+      if (sickLeave['days'] != null) {
+        sickLeaveDaysController.text = sickLeave['days'].toString();
+      }
+      if (sickLeave['start_date'] != null) {
+        sickLeaveStartDate = DateTime.tryParse(sickLeave['start_date'].toString());
+      }
+    }
+
+    // Note (at root level of medical record)
+    if (data['note'] != null) {
+      sickLeaveNotesController.text = data['note'].toString();
     }
   }
 
