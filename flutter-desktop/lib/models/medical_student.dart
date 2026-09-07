@@ -5,6 +5,7 @@ class MedicalStudent {
   final String? grade;
   final String? className;
   final String? gradeAndClass;
+  final String? photo;
   final int numberOfRecords;
   final DateTime? lastVisit;
   final String? lastVisitRaw; // Keep original string for display
@@ -16,6 +17,7 @@ class MedicalStudent {
     this.grade,
     this.className,
     this.gradeAndClass,
+    this.photo,
     required this.numberOfRecords,
     this.lastVisit,
     this.lastVisitRaw,
@@ -29,6 +31,7 @@ class MedicalStudent {
       grade: json['grade'] as String?,
       className: json['className'] as String?,
       gradeAndClass: json['gradeAndClass'] as String?,
+      photo: json['photo'] as String?,
       numberOfRecords: json['numberOfRecords'] as int? ?? 0,
       lastVisitRaw: json['lastVisit'] as String?,
       lastVisit: json['lastVisit'] != null
@@ -105,6 +108,7 @@ class MedicalStudent {
       'grade': grade,
       'className': className,
       'gradeAndClass': gradeAndClass,
+      'photo': photo,
       'numberOfRecords': numberOfRecords,
       'lastVisit': lastVisit?.toIso8601String(),
     };

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/app_config.dart';
 import '../../../models/student.dart';
 
 class MedicalRecordDetailDialog extends StatelessWidget {
@@ -244,18 +246,174 @@ class MedicalRecordDetailDialog extends StatelessWidget {
               childAspectRatio: 1,
             ),
             itemCount: attachments.length,
-            itemBuilder: (context, index) => Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFD9D9D9),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Center(
-                child: Icon(Icons.image, color: Color(0xFF9CA3AF), size: 32),
-              ),
-            ),
+            itemBuilder: (context, index) =>
+                _buildAttachmentTile(context, attachments[index].toString()),
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildAttachmentTile(BuildContext context, String rawUrl) {
+    final fullUrl = _resolveAttachmentUrl(rawUrl);
+    final isImage = _isImage(fullUrl);
+    final filename = _filenameOf(rawUrl);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _openAttachment(context, rawUrl),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: isImage
+              ? Image.network(
+                  fullUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: const Color(0xFFD9D9D9),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFD9D9D9),
+                    child: const Center(
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Color(0xFF9CA3AF), size: 32),
+                    ),
+                  ),
+                )
+              : Container(
+                  color: const Color(0xFFD9D9D9),
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.picture_as_pdf,
+                          color: Color(0xFFEF4444), size: 32),
+                      const SizedBox(height: 6),
+                      Text(
+                        filename,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF6B7280)),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  static String _resolveAttachmentUrl(String raw) {
+    if (raw.isEmpty) return raw;
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('gcs:')) {
+      return '${AppConfig.newBackendUrl}/api/files/gcs/${raw.substring(4)}';
+    }
+    return '${AppConfig.newBackendUrl}${raw.startsWith('/') ? '' : '/'}$raw';
+  }
+
+  static bool _isImage(String url) {
+    final ext = url.split('?').first.split('.').last.toLowerCase();
+    return const ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].contains(ext);
+  }
+
+  static String _filenameOf(String rawUrl) {
+    final tail = rawUrl.split('?').first.split('/').last;
+    if (tail.isEmpty) return 'Attachment';
+    try {
+      return Uri.decodeComponent(tail);
+    } catch (_) {
+      return tail;
+    }
+  }
+
+  Future<void> _openAttachment(BuildContext context, String rawUrl) async {
+    final fullUrl = _resolveAttachmentUrl(rawUrl);
+    if (_isImage(fullUrl)) {
+      _showImagePreview(context, fullUrl, _filenameOf(rawUrl));
+    } else {
+      final uri = Uri.tryParse(fullUrl);
+      if (uri != null) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  void _showImagePreview(BuildContext context, String url, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border:
+                      Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image_outlined,
+                                size: 48, color: Color(0xFF9CA3AF)),
+                            SizedBox(height: 8),
+                            Text('Failed to load image',
+                                style: TextStyle(color: Color(0xFF6B7280))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -12,32 +12,38 @@ class UploadStudentsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(UploadController(), tag: _tag);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        width: 600,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _UploadDialogHeader(tag: _tag),
-            const SizedBox(height: 24),
-            _UploadInstructions(controller: controller),
-            const SizedBox(height: 24),
-            _UploadArea(controller: controller),
-            const SizedBox(height: 16),
-            _UploadErrorBanner(controller: controller),
-            _UploadedFilesList(controller: controller),
-            const SizedBox(height: 32),
-            _UploadDialogActions(controller: controller, tag: _tag),
-          ],
+    return Obx(
+      () => PopScope(
+        // Block Esc / system back while a job is processing.
+        canPop: !controller.isUploading.value,
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: 600,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _UploadDialogHeader(tag: _tag, controller: controller),
+                const SizedBox(height: 24),
+                _UploadInstructions(controller: controller),
+                const SizedBox(height: 24),
+                _UploadArea(controller: controller),
+                const SizedBox(height: 16),
+                _UploadErrorBanner(controller: controller),
+                _UploadedFilesList(controller: controller),
+                const SizedBox(height: 32),
+                _UploadDialogActions(controller: controller, tag: _tag),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -46,7 +52,8 @@ class UploadStudentsDialog extends StatelessWidget {
 
 class _UploadDialogHeader extends StatelessWidget {
   final String tag;
-  const _UploadDialogHeader({required this.tag});
+  final UploadController controller;
+  const _UploadDialogHeader({required this.tag, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -61,17 +68,20 @@ class _UploadDialogHeader extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        IconButton(
-          onPressed: () {
-            Get.delete<UploadController>(tag: tag);
-            Get.back();
-          },
-          icon: Icon(Icons.close, color: Colors.grey.shade600),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.grey.shade100,
-            shape: const CircleBorder(),
-          ),
-        ),
+        Obx(() => IconButton(
+              // Disabled while a job is processing so it can't be dismissed.
+              onPressed: controller.isUploading.value
+                  ? null
+                  : () {
+                      Get.delete<UploadController>(tag: tag);
+                      Get.back();
+                    },
+              icon: Icon(Icons.close, color: Colors.grey.shade600),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.grey.shade100,
+                shape: const CircleBorder(),
+              ),
+            )),
       ],
     );
   }
@@ -281,7 +291,7 @@ class _UploadFileItem extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                _FileStatus(file: file),
+                _FileStatus(file: file, controller: controller),
               ],
             ),
           ),
@@ -312,8 +322,9 @@ class _UploadFileItem extends StatelessWidget {
 
 class _FileStatus extends StatelessWidget {
   final UploadFile file;
+  final UploadController controller;
 
-  const _FileStatus({required this.file});
+  const _FileStatus({required this.file, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -338,20 +349,29 @@ class _FileStatus extends StatelessWidget {
           ),
         );
       }
-      return _FileProgress(file: file);
+      return _FileProgress(file: file, controller: controller);
     });
   }
 }
 
 class _FileProgress extends StatelessWidget {
   final UploadFile file;
+  final UploadController controller;
 
-  const _FileProgress({required this.file});
+  const _FileProgress({required this.file, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final progress = file.progress.value;
+      final uploading = controller.isUploading.value;
+      final total = controller.totalCount.value;
+      final processed = controller.processed.value;
+      // Once a job is running show the live row counter; before that, the
+      // local parse/upload progress.
+      final statusLine = uploading && total > 0
+          ? '$processed/$total imported'
+          : (progress >= 1.0 ? 'Done' : 'Ready to upload');
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -389,7 +409,7 @@ class _FileProgress extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            progress >= 1.0 ? 'Done' : 'Ready to upload',
+            statusLine,
             style: TextStyle(
               fontSize: 10,
               color: Colors.blue.shade600,
@@ -412,27 +432,29 @@ class _UploadDialogActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
-            onPressed: () {
-              Get.delete<UploadController>(tag: tag);
-              Get.back();
-            },
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-              ),
-            ),
-          ),
+          child: Obx(() => OutlinedButton(
+                onPressed: controller.isUploading.value
+                    ? null
+                    : () {
+                        Get.delete<UploadController>(tag: tag);
+                        Get.back();
+                      },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              )),
         ),
         const SizedBox(width: 16),
         Expanded(

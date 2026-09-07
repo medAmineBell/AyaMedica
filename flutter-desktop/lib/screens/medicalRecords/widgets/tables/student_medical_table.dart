@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/medical_records_controller.dart';
 import 'package:flutter_getx_app/models/medical_student.dart';
 import 'package:flutter_getx_app/shared/widgets/dynamic_table_widget.dart';
@@ -36,18 +37,7 @@ class StudentMedicalTable extends StatelessWidget {
         columnWidth: const FlexColumnWidth(2.5),
         cellBuilder: (student, index) => Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: _getAvatarColor(student.id),
-              child: Text(
-                student.initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
+            _buildAvatar(student),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -123,6 +113,35 @@ class StudentMedicalTable extends StatelessWidget {
         ),
       ),
     ];
+  }
+
+  Widget _buildAvatar(MedicalStudent student) {
+    final photo = student.photo;
+    final backgroundColor = _getAvatarColor(student.id);
+
+    if (photo != null && photo.isNotEmpty) {
+      final fullUrl =
+          photo.startsWith('http') ? photo : '${AppConfig.newBackendUrl}$photo';
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: backgroundColor,
+        backgroundImage: NetworkImage(fullUrl),
+        onBackgroundImageError: (_, __) {},
+      );
+    }
+
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: backgroundColor,
+      child: Text(
+        student.initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+      ),
+    );
   }
 
   Color _getAvatarColor(String id) {

@@ -411,24 +411,12 @@ class Student {
     );
   }
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    
-    return other is Student &&
-           other.id == id &&
-           other.name == name &&
-           other.nationalId == nationalId &&
-           other.studentId == studentId;
-  }
-
-  @override
-  int get hashCode {
-    return id.hashCode ^ 
-           name.hashCode ^ 
-           nationalId.hashCode ^ 
-           studentId.hashCode;
-  }
+  // NOTE: Do not override == / hashCode here. GetX's `Rx<T>.value =` setter
+  // skips updating `_value` and skips notifying listeners when `_value == val`
+  // is true, so a partial-equality override (e.g. comparing only id/name)
+  // silently swallows merge updates that change other fields like guardians
+  // or address — the UI then never rebuilds with the merged data. Default
+  // identity-based equality keeps Rx assignments reliable.
 
   @override
   String toString() {

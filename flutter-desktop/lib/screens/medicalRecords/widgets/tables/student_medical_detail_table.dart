@@ -49,6 +49,17 @@ class StudentMedicalDetailTable extends StatelessWidget {
             ),
           ),
           TableColumnConfig<MedicalRecord>(
+            header: 'Speciality',
+            columnWidth: const FlexColumnWidth(1.2),
+            cellBuilder: (record, _) => Text(
+              record.type ?? '-',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ),
+          TableColumnConfig<MedicalRecord>(
             header: 'Complaint',
             columnWidth: const FlexColumnWidth(1.5),
             cellBuilder: (record, _) => Text(

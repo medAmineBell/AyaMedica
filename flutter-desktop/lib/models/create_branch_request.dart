@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class CreateBranchRequest {
   final String name;
   final String accountType;
@@ -8,6 +10,10 @@ class CreateBranchRequest {
   final String? phone;
   final String? website;
 
+  // Multipart-only fields (not serialized in toJson)
+  final Uint8List? logoBytes;
+  final String? logoFileName;
+
   CreateBranchRequest({
     required this.name,
     required this.accountType,
@@ -17,6 +23,8 @@ class CreateBranchRequest {
     required this.address,
     this.phone,
     this.website,
+    this.logoBytes,
+    this.logoFileName,
   });
 
   Map<String, dynamic> toJson() {

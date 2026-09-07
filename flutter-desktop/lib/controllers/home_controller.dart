@@ -83,6 +83,7 @@ class HomeController extends GetxController {
   final RxList<Map<String, dynamic>> patientMedicalRecords = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> patientMedicalHistory = <Map<String, dynamic>>[].obs;
   final RxBool isLoadingPatientRecords = false.obs;
+  final RxBool isLoadingStudent = false.obs;
 
   // Multi-branch flag
   final RxBool hasMultipleBranches = false.obs;
@@ -171,13 +172,39 @@ class HomeController extends GetxController {
     selectedProfileMenuItem.value = 'Profile';
     currentContent.value = ContentType.appointmentStudentProfile;
 
-    // Fetch full student data from medical record API
     print('[HomeController] medicalRecordId: ${appointment.medicalRecordId}, appointmentId: ${appointment.id}');
-    if (appointment.medicalRecordId != null) {
-      _fetchStudentFromMedicalRecord(appointment.id, appointment.medicalRecordId!);
+    _resolveAndLoadStudentData(appointment);
+  }
+
+  Future<void> _resolveAndLoadStudentData(AppointmentHistory appointment) async {
+    isLoadingStudent.value = true;
+    try {
+      // Fetch patient records (medical history tab) — also returns the
+      // current medicalRecordId in its response, which we use as a fallback
+      // when the appointment doesn't carry one (e.g. fresh walk-in creates
+      // where the POST response or the listing endpoint hasn't propagated it).
+      final discoveredId = await _fetchPatientRecords(appointment.id);
+      var resolvedId = appointment.medicalRecordId ?? discoveredId;
+
+      // Backend propagation can lag right after a walk-in is created. If
+      // patient-records returned no record yet, retry once briefly.
+      if (resolvedId == null) {
+        await Future.delayed(const Duration(milliseconds: 700));
+        resolvedId = await _fetchPatientRecords(appointment.id);
+      }
+
+      if (resolvedId != null) {
+        if (appointment.medicalRecordId == null) {
+          currentAppointmentHistory.value =
+              appointment.copyWith(medicalRecordId: resolvedId);
+        }
+        await _fetchStudentFromMedicalRecord(appointment.id, resolvedId);
+      } else {
+        print('[HomeController] Could not resolve medicalRecordId for appointment ${appointment.id}');
+      }
+    } finally {
+      isLoadingStudent.value = false;
     }
-    // Fetch patient records for medical history tab
-    _fetchPatientRecords(appointment.id);
   }
 
   Future<void> _fetchStudentFromMedicalRecord(String appointmentId, String recordId) async {
@@ -242,6 +269,11 @@ class HomeController extends GetxController {
       documentType: s['documentType'] as String? ?? current.documentType,
       documentNumber: s['documentNumber'] as String? ?? current.documentNumber,
       city: s['city'] as String? ?? current.city,
+      bloodType: s['bloodType'] as String? ?? current.bloodType,
+      heightCm: (s['height'] as num?)?.toDouble() ?? current.heightCm,
+      weightKg: (s['weight'] as num?)?.toDouble() ?? current.weightKg,
+      goToHospital:
+          s['emergencyHospital'] as String? ?? current.goToHospital,
       firstGuardianName: firstGuardian?['fullName'] as String?,
       firstGuardianPhone: firstGuardian?['phone'] as String?,
       firstGuardianEmail: firstGuardian?['email'] as String?,
@@ -253,7 +285,10 @@ class HomeController extends GetxController {
     );
   }
 
-  Future<void> _fetchPatientRecords(String appointmentId) async {
+  /// Fetches the patient-records payload for an appointment and returns the
+  /// medicalRecordId of the current/most-recent record (or null if none),
+  /// so callers can chain a follow-up fetch against the medical-record API.
+  Future<String?> _fetchPatientRecords(String appointmentId) async {
     try {
       isLoadingPatientRecords.value = true;
       patientMedicalRecords.clear();
@@ -261,7 +296,7 @@ class HomeController extends GetxController {
 
       final storageService = Get.find<StorageService>();
       final accessToken = storageService.getAccessToken();
-      if (accessToken == null) return;
+      if (accessToken == null) return null;
 
       final url =
           '${AppConfig.newBackendUrl}/api/appointment-sessions/$appointmentId/patient-records';
@@ -274,33 +309,53 @@ class HomeController extends GetxController {
         },
       );
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['success'] == true) {
-          final data = jsonData['data'] as Map<String, dynamic>;
+      if (response.statusCode != 200) return null;
 
-          if (data['medicalRecords'] is List) {
-            patientMedicalRecords.assignAll(
-              (data['medicalRecords'] as List)
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList(),
-            );
-          }
+      final jsonData = jsonDecode(response.body);
+      if (jsonData['success'] != true) return null;
 
-          if (data['medicalHistory'] is List) {
-            patientMedicalHistory.assignAll(
-              (data['medicalHistory'] as List)
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList(),
-            );
-          }
-        }
+      final data = jsonData['data'] as Map<String, dynamic>;
+
+      if (data['medicalRecords'] is List) {
+        patientMedicalRecords.assignAll(
+          (data['medicalRecords'] as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(),
+        );
       }
+
+      if (data['medicalHistory'] is List) {
+        patientMedicalHistory.assignAll(
+          (data['medicalHistory'] as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(),
+        );
+      }
+
+      return _extractMedicalRecordId(patientMedicalRecords);
     } catch (e) {
       print('[HomeController] Error fetching patient records: $e');
+      return null;
     } finally {
       isLoadingPatientRecords.value = false;
     }
+  }
+
+  String? _extractMedicalRecordId(List<Map<String, dynamic>> records) {
+    if (records.isEmpty) return null;
+    // Records are returned newest-first by the backend; the most recent one
+    // is the record for the current appointment session.
+    final first = records.first;
+    final candidates = [
+      first['id'],
+      first['medicalRecordId'],
+      first['recordId'],
+      first['_id'],
+    ];
+    for (final c in candidates) {
+      if (c is String && c.isNotEmpty) return c;
+    }
+    return null;
   }
 
   /// Fetch medical records & history for a student profile (not appointment-based)

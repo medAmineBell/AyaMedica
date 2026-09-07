@@ -118,6 +118,18 @@ class CreateMessageController extends GetxController {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
+      type: FileType.custom,
+      allowedExtensions: const [
+        'pdf',
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+        'bmp',
+        'heic',
+        'heif',
+      ],
     );
     if (result == null) return;
     for (final file in result.files) {

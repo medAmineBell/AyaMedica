@@ -21,6 +21,7 @@ class BranchManagementController extends GetxController {
   final RxString errorMessage = ''.obs;
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
+  final RxBool isRenamingGrade = false.obs;
   final Rx<BranchModel> selectedBranch =
       BranchModel(name: '', role: '', icon: '').obs;
 
@@ -284,6 +285,7 @@ class BranchManagementController extends GetxController {
       isHeadquarters: branchResponse.isHeadquarters,
       website: branchResponse.website,
       accountType: branchResponse.accountType,
+      logoUrl: branchResponse.logo,
     );
   }
 
@@ -310,16 +312,37 @@ class BranchManagementController extends GetxController {
         throw Exception('No access token found');
       }
 
-      // Make API request
-      final response = await http.post(
+      final multipart = http.MultipartRequest(
+        'POST',
         Uri.parse(
             '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: jsonEncode(request.toJson()),
       );
+      multipart.headers['Authorization'] = 'Bearer $accessToken';
+
+      multipart.fields['name'] = request.name;
+      multipart.fields['accountType'] = request.accountType;
+      multipart.fields['isHeadquarters'] = request.isHeadquarters.toString();
+      if (request.educationType != null && request.educationType!.isNotEmpty) {
+        multipart.fields['educationType'] = request.educationType!;
+      }
+      multipart.fields['grades'] = jsonEncode(request.grades);
+      multipart.fields['address'] = jsonEncode(request.address.toJson());
+      if (request.phone != null && request.phone!.isNotEmpty) {
+        multipart.fields['phone'] = request.phone!;
+      }
+      if (request.website != null && request.website!.isNotEmpty) {
+        multipart.fields['website'] = request.website!;
+      }
+      if (request.logoBytes != null) {
+        multipart.files.add(http.MultipartFile.fromBytes(
+          'logo',
+          request.logoBytes!,
+          filename: request.logoFileName ?? 'logo.jpg',
+        ));
+      }
+
+      final streamed = await multipart.send();
+      final response = await http.Response.fromStream(streamed);
 
       print('📡 Response Status: ${response.statusCode}');
       print('📡 Response Body: ${response.body}');
@@ -389,7 +412,7 @@ class BranchManagementController extends GetxController {
         throw Exception('No access token found');
       }
 
-      // Prepare update request body (accountType is immutable, so exclude it)
+      // Prepare update request (accountType is immutable, so exclude it)
       final addressBody = <String, dynamic>{
         'governorate': request.address.governorate,
         'city': request.address.city,
@@ -397,26 +420,37 @@ class BranchManagementController extends GetxController {
       if (request.address.street != null && request.address.street!.isNotEmpty) {
         addressBody['street'] = request.address.street;
       }
-      final updateBody = {
-        'name': request.name,
-        'isHeadquarters': request.isHeadquarters,
-        'educationType': request.educationType?.toUpperCase(),
-        'grades': request.grades,
-        'address': addressBody,
-        if (request.phone != null) 'phone': request.phone,
-        if (request.website != null) 'website': request.website,
-      };
 
-      // Make API request
-      final response = await http.put(
+      final multipart = http.MultipartRequest(
+        'PUT',
         Uri.parse(
             '${AppConfig.newBackendUrl}/api/organizations/$organizationId/branches/$branchId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: jsonEncode(updateBody),
       );
+      multipart.headers['Authorization'] = 'Bearer $accessToken';
+
+      multipart.fields['name'] = request.name;
+      multipart.fields['isHeadquarters'] = request.isHeadquarters.toString();
+      if (request.educationType != null && request.educationType!.isNotEmpty) {
+        multipart.fields['educationType'] = request.educationType!;
+      }
+      multipart.fields['grades'] = jsonEncode(request.grades);
+      multipart.fields['address'] = jsonEncode(addressBody);
+      if (request.phone != null && request.phone!.isNotEmpty) {
+        multipart.fields['phone'] = request.phone!;
+      }
+      if (request.website != null && request.website!.isNotEmpty) {
+        multipart.fields['website'] = request.website!;
+      }
+      if (request.logoBytes != null) {
+        multipart.files.add(http.MultipartFile.fromBytes(
+          'logo',
+          request.logoBytes!,
+          filename: request.logoFileName ?? 'logo.jpg',
+        ));
+      }
+
+      final streamed = await multipart.send();
+      final response = await http.Response.fromStream(streamed);
 
       print('📡 Response Status: ${response.statusCode}');
       print('📡 Response Body: ${response.body}');
@@ -458,6 +492,80 @@ class BranchManagementController extends GetxController {
       return false;
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  // PATCH - Rename a single grade for a branch
+  Future<bool> renameGrade({
+    required String branchId,
+    required String oldName,
+    required String newName,
+  }) async {
+    isRenamingGrade.value = true;
+
+    try {
+      print('✏️ Renaming grade...');
+      print('📍 Branch ID: $branchId');
+      print('📤 Body: {oldName: $oldName, newName: $newName}');
+
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) {
+        throw Exception('No access token found');
+      }
+
+      final response = await http.patch(
+        Uri.parse(
+            '${AppConfig.newBackendUrl}/api/grades/branch/$branchId/rename'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'oldName': oldName, 'newName': newName}),
+      );
+
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true ||
+            responseData['success'] == null) {
+          print('✅ Grade renamed successfully');
+
+          appSnackbar(
+            'Success',
+            'Grade renamed',
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 2),
+          );
+
+          await fetchBranches();
+
+          return true;
+        } else {
+          throw Exception(responseData['message'] ?? 'Failed to rename grade');
+        }
+      } else {
+        Map<String, dynamic> errorData = const {};
+        try {
+          errorData = jsonDecode(response.body) as Map<String, dynamic>;
+        } catch (_) {}
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error renaming grade: $e');
+      appSnackbar(
+        'Error',
+        'Failed to rename grade: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isRenamingGrade.value = false;
     }
   }
 

@@ -32,6 +32,7 @@ class StudentController extends GetxController {
   final RxString selectedFilter = 'All'.obs;
   final RxBool isLoading = false.obs;
   final RxBool isSaving = false.obs;
+  final RxBool isExporting = false.obs;
   final RxInt currentPage = 1.obs;
   final RxInt itemsPerPage = 10.obs;
   final RxInt totalStudents = 0.obs;
@@ -239,6 +240,81 @@ class StudentController extends GetxController {
     }
   }
 
+  Future<void> exportStudents() async {
+    if (isExporting.value) return;
+    if (selectedBranchId.value.isEmpty) {
+      appSnackbar(
+        'No branch selected',
+        'Pick a branch before exporting students.',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    isExporting.value = true;
+    try {
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null) throw Exception('No access token found');
+
+      final qp = <String, String>{
+        'branchId': selectedBranchId.value,
+        'format': 'xlsx',
+      };
+      final search = searchQuery.value.trim();
+      if (search.isNotEmpty) qp['search'] = search;
+      final grade = selectedGrade.value;
+      if (grade != null && grade.isNotEmpty) qp['grade'] = grade;
+      final klass = selectedClass.value;
+      if (klass != null && klass.isNotEmpty) qp['studentClass'] = klass;
+
+      final uri = Uri.parse(
+              '${AppConfig.newBackendUrl}/api/school-admin/students/export')
+          .replace(queryParameters: qp);
+
+      final response = await http.get(uri, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Accept':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Export failed (${response.statusCode}): ${response.body}');
+      }
+      final bytes = response.bodyBytes;
+      if (bytes.isEmpty) throw Exception('Server returned an empty file.');
+
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      final savePath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save students export',
+        fileName: 'students-$stamp.xlsx',
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+      );
+      if (savePath == null) return;
+
+      final outPath = savePath.toLowerCase().endsWith('.xlsx')
+          ? savePath
+          : '$savePath.xlsx';
+      await File(outPath).writeAsBytes(bytes, flush: true);
+
+      appSnackbar(
+        'Export complete',
+        'Students saved to $outPath',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      appSnackbar(
+        'Export failed',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isExporting.value = false;
+    }
+  }
+
   // Getters
   List<Student> get students => filteredStudents;
   List<Student> get paginatedStudents {
@@ -356,8 +432,8 @@ class StudentController extends GetxController {
             duration: const Duration(seconds: 2),
           );
 
-          // Refresh student list
-          await loadStudents();
+          // Refresh student list while preserving the active search/filters/page
+          refreshStudents();
 
           return true;
         } else {
@@ -420,8 +496,8 @@ class StudentController extends GetxController {
           duration: const Duration(seconds: 2),
         );
 
-        // Refresh student list
-        await loadStudents();
+        // Refresh student list while preserving the active search/filters/page
+        refreshStudents();
 
         return true;
       } else {
@@ -502,15 +578,6 @@ class StudentController extends GetxController {
           currentPage.value = pagination['page'];
           totalStudents.value = pagination['total'];
           totalPages.value = pagination['totalPages'];
-
-          // Extract unique class names for filter
-          final classNames = <String>{};
-          for (final s in students) {
-            if (s.className != null && s.className!.isNotEmpty) {
-              classNames.add(s.className!);
-            }
-          }
-          availableClasses.value = classNames.toList()..sort();
 
           print('✅ Students loaded successfully:');
           print('   - Students: ${students.length}');
@@ -606,9 +673,9 @@ class StudentController extends GetxController {
         lastAppointmentDate: lastAppointmentDate,
         lastAppointmentType: lastAppointmentType,
         emrNumber: 0,
-        bloodType: null,
-        weightKg: null,
-        heightCm: null,
+        bloodType: json['bloodType'] as String?,
+        weightKg: (json['weight'] as num?)?.toDouble(),
+        heightCm: (json['height'] as num?)?.toDouble(),
         city: json['city'],
         street: null,
         zipCode: null,
@@ -624,7 +691,7 @@ class StudentController extends GetxController {
         secondGuardianEmail: secondGuardian?['email'],
         secondGuardianStatus: secondGuardian?['status'],
         secondGuardianRelation: secondGuardian?['relation'],
-        goToHospital: null,
+        goToHospital: json['emergencyHospital'] as String?,
         insuranceCompany: null,
         policyNumber: null,
         chronicDiseases: [],

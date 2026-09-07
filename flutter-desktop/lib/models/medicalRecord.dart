@@ -262,6 +262,7 @@ class StudentDetails {
   final String? bloodType;
   final double? height;
   final double? weight;
+  final String? emergencyHospital;
 
   StudentDetails({
     required this.id,
@@ -274,6 +275,7 @@ class StudentDetails {
     this.bloodType,
     this.height,
     this.weight,
+    this.emergencyHospital,
   });
 
   factory StudentDetails.fromJson(Map<String, dynamic> json) {
@@ -290,6 +292,7 @@ class StudentDetails {
       bloodType: json['bloodType'] as String?,
       height: (json['height'] as num?)?.toDouble(),
       weight: (json['weight'] as num?)?.toDouble(),
+      emergencyHospital: json['emergencyHospital'] as String?,
     );
   }
 

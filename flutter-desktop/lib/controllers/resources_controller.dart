@@ -17,6 +17,20 @@ class ResourcesController extends GetxController {
   final RxBool isLoadingClassDetails = false.obs;
   final RxString selectedBranchId = ''.obs;
   final RxString searchQuery = ''.obs;
+  final TextEditingController searchTextController = TextEditingController();
+
+  // '' = no sort, 'name' = Class Name, 'grade' = Grade
+  final RxString sortColumn = ''.obs;
+  final RxBool sortAscending = true.obs;
+
+  void toggleSort(String column) {
+    if (sortColumn.value == column) {
+      sortAscending.value = !sortAscending.value;
+    } else {
+      sortColumn.value = column;
+      sortAscending.value = true;
+    }
+  }
 
   static String get baseUrl => AppConfig.newBackendUrl;
 
@@ -25,6 +39,12 @@ class ResourcesController extends GetxController {
     super.onInit();
     loadBranchData();
     loadClasses();
+  }
+
+  @override
+  void onClose() {
+    searchTextController.dispose();
+    super.onClose();
   }
 
   // Load branch data from storage
@@ -36,17 +56,32 @@ class ResourcesController extends GetxController {
     }
   }
 
-  // Filtered classes based on search
+  // Filtered classes based on search and sort
   List<Map<String, dynamic>> get filteredClasses {
+    List<Map<String, dynamic>> result;
     if (searchQuery.value.isEmpty) {
-      return classes;
+      result = List<Map<String, dynamic>>.from(classes);
+    } else {
+      final query = searchQuery.value.toLowerCase();
+      result = classes.where((classItem) {
+        final name = classItem['name']?.toString().toLowerCase() ?? '';
+        final grade = classItem['grade']?.toString().toLowerCase() ?? '';
+        return name.contains(query) || grade.contains(query);
+      }).toList();
     }
-    final query = searchQuery.value.toLowerCase();
-    return classes.where((classItem) {
-      final name = classItem['name']?.toString().toLowerCase() ?? '';
-      final grade = classItem['grade']?.toString().toLowerCase() ?? '';
-      return name.contains(query) || grade.contains(query);
-    }).toList();
+
+    if (sortColumn.value.isNotEmpty) {
+      final key = sortColumn.value;
+      final ascending = sortAscending.value;
+      result.sort((a, b) {
+        final av = a[key]?.toString().toLowerCase() ?? '';
+        final bv = b[key]?.toString().toLowerCase() ?? '';
+        final cmp = av.compareTo(bv);
+        return ascending ? cmp : -cmp;
+      });
+    }
+
+    return result;
   }
 
   void setSearchQuery(String query) {
@@ -147,6 +182,37 @@ class ResourcesController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // GET /api/classes for an arbitrary branch — does not mutate cached state.
+  Future<List<Map<String, dynamic>>> fetchClassesForBranch(
+      String branchId) async {
+    if (branchId.isEmpty) return const [];
+    try {
+      final accessToken = await storageService.getAccessToken();
+      if (accessToken == null) return const [];
+
+      final uri = Uri.parse('$baseUrl/api/classes')
+          .replace(queryParameters: {'branchId': branchId});
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true && jsonData['data'] is List) {
+          return List<Map<String, dynamic>>.from(jsonData['data']);
+        }
+      }
+    } catch (e) {
+      print('Error fetching classes for branch $branchId: $e');
+    }
+    return const [];
   }
 
   // POST /api/classes

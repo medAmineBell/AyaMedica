@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/branch_management_controller.dart';
 import 'package:flutter_getx_app/models/branch_model.dart';
 import 'package:flutter_getx_app/shared/widgets/dynamic_table_widget.dart';
@@ -200,19 +201,7 @@ class BranchTableWidget extends StatelessWidget {
         columnWidth: const FlexColumnWidth(2.5),
         cellBuilder: (branch, index) => Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _getBranchColor(branch.name),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                _getBranchIcon(branch.icon),
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
+            _buildBranchAvatar(branch),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -330,6 +319,49 @@ class BranchTableWidget extends StatelessWidget {
         onPressed: (branch, index) => _activateDeactivateBranch(branch),
       ),
     ];
+  }
+
+  String _resolveBranchLogoUrl(String raw) {
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/')) return '${AppConfig.newBackendUrl}$raw';
+    return '${AppConfig.newBackendUrl}/api/files/gcs/$raw';
+  }
+
+  Widget _buildBranchAvatar(BranchModel branch) {
+    final fallback = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: _getBranchColor(branch.name),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        _getBranchIcon(branch.icon),
+        color: Colors.white,
+        size: 20,
+      ),
+    );
+
+    final logoUrl = branch.logoUrl;
+    if (logoUrl == null || logoUrl.isEmpty) {
+      print('🏷️ Branch ${branch.name}: logoUrl is null/empty → fallback');
+      return fallback;
+    }
+    final fullUrl = _resolveBranchLogoUrl(logoUrl);
+    print('🏷️ Branch ${branch.name}: loading logo from $fullUrl');
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        fullUrl,
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+        errorBuilder: (_, error, __) {
+          print('🏷️ Branch ${branch.name}: image load FAILED → $error');
+          return fallback;
+        },
+      ),
+    );
   }
 
   Color _getBranchColor(String branchName) {

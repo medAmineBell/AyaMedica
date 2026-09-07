@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_getx_app/bindings/app_binding.dart';
 import 'package:flutter_getx_app/controllers/auth_controller.dart';
 import 'package:flutter_getx_app/controllers/calendar_controller.dart';
@@ -76,6 +77,16 @@ void main(List<String> args) async {
       locale: languageController.locale,
       fallbackLocale: TranslationService.fallbackLocale,
       translations: TranslationService(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'GB'),
+        Locale('en', 'US'),
+        Locale('ar'),
+      ],
       initialRoute: Routes.SPLASH,
       getPages: AppPages.routes,
       initialBinding: AppBinding(),
@@ -97,6 +108,16 @@ class MyApp extends StatelessWidget {
           locale: languageController.locale,
           fallbackLocale: TranslationService.fallbackLocale,
           translations: TranslationService(),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en', 'GB'),
+            Locale('en', 'US'),
+            Locale('ar'),
+          ],
           initialRoute: Routes.HOME,
           getPages: AppPages.routes,
         ),

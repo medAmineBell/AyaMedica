@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -8,6 +9,7 @@ import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/student_controller.dart';
 import 'package:flutter_getx_app/models/bulk_upload_models.dart';
 import 'package:flutter_getx_app/utils/app_snackbar.dart';
+import 'package:flutter_getx_app/utils/location_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -18,6 +20,15 @@ class UploadController extends GetxController {
   final RxList<UploadFile> uploadedFiles = <UploadFile>[].obs;
   final RxBool isUploading = false.obs;
   final RxnString errorMessage = RxnString();
+
+  // Async job progress. The backend now returns 202 + jobId immediately and we
+  // poll for live counters every 3s until status is completed/failed.
+  final RxInt processed = 0.obs;
+  final RxInt totalCount = 0.obs;
+  final RxnString jobStatus = RxnString(); // queued/processing/completed/failed
+  String? _jobId;
+  Timer? _pollTimer;
+  bool _fetchingProgress = false;
 
   bool get canSubmit =>
       uploadedFiles.length == 1 &&
@@ -121,9 +132,26 @@ class UploadController extends GetxController {
     file.progress.value = 0.1;
 
     try {
+      // Resolve full country names ("Egypt", "Saudi Arabia") to ISO codes so
+      // documentType is derived correctly regardless of how the nationality was
+      // spelled in the spreadsheet. Backed by the app's country list, with the
+      // parser's built-in EG/SA aliases as a fallback.
+      final location =
+          Get.isRegistered<LocationService>() ? Get.find<LocationService>() : null;
+      String? resolveCountryKey(String raw) {
+        final s = raw.trim();
+        if (s.isEmpty) return null;
+        final match = location?.countries.firstWhereOrNull((c) =>
+            c.key.toUpperCase() == s.toUpperCase() ||
+            c.code.toUpperCase() == s.toUpperCase() ||
+            c.nameEn.toLowerCase() == s.toLowerCase());
+        return match?.key;
+      }
+
       final payloads = BulkUploadParser.parseExcel(
         file.bytes,
         branchCountry: branchCountry,
+        countryKeyResolver: resolveCountryKey,
       );
       if (payloads.isEmpty) {
         throw BulkUploadParseException(
@@ -146,9 +174,13 @@ class UploadController extends GetxController {
         },
         body: body,
       );
-      file.progress.value = 0.9;
+      file.progress.value = 0.5;
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
+      // The endpoint is now async: it validates, creates a job, and returns 202
+      // with { data: { jobId, total } }. Results arrive via the progress poll.
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
         String message = 'HTTP ${response.statusCode}';
         try {
           final decoded = jsonDecode(response.body);
@@ -163,28 +195,23 @@ class UploadController extends GetxController {
       if (decoded is! Map<String, dynamic>) {
         throw Exception('Unexpected response from server.');
       }
+      final data = decoded['data'];
+      final jobId = data is Map ? data['jobId']?.toString() : null;
+      if (jobId == null || jobId.isEmpty) {
+        throw Exception('Server did not return a job id.');
+      }
 
-      final parsed = BulkUploadResponse.fromJson(decoded);
-      file.progress.value = 1.0;
-      file.isCompleted.value = true;
-
-      // Close the upload dialog FIRST so the results screen (or refreshed
-      // list) is visible underneath. The dialog is opened via Flutter's
-      // showDialog, so Get.isDialogOpen is false here — call Get.back()
-      // unconditionally to pop the dialog route.
-      Get.back();
-
-      // Then notify the student controller, which navigates to the results
-      // screen (on partial failure) or back to the list (on full success).
-      studentController.handleBulkUploadResponse(parsed);
-
-      // Clean up so the next dialog open starts with a fresh controller
-      // (otherwise the stale "completed" file would remain in the list).
-      Get.delete<UploadController>(tag: 'upload');
+      _jobId = jobId;
+      totalCount.value = (data['total'] as num?)?.toInt() ?? 0;
+      processed.value = 0;
+      jobStatus.value = 'queued';
+      // Keep isUploading = true and the dialog open while we poll for progress.
+      _startPolling();
       return;
     } on BulkUploadParseException catch (e) {
       file.hasError.value = true;
       errorMessage.value = e.message;
+      isUploading.value = false;
     } catch (e) {
       file.hasError.value = true;
       errorMessage.value = 'Upload failed: $e';
@@ -194,9 +221,123 @@ class UploadController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
-    } finally {
       isUploading.value = false;
     }
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    // Poll immediately so the UI updates without waiting a full interval, then
+    // every 3 seconds until the job completes or fails.
+    _pollProgress();
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 3), (_) => _pollProgress());
+  }
+
+  Future<void> _pollProgress() async {
+    if (_fetchingProgress || _jobId == null) return;
+    _fetchingProgress = true;
+    final file = uploadedFiles.isNotEmpty ? uploadedFiles.first : null;
+    try {
+      final accessToken = await _storageService.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        _failPolling('Session expired, please log in again.', file);
+        return;
+      }
+
+      final url = Uri.parse(
+          '${AppConfig.newBackendUrl}/api/school-admin/students/bulk-upload/$_jobId/progress');
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+
+      if (response.statusCode != 200) {
+        // 403 = not the owning user, 404 = unknown/expired job, etc.
+        String message = 'HTTP ${response.statusCode}';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map && decoded['message'] is String) {
+            message = decoded['message'];
+          }
+        } catch (_) {}
+        _failPolling(message, file);
+        return;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return;
+      final data = decoded['data'];
+      if (data is! Map) return;
+
+      processed.value = (data['processed'] as num?)?.toInt() ?? processed.value;
+      final total = (data['total'] as num?)?.toInt();
+      if (total != null) totalCount.value = total;
+      jobStatus.value = data['status']?.toString();
+
+      if (file != null && totalCount.value > 0) {
+        file.progress.value =
+            (processed.value / totalCount.value).clamp(0.0, 1.0);
+      }
+
+      final status = jobStatus.value;
+      if (status == 'completed') {
+        _pollTimer?.cancel();
+        final created = (data['created'] as num?)?.toInt() ?? 0;
+        final updated = (data['updated'] as num?)?.toInt() ?? 0;
+        final transferred = (data['transferred'] as num?)?.toInt() ?? 0;
+        final failed = (data['failed'] as num?)?.toInt() ?? 0;
+        // The async payload drops the human-readable message the old
+        // synchronous response carried — synthesize one from the counters.
+        final message =
+            'Bulk upload completed: $created created, $updated updated, '
+            '$transferred transferred, $failed failed.';
+        final parsed = BulkUploadResponse.fromJson({
+          'success': true,
+          'message': message,
+          'data': Map<String, dynamic>.from(data),
+        });
+
+        if (file != null) {
+          file.progress.value = 1.0;
+          file.isCompleted.value = true;
+        }
+        isUploading.value = false;
+
+        final studentController = Get.find<StudentController>();
+        // Close the dialog first so the results screen / refreshed list shows
+        // underneath, then hand off to the student controller, then clean up.
+        Get.back();
+        studentController.handleBulkUploadResponse(parsed);
+        Get.delete<UploadController>(tag: 'upload');
+      } else if (status == 'failed') {
+        final error = data['error']?.toString() ?? 'Bulk upload failed.';
+        _failPolling(error, file);
+      }
+    } catch (_) {
+      // Transient network errors: swallow and let the next tick retry.
+    } finally {
+      _fetchingProgress = false;
+    }
+  }
+
+  void _failPolling(String message, UploadFile? file) {
+    _pollTimer?.cancel();
+    file?.hasError.value = true;
+    errorMessage.value = message;
+    isUploading.value = false;
+    appSnackbar(
+      'Upload Failed',
+      message,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  }
+
+  @override
+  void onClose() {
+    _pollTimer?.cancel();
+    super.onClose();
   }
 }
 

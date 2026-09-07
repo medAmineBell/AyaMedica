@@ -107,8 +107,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   String? _selectedGrade;
   String? _selectedClass; // class name shown in dropdown
   String? _selectedClassId; // resolved class UUID (sent to API)
-  String? _guardian1Relationship = 'MOTHER';
-  String? _guardian2Relationship = 'FATHER';
+  String? _guardian1Relationship;
+  String? _guardian2Relationship;
 
   DateTime? _dateOfBirth;
 
@@ -171,6 +171,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
       _guardian2Relationship = student.secondGuardianRelation!.toUpperCase();
     }
   }
+
+  static final RegExp _phoneRegex = RegExp(r'^\+\d{6,15}$');
+  bool _isValidInternationalPhone(String value) => _phoneRegex.hasMatch(value);
 
   void _showErrorSnackbar(String message) {
     appSnackbar(
@@ -390,6 +393,49 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
     if (_selectedNationalityKey == null || _selectedNationalityKey!.isEmpty) {
       _showErrorSnackbar('Nationality is required');
+      return;
+    }
+
+    // Guardian 1 (required): must have at least email OR phone.
+    final g1Email = _guardian1EmailController.text.trim();
+    final g1Phone = _guardian1PhoneController.text.trim();
+    if (g1Email.isEmpty && g1Phone.isEmpty) {
+      _showErrorSnackbar('First guardian must have an email or phone number');
+      return;
+    }
+    if (g1Phone.isNotEmpty && !_isValidInternationalPhone(g1Phone)) {
+      _showErrorSnackbar(
+          'First guardian phone must include country code (e.g., +201234567890)');
+      return;
+    }
+
+    // Guardian 2 (optional section): allow fully empty, otherwise require a
+    // coherent record (name + relationship + email-or-phone).
+    final g2Name = _guardian2FullNameController.text.trim();
+    final g2Email = _guardian2EmailController.text.trim();
+    final g2Phone = _guardian2PhoneController.text.trim();
+    final g2HasAnything = g2Name.isNotEmpty ||
+        (_guardian2Relationship ?? '').isNotEmpty ||
+        g2Email.isNotEmpty ||
+        g2Phone.isNotEmpty;
+    if (g2HasAnything) {
+      if (g2Name.isEmpty) {
+        _showErrorSnackbar('Second guardian full name is required');
+        return;
+      }
+      if ((_guardian2Relationship ?? '').isEmpty) {
+        _showErrorSnackbar('Second guardian relationship is required');
+        return;
+      }
+      if (g2Email.isEmpty && g2Phone.isEmpty) {
+        _showErrorSnackbar(
+            'Second guardian must have an email or phone number');
+        return;
+      }
+    }
+    if (g2Phone.isNotEmpty && !_isValidInternationalPhone(g2Phone)) {
+      _showErrorSnackbar(
+          'Second guardian phone must include country code (e.g., +201234567890)');
       return;
     }
 
@@ -781,17 +827,72 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           if (match != null) currentName = match;
         }
       }
-      final value = names.contains(currentName) ? currentName : null;
-      return CustomDropdownField(
-        label: label,
-        value: value,
-        items: names,
-        onChanged: (name) => onKeySelected(
-          name == null ? null : _locationService.getCountryKey(name),
-        ),
-        isRequired: true,
-        icon: icon,
-        readOnly: readOnly,
+      final displayName = names.contains(currentName) ? currentName : null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+              children: const [
+                TextSpan(text: '*', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: readOnly
+                ? null
+                : () async {
+                    final picked = await showDialog<String>(
+                      context: context,
+                      builder: (_) => _CountrySearchDialog(
+                        title: label,
+                        options: names,
+                        initialSelection: displayName,
+                      ),
+                    );
+                    if (picked != null) {
+                      onKeySelected(_locationService.getCountryKey(picked));
+                    }
+                  },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: readOnly ? Colors.grey.shade100 : Colors.white,
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: Colors.grey.shade600),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      displayName ?? label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: displayName != null
+                            ? Colors.black87
+                            : Colors.grey.shade400,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
     });
   }
@@ -1027,6 +1128,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                 onChanged: onRelationshipChanged,
                 isRequired: required,
                 itemLabel: _relationLabel,
+                hint: 'Select relationship',
               ),
             ),
           ],
@@ -1038,7 +1140,6 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               child: CustomTextField(
                 label: 'Email',
                 controller: emailController,
-                isRequired: required,
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: Icons.email_outlined,
               ),
@@ -1048,9 +1149,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
               child: CustomTextField(
                 label: 'Phone number',
                 controller: phoneController,
-                isRequired: required,
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
+                hintText: 'e.g., +201234567890',
               ),
             ),
           ],
@@ -1129,6 +1230,7 @@ class CustomTextField extends StatelessWidget {
   final IconData? prefixIcon;
   final Function(String)? onChanged;
   final bool readOnly;
+  final String? hintText;
 
   const CustomTextField({
     Key? key,
@@ -1139,6 +1241,7 @@ class CustomTextField extends StatelessWidget {
     this.prefixIcon,
     this.onChanged,
     this.readOnly = false,
+    this.hintText,
   }) : super(key: key);
 
   @override
@@ -1170,7 +1273,7 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           readOnly: readOnly,
           decoration: InputDecoration(
-            hintText: label,
+            hintText: hintText ?? label,
             hintStyle: TextStyle(color: Colors.grey.shade400),
             prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
             border: OutlineInputBorder(
@@ -1213,6 +1316,7 @@ class CustomDropdownField extends StatelessWidget {
   final IconData? icon;
   final String Function(String item)? itemLabel;
   final bool readOnly;
+  final String? hint;
 
   const CustomDropdownField({
     Key? key,
@@ -1224,6 +1328,7 @@ class CustomDropdownField extends StatelessWidget {
     this.icon,
     this.itemLabel,
     this.readOnly = false,
+    this.hint,
   }) : super(key: key);
 
   @override
@@ -1253,6 +1358,12 @@ class CustomDropdownField extends StatelessWidget {
           value: value,
           onChanged: readOnly ? null : onChanged,
           isExpanded: true,
+          hint: hint == null
+              ? null
+              : Text(
+                  hint!,
+                  style: TextStyle(color: Colors.grey.shade400),
+                ),
           decoration: InputDecoration(
             prefixIcon: icon != null ? Icon(icon, size: 20) : null,
             border: OutlineInputBorder(
@@ -1343,6 +1454,7 @@ class CustomDateField extends StatelessWidget {
                     initialDate: selectedDate ?? DateTime.now(),
                     firstDate: DateTime(1900),
                     lastDate: DateTime.now(),
+                    locale: const Locale('en', 'GB'),
                   );
                   if (date != null) {
                     onDateSelected(date);
@@ -1517,6 +1629,130 @@ class ImagePickerWidget extends StatelessWidget {
             constraints: const BoxConstraints(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CountrySearchDialog extends StatefulWidget {
+  final String title;
+  final List<String> options;
+  final String? initialSelection;
+
+  const _CountrySearchDialog({
+    required this.title,
+    required this.options,
+    this.initialSelection,
+  });
+
+  @override
+  State<_CountrySearchDialog> createState() => _CountrySearchDialogState();
+}
+
+class _CountrySearchDialogState extends State<_CountrySearchDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  late List<String> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.options;
+    _searchController.addListener(_onQueryChanged);
+  }
+
+  void _onQueryChanged() {
+    final q = _searchController.text.trim().toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.options
+          : widget.options
+              .where((c) => c.toLowerCase().startsWith(q))
+              .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onQueryChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 560),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Type the first letter of a country',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: _filtered.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            'No matches',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filtered.length,
+                        itemBuilder: (ctx, i) {
+                          final name = _filtered[i];
+                          final isSelected = name == widget.initialSelection;
+                          return ListTile(
+                            dense: true,
+                            title: Text(name),
+                            trailing: isSelected
+                                ? const Icon(Icons.check,
+                                    color: Color(0xFF1339FF), size: 18)
+                                : null,
+                            onTap: () => Navigator.of(context).pop(name),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

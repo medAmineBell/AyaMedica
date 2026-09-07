@@ -197,19 +197,17 @@ class _StudentSummaryCard extends StatelessWidget {
           _SummaryField(label: 'Gender', value: _capitalize(student.gender)),
           _SummaryField(
               label: 'Date of Birth', value: _formatDate(student.dateOfBirth)),
-          // _SummaryField(
-          //     label: 'Blood Type', value: student.bloodType),
-          // _SummaryField(
-          //     label: 'Height (Cm)',
-          //     value: student.heightCm == null
-          //         ? null
-          //         : student.heightCm!.toStringAsFixed(0)),
-          // _SummaryField(
-          //     label: 'Weight (Kg)',
-          //     value: student.weightKg == null
-          //         ? null
-          //         : student.weightKg!.toStringAsFixed(0),
-          //     isLast: true),
+          _SummaryField(label: 'Blood Type', value: student.bloodType),
+          _SummaryField(
+              label: 'Height (Cm)',
+              value: student.heightCm?.toStringAsFixed(0)),
+          _SummaryField(
+              label: 'Weight (Kg)',
+              value: student.weightKg?.toStringAsFixed(1)),
+          _SummaryField(
+              label: 'Emergency Hospital',
+              value: student.goToHospital,
+              isLast: true),
         ],
       ),
     );

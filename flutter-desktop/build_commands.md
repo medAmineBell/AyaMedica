@@ -2,7 +2,7 @@ flutter build macos --release
 
 vpk pack \
   -u com.ayamedica.desktop \
-  -v 1.0.21 \
+  -v 1.0.23 \
   -p build/macos/Build/Products/Release/ayamedica_desktop.app \
   --packTitle "Ayamedica Desktop" \
   -e ayamedica_desktop \
@@ -15,10 +15,10 @@ vpk pack \
 vpk upload github \
   --repoUrl https://github.com/Ayamedica-MP/DesktopApp \
   --publish \
-  --releaseName "v1.0.21" \
-  --tag v1.0.21 \
+  --releaseName "v1.0.23" \
+  --tag v1.0.23 \
   --merge \
-  --token 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
+  --token github_ pat_ 11BANKSXY05uexFHN95g4T_FpiISxiQMav9Q6rVmXBszldQ5GWJLCjRY3jkaqWAPVf37BFGNJLtMAl6Aai
 
 
 
@@ -31,7 +31,7 @@ flutter build windows --release
 
 vpk pack ^
   -u com.ayamedica.desktop ^
-  -v 1.0.21 ^
+  -v 1.0.23 ^
   -p build\windows\x64\runner\Release ^
   --packTitle "Ayamedica Desktop" ^
   -e ayamedica_desktop.exe ^
@@ -42,7 +42,7 @@ vpk pack ^
 vpk upload github ^
   --repoUrl https://github.com/Ayamedica-MP/DesktopApp ^
   --publish ^
-  --releaseName "v1.0.21" ^
-  --tag v1.0.21 ^
+  --releaseName "v1.0.23" ^
+  --tag v1.0.23 ^
   --merge ^
-  --token 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
+  --token github_ pat_ 11BANKSXY05uexFHN95g4T_FpiISxiQMav9Q6rVmXBszldQ5GWJLCjRY3jkaqWAPVf37BFGNJLtMAl6Aai

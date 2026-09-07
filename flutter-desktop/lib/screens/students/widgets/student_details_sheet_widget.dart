@@ -205,9 +205,27 @@ class StudentDetailsSheet extends StatelessWidget {
         if (student.passportIdNumber != null)
           _buildInfoRow('Passport Number', student.passportIdNumber!,
               Icons.document_scanner_outlined),
-        if (student.bloodType != null)
-          _buildInfoRow(
-              'Blood Type', student.bloodType!, Icons.bloodtype_outlined),
+        _buildInfoRow(
+            'Blood Type', student.bloodType ?? '-', Icons.bloodtype_outlined),
+        _buildInfoRow(
+          'Height (Cm)',
+          student.heightCm != null
+              ? '${student.heightCm!.toStringAsFixed(0)} cm'
+              : '-',
+          Icons.height_outlined,
+        ),
+        _buildInfoRow(
+          'Weight (Kg)',
+          student.weightKg != null
+              ? '${student.weightKg!.toStringAsFixed(1)} kg'
+              : '-',
+          Icons.monitor_weight_outlined,
+        ),
+        _buildInfoRow(
+          'Emergency Hospital',
+          student.goToHospital ?? '-',
+          Icons.local_hospital_outlined,
+        ),
       ],
     );
   }

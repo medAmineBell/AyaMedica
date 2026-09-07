@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/controllers/update_controller.dart';
 import 'package:flutter_getx_app/routes/app_pages.dart';
 import 'package:flutter_getx_app/utils/api_service.dart';
@@ -97,7 +98,9 @@ class SplashController extends GetxController {
       // Check if user has selected a branch
       final bool branchSelected = _storageService.getBranchSelectedStatus();
 
-      if (branchSelected) {
+      if (AppConfig.showOneRosterImport) {
+        Get.offAllNamed(Routes.ONEROSTER_IMPORT);
+      } else if (branchSelected) {
         // Pre-fetch and cache user profile so home screen loads instantly
         await _fetchAndCacheUserProfile();
         Get.offAllNamed(Routes.HOME);

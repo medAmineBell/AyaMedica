@@ -772,19 +772,9 @@ class CreateAppointmentController extends GetxController {
       final responseData = jsonDecode(response.body);
       final data = responseData['data'] as Map<String, dynamic>?;
       final appointmentId = data?['appointmentId'] as String? ?? '';
-      var medicalRecordId = data?['medicalRecordId'] as String?;
-
-      // Fallback: if create response didn't include medicalRecordId,
-      // try to get it from the refreshed appointment history list
-      if (medicalRecordId == null && Get.isRegistered<AppointmentHistoryController>()) {
-        final historyController = Get.find<AppointmentHistoryController>();
-        final match = historyController.allAppointments
-            .firstWhereOrNull((a) => a.id == appointmentId);
-        if (match != null) {
-          medicalRecordId = match.medicalRecordId;
-        }
-      }
-      print('[CreateAppointment] Walk-in created: appointmentId=$appointmentId, medicalRecordId=$medicalRecordId');
+      // medicalRecordId may be null here; HomeController.navigateToAppointmentStudentProfile
+      // resolves it from the patient-records endpoint when missing.
+      final medicalRecordId = data?['medicalRecordId'] as String?;
 
       final appointment = AppointmentHistory(
         id: appointmentId,

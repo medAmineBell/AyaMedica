@@ -33,6 +33,12 @@ class CommunicationScreen extends GetView<CommunicationController> {
             children: [
               const _Header(),
               const SizedBox(height: 16),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: Color(0xFFE2E8F0),
+              ),
+              const SizedBox(height: 16),
 
               // BOUND the table/detail area with Expanded
               Expanded(

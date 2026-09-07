@@ -6,6 +6,36 @@ import 'package:get/get.dart';
 class GardesFiltersWidget extends StatelessWidget {
   const GardesFiltersWidget({Key? key}) : super(key: key);
 
+  Widget _buildCountBadge({
+    required IconData icon,
+    required String label,
+    required int count,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF1339FF)),
+          const SizedBox(width: 6),
+          Text(
+            '$count $label',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<ResourcesController>();
@@ -29,6 +59,7 @@ class GardesFiltersWidget extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: TextField(
+                controller: controller.searchTextController,
                 onChanged: controller.setSearchQuery,
                 decoration: const InputDecoration(
                   hintText: 'Search classes...',
@@ -55,6 +86,34 @@ class GardesFiltersWidget extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 16),
+
+          // Counters
+          Obx(() {
+            final filtered = controller.filteredClasses;
+            final classesCount = filtered.length;
+            final gradesCount = filtered
+                .map((c) => c['grade'] as String?)
+                .where((g) => g != null && g.isNotEmpty)
+                .toSet()
+                .length;
+            return Row(
+              children: [
+                _buildCountBadge(
+                  icon: Icons.class_outlined,
+                  label: 'Classes',
+                  count: classesCount,
+                ),
+                const SizedBox(width: 8),
+                _buildCountBadge(
+                  icon: Icons.grade_outlined,
+                  label: 'Grades',
+                  count: gradesCount,
+                ),
+              ],
+            );
+          }),
+
           const Spacer(),
 
           // Add Class Button
@@ -62,9 +121,14 @@ class GardesFiltersWidget extends StatelessWidget {
             onPressed: () {
               Get.dialog(
                 const CreateClassScreen(),
+                barrierDismissible: false,
               );
             },
-            icon: const Icon(Icons.add, size: 20),
+            icon: const Icon(
+              Icons.add,
+              size: 20,
+              color: Colors.white,
+            ),
             label: const Text(
               'Add Class',
               style: TextStyle(

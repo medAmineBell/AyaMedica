@@ -27,9 +27,9 @@ class AppConfig {
   static const String devPassword = "22001018888818";
 
   // NEW Backend API Configuration
-  static const String newBackendUrl = 'http://localhost:3000';
-  // static const String newBackendUrl =
-  //     'https://ayamedica-backend.ayamedica.online';
+  //static const String newBackendUrl = 'http://localhost:3000';
+  static const String newBackendUrl =
+      'https://ayamedica-backend.ayamedica.online';
 
   static const String newLoginUrl = '$newBackendUrl/api/auth/login';
   static const String newOrganizationsUrl = '$newBackendUrl/api/organizations';

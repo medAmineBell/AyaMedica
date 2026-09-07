@@ -66,6 +66,43 @@ class AppointmentHistory {
     this.medicalRecordId,
   });
 
+  AppointmentHistory copyWith({
+    String? medicalRecordId,
+  }) {
+    return AppointmentHistory(
+      id: id,
+      country: country,
+      branchId: branchId,
+      createdByAid: createdByAid,
+      createdAt: createdAt,
+      appointmentDate: appointmentDate,
+      updatedByAid: updatedByAid,
+      updatedAt: updatedAt,
+      checkedOutByAid: checkedOutByAid,
+      checkOutDate: checkOutDate,
+      appointmentType: appointmentType,
+      disease: disease,
+      vaccineType: vaccineType,
+      vaccineTypeLastConfirmationDate: vaccineTypeLastConfirmationDate,
+      allPatientsChecked: allPatientsChecked,
+      checkedPatientsCount: checkedPatientsCount,
+      uncheckedPatientsCount: uncheckedPatientsCount,
+      includesOnePatient: includesOnePatient,
+      gradeName: gradeName,
+      gradeId: gradeId,
+      className: className,
+      classId: classId,
+      totalPatientsCount: totalPatientsCount,
+      onePatientAid: onePatientAid,
+      enableNotification: enableNotification,
+      canceledByAid: canceledByAid,
+      appointmentStatus: appointmentStatus,
+      cancelReason: cancelReason,
+      fullName: fullName,
+      medicalRecordId: medicalRecordId ?? this.medicalRecordId,
+    );
+  }
+
   factory AppointmentHistory.fromJson(Map<String, dynamic> json) {
     return AppointmentHistory(
       id: json['id'] as String? ?? '',

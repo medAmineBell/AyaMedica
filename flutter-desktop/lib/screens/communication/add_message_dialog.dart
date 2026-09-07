@@ -287,9 +287,7 @@ class _AddMessageDialogState extends State<AddMessageDialog> {
     final result = await showDialog<List<Student>>(
       context: context,
       builder: (_) => _StudentPickerDialog(
-        students: controller.students.toList(),
-        selected: controller.selectedStudents.toList(),
-        isLoading: controller.isLoadingStudents.value,
+        initialSelected: controller.selectedStudents.toList(),
       ),
     );
     if (result != null) controller.replaceSelectedStudents(result);
@@ -708,14 +706,10 @@ class _AttachmentRow extends StatelessWidget {
 
 // ─── Student picker dialog ───────────────────────────────────────────
 class _StudentPickerDialog extends StatefulWidget {
-  final List<Student> students;
-  final List<Student> selected;
-  final bool isLoading;
+  final List<Student> initialSelected;
 
   const _StudentPickerDialog({
-    required this.students,
-    required this.selected,
-    required this.isLoading,
+    required this.initialSelected,
   });
 
   @override
@@ -723,16 +717,16 @@ class _StudentPickerDialog extends StatefulWidget {
 }
 
 class _StudentPickerDialogState extends State<_StudentPickerDialog> {
+  final CreateMessageController controller =
+      Get.find<CreateMessageController>();
   late List<Student> _selected;
   final TextEditingController _search = TextEditingController();
-  late List<Student> _filtered;
 
   @override
   void initState() {
     super.initState();
-    _selected = List<Student>.from(widget.selected);
-    _filtered = List<Student>.from(widget.students);
-    _search.addListener(_applyFilter);
+    _selected = List<Student>.from(widget.initialSelected);
+    _search.addListener(() => setState(() {}));
   }
 
   @override
@@ -741,17 +735,12 @@ class _StudentPickerDialogState extends State<_StudentPickerDialog> {
     super.dispose();
   }
 
-  void _applyFilter() {
-    setState(() {
-      final q = _search.text.trim().toLowerCase();
-      if (q.isEmpty) {
-        _filtered = List<Student>.from(widget.students);
-      } else {
-        _filtered = widget.students
-            .where((s) => s.name.toLowerCase().contains(q))
-            .toList();
-      }
-    });
+  List<Student> _currentFiltered() {
+    final q = _search.text.trim().toLowerCase();
+    if (q.isEmpty) return controller.students.toList();
+    return controller.students
+        .where((s) => s.name.toLowerCase().contains(q))
+        .toList();
   }
 
   void _toggle(Student s) {
@@ -806,8 +795,8 @@ class _StudentPickerDialogState extends State<_StudentPickerDialog> {
               Row(
                 children: [
                   TextButton(
-                    onPressed: () => setState(
-                        () => _selected = List<Student>.from(_filtered)),
+                    onPressed: () => setState(() =>
+                        _selected = List<Student>.from(_currentFiltered())),
                     child: const Text('Select All'),
                   ),
                   const SizedBox(width: 8),
@@ -824,44 +813,49 @@ class _StudentPickerDialogState extends State<_StudentPickerDialog> {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: widget.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _filtered.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No students found',
-                              style: TextStyle(color: _kSubtle),
+                child: Obx(() {
+                  if (controller.isLoadingStudents.value) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final filtered = _currentFiltered();
+                  if (filtered.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No students found',
+                        style: TextStyle(color: _kSubtle),
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final s = filtered[i];
+                      final isSelected =
+                          _selected.any((x) => x.id == s.id);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: s.avatarColor,
+                          child: Text(
+                            s.initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: _filtered.length,
-                            itemBuilder: (_, i) {
-                              final s = _filtered[i];
-                              final isSelected =
-                                  _selected.any((x) => x.id == s.id);
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: s.avatarColor,
-                                  child: Text(
-                                    s.initials,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(s.name),
-                                trailing: Checkbox(
-                                  value: isSelected,
-                                  onChanged: (_) => _toggle(s),
-                                  activeColor: _kActiveBlue,
-                                ),
-                                onTap: () => _toggle(s),
-                              );
-                            },
                           ),
+                        ),
+                        title: Text(s.name),
+                        trailing: Checkbox(
+                          value: isSelected,
+                          onChanged: (_) => _toggle(s),
+                          activeColor: _kActiveBlue,
+                        ),
+                        onTap: () => _toggle(s),
+                      );
+                    },
+                  );
+                }),
               ),
               const SizedBox(height: 12),
               Row(

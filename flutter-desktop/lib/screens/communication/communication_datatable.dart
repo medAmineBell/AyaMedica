@@ -133,17 +133,28 @@ class _DataRowState extends State<_DataRow> {
                 flex: 3,
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: _colorFromName(name),
-                      child: Text(
-                        avatarLabel,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                    Builder(builder: (_) {
+                      final photoUrl = msg.studentPhoto;
+                      final hasPhoto =
+                          photoUrl != null && photoUrl.isNotEmpty;
+                      return CircleAvatar(
+                        radius: 18,
+                        backgroundColor: _colorFromName(name),
+                        backgroundImage:
+                            hasPhoto ? NetworkImage(photoUrl) : null,
+                        onBackgroundImageError:
+                            hasPhoto ? (_, __) {} : null,
+                        child: hasPhoto
+                            ? null
+                            : Text(
+                                avatarLabel,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                      );
+                    }),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(

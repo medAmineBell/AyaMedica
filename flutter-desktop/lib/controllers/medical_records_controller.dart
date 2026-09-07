@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/medicalRecord.dart';
@@ -23,6 +24,8 @@ class MedicalRecordsController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString selectedFilter = 'all'.obs;
   final RxString searchQuery = ''.obs;
+  final TextEditingController searchTextController = TextEditingController();
+  Timer? _searchDebounce;
 
   // Pagination
   final RxInt currentPage = 1.obs;
@@ -140,6 +143,13 @@ class MedicalRecordsController extends GetxController {
     fetchRecords();
   }
 
+  @override
+  void onClose() {
+    _searchDebounce?.cancel();
+    searchTextController.dispose();
+    super.onClose();
+  }
+
   /// CENTRALIZED METHOD: Get Branch ID
   void _loadBranchId() {
     // Get branch ID from selected branch data
@@ -158,7 +168,9 @@ class MedicalRecordsController extends GetxController {
   }
 
   /// GET - Fetch medical records from API
-  Future<void> fetchRecords({int page = 1}) async {
+  Future<void> fetchRecords({int page = 1, String? search}) async {
+    final effectiveSearch = (search ?? searchQuery.value).trim();
+
     if (branchId.value.isEmpty) {
       print('❌ Cannot load medical records: No branch ID available');
       appSnackbar(
@@ -184,9 +196,12 @@ class MedicalRecordsController extends GetxController {
       }
 
       // Build API URL - Using branchId as organizationId parameter
-      final url = Uri.parse(
-        '${AppConfig.newBackendUrl}/api/school-admin/medical-records/students?organizationId=${branchId.value}&page=$page&limit=${itemsPerPage.value}',
-      );
+      var urlStr =
+          '${AppConfig.newBackendUrl}/api/school-admin/medical-records/students?organizationId=${branchId.value}&page=$page&limit=${itemsPerPage.value}';
+      if (effectiveSearch.isNotEmpty) {
+        urlStr += '&search=${Uri.encodeComponent(effectiveSearch)}';
+      }
+      final url = Uri.parse(urlStr);
 
       print('📡 Request URL: $url');
 
@@ -235,8 +250,8 @@ class MedicalRecordsController extends GetxController {
               ? MedicalRecordsState.empty
               : MedicalRecordsState.success;
 
-          // Reapply filters if any
-          if (searchQuery.value.isNotEmpty || selectedFilter.value != 'all') {
+          // Reapply status filter (search is handled server-side)
+          if (selectedFilter.value != 'all') {
             _applySearchAndFilter();
           }
         } else {
@@ -265,11 +280,13 @@ class MedicalRecordsController extends GetxController {
     }
   }
 
-  /// SEARCH - Filter students by query
+  /// SEARCH - Debounced server-side search by name
   void searchRecords(String query) {
-    print('🔍 Searching for: "$query"');
-    searchQuery.value = query.trim().toLowerCase();
-    _applySearchAndFilter();
+    searchQuery.value = query.trim();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      fetchRecords(page: 1);
+    });
   }
 
   /// FILTER - Filter by visit status
@@ -279,37 +296,18 @@ class MedicalRecordsController extends GetxController {
     _applySearchAndFilter();
   }
 
-  /// Apply search and filter logic
+  /// Apply client-side status filter (search is server-side)
   void _applySearchAndFilter() {
     List<MedicalStudent> filtered = List.from(allStudents);
 
-    // Apply status filter
     if (selectedFilter.value == 'visited') {
       filtered = filtered.where((student) => student.hasVisited).toList();
     } else if (selectedFilter.value == 'not_visited') {
       filtered = filtered.where((student) => !student.hasVisited).toList();
     }
 
-    // Apply search filter
-    if (searchQuery.value.isNotEmpty) {
-      filtered = filtered.where((student) {
-        final name = student.fullName.toLowerCase();
-        final sid = student.studentId.toLowerCase();
-        final grade = student.grade?.toLowerCase() ?? '';
-        final className = student.className?.toLowerCase() ?? '';
-
-        return name.contains(searchQuery.value) ||
-            sid.contains(searchQuery.value) ||
-            grade.contains(searchQuery.value) ||
-            className.contains(searchQuery.value);
-      }).toList();
-    }
-
     displayedStudents.assignAll(filtered);
 
-    print('✅ Filters applied: ${displayedStudents.length} students found');
-
-    // Update state
     state.value = displayedStudents.isEmpty
         ? MedicalRecordsState.empty
         : MedicalRecordsState.success;

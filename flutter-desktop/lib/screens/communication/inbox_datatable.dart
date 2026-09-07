@@ -89,6 +89,7 @@ class _InboxRowState extends State<_InboxRow> {
     final msg = widget.msg;
     final controller = widget.controller;
     final isUnread = !msg.read;
+    final isSentTab = controller.selectedType.value == 'sent';
 
     final studentName = (msg.patientName?.isNotEmpty == true)
         ? msg.patientName!
@@ -159,7 +160,7 @@ class _InboxRowState extends State<_InboxRow> {
                                   ),
                                 ),
                               ),
-                              if (isUnread) ...[
+                              if (isUnread && !isSentTab) ...[
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(

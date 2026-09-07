@@ -60,7 +60,7 @@ class GardesSettingsDatatable extends StatelessWidget {
           },
           children: [
             // Header
-            _buildHeaderRow(),
+            _buildHeaderRow(controller),
             // Data rows
             ...classes.map((classItem) {
               return _buildDataRow(classItem, controller);
@@ -71,7 +71,7 @@ class GardesSettingsDatatable extends StatelessWidget {
     });
   }
 
-  TableRow _buildHeaderRow() {
+  TableRow _buildHeaderRow(ResourcesController controller) {
     return TableRow(
       decoration: const BoxDecoration(
         color: Color(0xFFF9FAFB),
@@ -80,25 +80,15 @@ class GardesSettingsDatatable extends StatelessWidget {
         ),
       ),
       children: [
-        _buildHeaderCell(
-          child: const Text(
-            'Class Name',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
-            ),
-          ),
+        _buildSortableHeaderCell(
+          label: 'Class Name',
+          column: 'name',
+          controller: controller,
         ),
-        _buildHeaderCell(
-          child: const Text(
-            'Grade',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
-            ),
-          ),
+        _buildSortableHeaderCell(
+          label: 'Grade',
+          column: 'grade',
+          controller: controller,
         ),
         _buildHeaderCell(
           child: const Text(
@@ -314,6 +304,47 @@ class GardesSettingsDatatable extends StatelessWidget {
     );
   }
 
+  Widget _buildSortableHeaderCell({
+    required String label,
+    required String column,
+    required ResourcesController controller,
+  }) {
+    return InkWell(
+      onTap: () => controller.toggleSort(column),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Obx(() {
+          final isActive = controller.sortColumn.value == column;
+          final icon = !isActive
+              ? Icons.unfold_more
+              : (controller.sortAscending.value
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward);
+          return Row(
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                icon,
+                size: 14,
+                color: isActive
+                    ? const Color(0xFF374151)
+                    : const Color(0xFF9CA3AF),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildDataCell({required Widget child}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -406,6 +437,7 @@ class GardesSettingsDatatable extends StatelessWidget {
   void _showEditDialog(Map<String, dynamic> classItem) {
     Get.dialog(
       CreateClassScreen(classToEdit: classItem),
+      barrierDismissible: false,
     );
   }
 }

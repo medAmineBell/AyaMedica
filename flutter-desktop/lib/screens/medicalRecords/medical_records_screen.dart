@@ -23,7 +23,7 @@ class MedicalRecordsScreen extends StatelessWidget {
           _buildTitleSection(controller, branchController),
 
           // Search & actions header
-          //_buildSearchHeader(controller),
+          _buildSearchHeader(controller),
 
           // Table content
           Expanded(
@@ -179,6 +179,7 @@ class MedicalRecordsScreen extends StatelessWidget {
           SizedBox(
             width: 400,
             child: TextField(
+              controller: controller.searchTextController,
               onChanged: controller.searchRecords,
               decoration: InputDecoration(
                 hintText: 'search',
@@ -205,53 +206,53 @@ class MedicalRecordsScreen extends StatelessWidget {
           ),
           const Spacer(),
           // Export button
-          InkWell(
-            onTap: controller.exportRecords,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-              ),
-              child: Center(
-                child: Icon(Icons.download_outlined,
-                    size: 20, color: Colors.grey.shade700),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
+          // InkWell(
+          //   onTap: controller.exportRecords,
+          //   borderRadius: BorderRadius.circular(8),
+          //   child: Container(
+          //     height: 48,
+          //     width: 48,
+          //     decoration: BoxDecoration(
+          //       border: Border.all(color: Colors.grey.shade300),
+          //       borderRadius: BorderRadius.circular(8),
+          //       color: Colors.white,
+          //     ),
+          //     child: Center(
+          //       child: Icon(Icons.download_outlined,
+          //           size: 20, color: Colors.grey.shade700),
+          //     ),
+          //   ),
+          // ),
+          // const SizedBox(width: 12),
           // Filters button
-          InkWell(
-            onTap: () {},
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.tune, size: 20, color: Colors.grey.shade700),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Filters',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // InkWell(
+          //   onTap: () {},
+          //   borderRadius: BorderRadius.circular(8),
+          //   child: Container(
+          //     height: 48,
+          //     padding: const EdgeInsets.symmetric(horizontal: 16),
+          //     decoration: BoxDecoration(
+          //       border: Border.all(color: Colors.grey.shade300),
+          //       borderRadius: BorderRadius.circular(8),
+          //       color: Colors.white,
+          //     ),
+          //     child: Row(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         Icon(Icons.tune, size: 20, color: Colors.grey.shade700),
+          //         const SizedBox(width: 8),
+          //         Text(
+          //           'Filters',
+          //           style: TextStyle(
+          //             color: Colors.grey.shade700,
+          //             fontSize: 14,
+          //             fontWeight: FontWeight.w500,
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

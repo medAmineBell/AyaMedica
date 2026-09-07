@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/create_branch_request.dart';
 import 'package:flutter_getx_app/utils/location_service.dart';
 import 'package:flutter_getx_app/utils/storage_service.dart';
@@ -36,6 +37,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   // Image upload state
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
+  String? _existingLogoUrl;
   final RxBool _isUploadingImage = false.obs;
 
   // Grade selection - Multiple grades
@@ -84,7 +86,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       _gradesByEducationType[_selectedEducationType] ??
       const ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'];
 
-  // Custom grade controllers (for Custom education type)
+  // Per-row grade text controllers, used for all education types.
   List<TextEditingController> _customGradeControllers = [];
 
   // Education type to display name mapping
@@ -93,6 +95,10 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     'BRITISH': 'British',
     'CUSTOM': 'Custom',
   };
+
+  bool get _isEditMode =>
+      homeController.isEditingBranch.value &&
+      homeController.branchToEdit.value != null;
 
   late HomeController homeController;
   late BranchManagementController branchController;
@@ -172,16 +178,18 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       if (branch.isHeadquarters != null) {
         _isHeadquarters = branch.isHeadquarters!;
       }
-
-      // Initialize custom grade controllers if Custom education type
-      if (_selectedEducationType == 'Custom') {
-        _initCustomGradeControllers();
+      if (branch.logoUrl != null && branch.logoUrl!.isNotEmpty) {
+        _existingLogoUrl = branch.logoUrl;
       }
+
+      _initGradeControllers();
+    } else {
+      _initGradeControllers();
     }
   }
 
-  void _initCustomGradeControllers() {
-    _disposeCustomGradeControllers();
+  void _initGradeControllers() {
+    _disposeGradeControllers();
     _customGradeControllers = _selectedGrades
         .map((grade) => TextEditingController(text: grade))
         .toList();
@@ -190,14 +198,14 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     }
   }
 
-  void _disposeCustomGradeControllers() {
+  void _disposeGradeControllers() {
     for (final controller in _customGradeControllers) {
       controller.dispose();
     }
     _customGradeControllers = [];
   }
 
-  void _syncCustomGradesToSelectedGrades() {
+  void _syncGradesFromControllers() {
     _selectedGrades = _customGradeControllers
         .map((c) => c.text.trim())
         .where((text) => text.isNotEmpty)
@@ -208,7 +216,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
   void dispose() {
     _branchNameController.dispose();
     _streetAddressController.dispose();
-    _disposeCustomGradeControllers();
+    _disposeGradeControllers();
     super.dispose();
   }
 
@@ -422,7 +430,32 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     );
   }
 
+  // Branch logo paths come back from the API as bare GCS object paths
+  // (e.g. "EG/organizations/.../logo-xxx.png"). Resolve them through the
+  // backend's /api/files/gcs/ proxy. Absolute URLs and backend-rooted paths
+  // are passed through.
+  String _resolveBranchLogoUrl(String raw) {
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/')) return '${AppConfig.newBackendUrl}$raw';
+    return '${AppConfig.newBackendUrl}/api/files/gcs/$raw';
+  }
+
   Widget _buildImageUploadSection() {
+    DecorationImage? bgImage;
+    if (_selectedImageBytes != null) {
+      bgImage = DecorationImage(
+        image: MemoryImage(_selectedImageBytes!),
+        fit: BoxFit.cover,
+      );
+    } else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty) {
+      bgImage = DecorationImage(
+        image: NetworkImage(_resolveBranchLogoUrl(_existingLogoUrl!)),
+        fit: BoxFit.cover,
+        onError: (_, __) {},
+      );
+    }
+    final hasImage = bgImage != null;
+
     return Stack(
       children: [
         Container(
@@ -432,20 +465,15 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
             color: const Color(0xFFF3F4F6),
             shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFFE5E7EB), width: 3),
-            image: _selectedImageBytes != null
-                ? DecorationImage(
-                    image: MemoryImage(_selectedImageBytes!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
+            image: bgImage,
           ),
-          child: _selectedImageBytes == null
-              ? const Icon(
+          child: hasImage
+              ? null
+              : const Icon(
                   Icons.business_outlined,
                   color: Color(0xFF9CA3AF),
                   size: 48,
-                )
-              : null,
+                ),
         ),
         Positioned(
           bottom: 5,
@@ -685,12 +713,14 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
               final oldType = _selectedEducationType;
               _selectedEducationType = value!;
               if (oldType != value) {
-                _selectedGrades.clear();
-                if (value == 'Custom') {
-                  _initCustomGradeControllers();
-                } else {
-                  _disposeCustomGradeControllers();
-                }
+                _syncGradesFromControllers();
+                final oldPredefined = oldType == 'Custom'
+                    ? const <String>[]
+                    : (_gradesByEducationType[oldType] ?? const <String>[]);
+                _selectedGrades = _selectedGrades
+                    .where((g) => !oldPredefined.contains(g))
+                    .toList();
+                _initGradeControllers();
               }
             });
           },
@@ -704,169 +734,190 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
           ),
         ),
         const SizedBox(height: 24),
-        if (_selectedEducationType == 'Custom')
-          _buildCustomGradeTable()
-        else
-          _buildMultiGradeSelector(),
+        if (_selectedEducationType != 'Custom') ...[
+          _buildPredefinedGradeDropdown(),
+          const SizedBox(height: 16),
+        ],
+        _buildCustomGradeTable(),
       ],
     );
   }
 
-  Widget _buildMultiGradeSelector() {
-    final availableGrades =
+  Widget _buildPredefinedGradeDropdown() {
+    _syncGradesFromControllers();
+    final available =
         _allGrades.where((g) => !_selectedGrades.contains(g)).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Text(
-              'Grades',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
-            ),
-            Text(
-              '*',
-              style: TextStyle(color: Colors.red, fontSize: 14),
-            ),
-          ],
+    if (available.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return DropdownButtonFormField<String>(
+      key: ValueKey(
+          'predefined_grade_${_selectedEducationType}_${_selectedGrades.length}'),
+      value: null,
+      hint: Row(
+        children: [
+          Icon(Icons.school_outlined, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 8),
+          Text(
+            'Pick a $_selectedEducationType grade to add',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+      decoration: InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
-        const SizedBox(height: 8),
-        if (availableGrades.isNotEmpty)
-          DropdownButtonFormField<String>(
-            key: ValueKey('grade_dropdown_${_selectedGrades.length}'),
-            value: null,
-            hint: Row(
-              children: [
-                Icon(
-                  Icons.school_outlined,
-                  size: 20,
-                  color: Colors.grey.shade600,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF1339FF)),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      items: available
+          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+          .toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() {
+          _syncGradesFromControllers();
+          if (_customGradeControllers.length == 1 &&
+              _customGradeControllers.first.text.trim().isEmpty) {
+            _customGradeControllers.first.text = value;
+          } else {
+            _customGradeControllers.add(TextEditingController(text: value));
+          }
+          _syncGradesFromControllers();
+        });
+      },
+    );
+  }
+
+  Future<void> _showRenameGradeDialog({
+    required String oldName,
+    required ValueChanged<String> onLocalApplied,
+  }) async {
+    if (!_isEditMode) return;
+    final branchId = homeController.branchToEdit.value!.id;
+
+    final dialogKey = GlobalKey<FormState>();
+    final newNameController = TextEditingController(text: oldName);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Obx(() {
+          final isLoading = branchController.isRenamingGrade.value;
+          return PopScope(
+            canPop: !isLoading,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: const Text('Rename grade'),
+              content: Form(
+                key: dialogKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Old name: $oldName',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: newNameController,
+                      autofocus: true,
+                      enabled: !isLoading,
+                      decoration: InputDecoration(
+                        labelText: 'New name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      validator: (value) {
+                        final trimmed = value?.trim() ?? '';
+                        if (trimmed.isEmpty) {
+                          return 'Name is required';
+                        }
+                        if (trimmed == oldName) {
+                          return 'New name must differ from old name';
+                        }
+                        final duplicate = _selectedGrades.any((g) =>
+                            g != oldName && g == trimmed);
+                        if (duplicate) {
+                          return 'A grade with this name already exists';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Grade name goes here',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (!(dialogKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
+                          final newName = newNameController.text.trim();
+                          final success = await branchController.renameGrade(
+                            branchId: branchId,
+                            oldName: oldName,
+                            newName: newName,
+                          );
+                          if (success) {
+                            onLocalApplied(newName);
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1339FF),
+                    foregroundColor: Colors.white,
                   ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Text('Rename'),
                 ),
               ],
             ),
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1339FF)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            items: availableGrades.map((String grade) {
-              return DropdownMenuItem(
-                value: grade,
-                child: Text(grade),
-              );
-            }).toList(),
-            onChanged: (String? value) {
-              if (value != null) {
-                setState(() {
-                  _selectedGrades.add(value);
-                });
-              }
-            },
-          ),
-        const SizedBox(height: 4),
-        Text(
-          'Select from the dropdown or type your own grade naming then press enter',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade500,
-          ),
-        ),
-        if (_selectedGrades.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _selectedGrades.map((grade) {
-              return _buildGradeChip(grade);
-            }).toList(),
-          ),
-        ],
-        if (_selectedGrades.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Please select at least one grade',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.red.shade700,
-              ),
-            ),
-          ),
-      ],
+          );
+        });
+      },
     );
-  }
 
-  Widget _buildGradeChip(String grade) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1339FF).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1339FF).withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            grade,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF1339FF),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedGrades.remove(grade);
-              });
-            },
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close,
-                size: 12,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    newNameController.dispose();
   }
 
   Widget _buildCustomGradeTable() {
@@ -970,35 +1021,51 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
       child: Row(
         children: [
           Expanded(
-            child: TextFormField(
-              controller: _customGradeControllers[index],
-              decoration: InputDecoration(
-                hintText: 'Grade name goes here',
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade400,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF1339FF)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              onChanged: (value) {
-                _syncCustomGradesToSelectedGrades();
+            child: Builder(
+              builder: (context) {
+                final text = _customGradeControllers[index].text;
+                final isReadOnly = _selectedEducationType != 'Custom' &&
+                    text.isNotEmpty &&
+                    _allGrades.contains(text);
+                return TextFormField(
+                  controller: _customGradeControllers[index],
+                  readOnly: isReadOnly,
+                  decoration: InputDecoration(
+                    hintText: 'Grade name goes here',
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: isReadOnly
+                            ? const Color(0xFFE5E7EB)
+                            : const Color(0xFF1339FF),
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    filled: true,
+                    fillColor:
+                        isReadOnly ? const Color(0xFFF9FAFB) : Colors.white,
+                  ),
+                  onChanged: isReadOnly
+                      ? null
+                      : (value) {
+                          _syncGradesFromControllers();
+                        },
+                );
               },
             ),
           ),
@@ -1013,7 +1080,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                     setState(() {
                       _customGradeControllers[index].dispose();
                       _customGradeControllers.removeAt(index);
-                      _syncCustomGradesToSelectedGrades();
+                      _syncGradesFromControllers();
                     });
                   },
                   icon: SvgPicture.asset(
@@ -1027,14 +1094,30 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                 ),
                 IconButton(
                   onPressed: () {
-                    FocusScope.of(context).requestFocus(FocusNode());
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      _customGradeControllers[index].selection =
-                          TextSelection.fromPosition(
-                        TextPosition(
-                            offset: _customGradeControllers[index].text.length),
+                    if (_isEditMode) {
+                      final current =
+                          _customGradeControllers[index].text.trim();
+                      if (current.isEmpty) return;
+                      _showRenameGradeDialog(
+                        oldName: current,
+                        onLocalApplied: (newName) {
+                          setState(() {
+                            _customGradeControllers[index].text = newName;
+                            _syncGradesFromControllers();
+                          });
+                        },
                       );
-                    });
+                    } else {
+                      FocusScope.of(context).requestFocus(FocusNode());
+                      Future.delayed(const Duration(milliseconds: 50), () {
+                        _customGradeControllers[index].selection =
+                            TextSelection.fromPosition(
+                          TextPosition(
+                              offset:
+                                  _customGradeControllers[index].text.length),
+                        );
+                      });
+                    }
                   },
                   icon: SvgPicture.asset(
                     'assets/svg/edit-2.svg',
@@ -1043,7 +1126,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
                     colorFilter: const ColorFilter.mode(
                         Color(0xFF6B7280), BlendMode.srcIn),
                   ),
-                  tooltip: 'Edit',
+                  tooltip: _isEditMode ? 'Rename' : 'Edit',
                 ),
                 IconButton(
                   onPressed: () {
@@ -1068,7 +1151,7 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
     if (_formKey.currentState!.validate()) {
       // For custom education type, sync grades from controllers
       if (_selectedEducationType == 'Custom') {
-        _syncCustomGradesToSelectedGrades();
+        _syncGradesFromControllers();
       }
 
       // Validate required fields
@@ -1107,6 +1190,8 @@ class _BranchFormWidgetState extends State<BranchFormWidget> {
         ),
         phone: null,
         website: null,
+        logoBytes: _selectedImageBytes,
+        logoFileName: _selectedImageName,
       );
 
       // Check if editing or creating

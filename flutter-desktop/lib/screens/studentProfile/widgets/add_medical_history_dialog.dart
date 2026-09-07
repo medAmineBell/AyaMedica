@@ -1403,22 +1403,30 @@ class _AddMedicalHistoryDialogState extends State<AddMedicalHistoryDialog> {
           link: layerLink,
           child: Container(
             width: double.infinity,
-            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: _fieldDecoration(),
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              style: const TextStyle(color: Color(0xFF2D2E2E), fontSize: 14),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Search...',
-                hintStyle: TextStyle(color: Color(0xFFA6A9AC), fontSize: 14),
-                prefixIcon:
-                    Icon(Icons.search, color: Color(0xFFA6A9AC), size: 20),
-                prefixIconConstraints: BoxConstraints(minWidth: 42),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
+            child: Row(
+              children: [
+                const Icon(Icons.search,
+                    color: Color(0xFFA6A9AC), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    onChanged: onChanged,
+                    style: const TextStyle(
+                        color: Color(0xFF2D2E2E), fontSize: 14),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      hintText: 'Search...',
+                      hintStyle: TextStyle(
+                          color: Color(0xFFA6A9AC), fontSize: 14),
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

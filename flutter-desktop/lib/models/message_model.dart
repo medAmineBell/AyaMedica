@@ -1,3 +1,4 @@
+import 'package:flutter_getx_app/config/app_config.dart';
 import 'package:flutter_getx_app/models/student.dart';
 
 class MessageAttachment {
@@ -152,6 +153,12 @@ class MessageModel {
     );
   }
 
+  static String? _absoluteUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http')) return url;
+    return '${AppConfig.newBackendUrl}$url';
+  }
+
   /// Parse from the /api/messages?type=inbox|sent API response
   factory MessageModel.fromInboxApi(Map<String, dynamic> json) {
     final sender = json['sender'] as Map<String, dynamic>? ?? {};
@@ -196,7 +203,7 @@ class MessageModel {
       patientName: studentName.isEmpty ? null : studentName,
       studentGrade: requestData['grade']?.toString(),
       studentClass: requestData['class']?.toString(),
-      studentPhoto: requestData['photo']?.toString(),
+      studentPhoto: _absoluteUrl(requestData['photo']?.toString()),
       studentAid: requestData['studentAid']?.toString(),
       destinationType: requestData['destinationType']?.toString(),
       destinationLabel: requestData['destinationLabel']?.toString(),

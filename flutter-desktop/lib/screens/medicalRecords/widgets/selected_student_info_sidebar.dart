@@ -162,6 +162,8 @@ class SelectedStudentInfoSidebar extends StatelessWidget {
                     _buildInfoRow('Height (Cm)', studentDetails.height != null ? '${studentDetails.height}' : '-'),
                     const SizedBox(height: 12),
                     _buildInfoRow('Weight (Kg)', studentDetails.weight != null ? '${studentDetails.weight}' : '-'),
+                    const SizedBox(height: 12),
+                    _buildInfoRow('Emergency Hospital', studentDetails.emergencyHospital ?? '-'),
                   ],
                 ),
               ),

@@ -27,8 +27,13 @@ class StudentTableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildSearchField()),
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.3,
+            child: _buildSearchField(),
+          ),
           const SizedBox(width: 16),
+          _buildStudentsCountBadge(),
+          const Spacer(),
           _buildActionButtons(context),
         ],
       ),
@@ -63,7 +68,47 @@ class StudentTableHeader extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    return _FiltersButton(controller: controller);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ExportButton(controller: controller),
+        const SizedBox(width: 8),
+        _FiltersButton(controller: controller),
+      ],
+    );
+  }
+
+  Widget _buildStudentsCountBadge() {
+    return Obx(() {
+      final count = controller.totalStudents.value;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.school_outlined,
+              size: 16,
+              color: Color(0xFF1339FF),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$count Students',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -141,5 +186,54 @@ class _FiltersButton extends StatelessWidget {
         position: Offset(position.dx + button.size.width - 300, position.dy + button.size.height + 4),
       ),
     );
+  }
+}
+
+class _ExportButton extends StatelessWidget {
+  final StudentController controller;
+
+  const _ExportButton({Key? key, required this.controller}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final busy = controller.isExporting.value;
+      return InkWell(
+        onTap: busy ? null : controller.exportStudents,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (busy)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(Icons.file_download_outlined,
+                    size: 20, color: Colors.grey.shade700),
+              const SizedBox(width: 8),
+              Text(
+                busy ? 'Exporting…' : 'Export',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }

@@ -32,8 +32,12 @@ class OneRosterImportScreen extends StatelessWidget {
                       _Header(),
                       const SizedBox(height: 24),
                       _OrganizationField(controller: controller),
+                      const SizedBox(height: 16),
+                      _ExistingImportSection(controller: controller),
                       const SizedBox(height: 20),
                       _FilePickerSection(controller: controller),
+                      const SizedBox(height: 16),
+                      const _SisCredentialsSection(),
                       const SizedBox(height: 16),
                       _DryRunToggle(controller: controller),
                       const SizedBox(height: 24),
@@ -535,5 +539,272 @@ class _ResultPanel extends StatelessWidget {
       default:
         return phase;
     }
+  }
+}
+
+class _ExistingImportSection extends StatelessWidget {
+  final OneRosterImportController controller;
+  const _ExistingImportSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.isCheckingExistingImport.value) {
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Checking for existing import…',
+                style: TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final existing = controller.existingImport.value;
+      if (existing == null) return const SizedBox.shrink();
+
+      final counts =
+          existing['counts'] as Map<String, dynamic>? ?? const {};
+      final branches = (counts['branches'] as num?)?.toInt() ?? 0;
+      final classes = (counts['classes'] as num?)?.toInt() ?? 0;
+      final students = (counts['students'] as num?)?.toInt() ?? 0;
+      final createdAt = existing['createdAt']?.toString() ?? '';
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          border: Border.all(color: Colors.amber.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.history, color: Colors.amber.shade800),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Active OneRoster import for this organization',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Branches: $branches · Classes: $classes · Students: $students',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+            ),
+            if (createdAt.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                'Imported: $createdAt',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PrimaryButton(
+                text: controller.isDeletingImport.value
+                    ? 'Deleting…'
+                    : 'Delete imported data',
+                variant: ButtonVariant.danger,
+                onPressed: controller.isDeletingImport.value
+                    ? null
+                    : () => _confirmDelete(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete imported data?'),
+        content: const Text(
+          'This will reverse the latest OneRoster import for this organization: '
+          'guardians, students (and their user records), classes, and branches '
+          'will be removed. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      controller.deleteImport();
+    }
+  }
+}
+
+class _SisCredentialsSection extends StatefulWidget {
+  const _SisCredentialsSection();
+
+  @override
+  State<_SisCredentialsSection> createState() => _SisCredentialsSectionState();
+}
+
+class _SisCredentialsSectionState extends State<_SisCredentialsSection> {
+  bool _expanded = false;
+  bool _obscureSecret = true;
+  String _provider = 'Classera';
+  final TextEditingController _clientIdController = TextEditingController();
+  final TextEditingController _clientSecretController = TextEditingController();
+
+  @override
+  void dispose() {
+    _clientIdController.dispose();
+    _clientSecretController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: _expanded ? _buildExpanded() : _buildCollapsed(),
+    );
+  }
+
+  Widget _buildCollapsed() {
+    return Row(
+      children: [
+        Icon(Icons.vpn_key_outlined, size: 32, color: Colors.grey.shade600),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Connect via SIS credentials',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Use Client ID and Client Secret from Classera or PowerSchool',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        TextButton.icon(
+          onPressed: () => setState(() => _expanded = true),
+          icon: const Icon(Icons.expand_more, size: 18),
+          label: const Text('Connect'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpanded() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.vpn_key_outlined, size: 20, color: Colors.grey.shade700),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'SIS credentials',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Close',
+              onPressed: () => setState(() => _expanded = false),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _clientIdController,
+          decoration: const InputDecoration(
+            labelText: 'Client ID',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _clientSecretController,
+          obscureText: _obscureSecret,
+          decoration: InputDecoration(
+            labelText: 'Client Secret',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              tooltip: _obscureSecret ? 'Show' : 'Hide',
+              icon: Icon(
+                _obscureSecret
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
+              onPressed: () =>
+                  setState(() => _obscureSecret = !_obscureSecret),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _provider,
+          decoration: const InputDecoration(
+            labelText: 'Provider',
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Classera', child: Text('Classera')),
+            DropdownMenuItem(value: 'PowerSchool', child: Text('PowerSchool')),
+          ],
+          onChanged: (value) {
+            if (value != null) setState(() => _provider = value);
+          },
+        ),
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerRight,
+          child: PrimaryButton(
+            text: 'Confirm',
+            variant: ButtonVariant.primary,
+            onPressed: () {},
+          ),
+        ),
+      ],
+    );
   }
 }

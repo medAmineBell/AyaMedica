@@ -48,6 +48,7 @@ class AddStudentDialog extends StatelessWidget {
     Get.back();
     showDialog(
       context: Get.context!,
+      barrierDismissible: false,
       builder: (context) => UploadStudentsDialog(),
     );
   }

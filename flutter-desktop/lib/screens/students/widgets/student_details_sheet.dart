@@ -119,7 +119,20 @@ class _StudentDetailsContent extends StatelessWidget {
           _DetailRow('EMR Number', student.emrNumber?.toString() ?? 'N/A'),
           _DetailRow('Age', '${student.age} years old'),
           _DetailRow('Gender', student.gender ?? 'N/A'),
-          _DetailRow('Blood Type', student.bloodType ?? 'N/A'),
+          _DetailRow('Blood Type', student.bloodType ?? '-'),
+          _DetailRow(
+            'Height (Cm)',
+            student.heightCm != null
+                ? '${student.heightCm!.toStringAsFixed(0)} Cm'
+                : '-',
+          ),
+          _DetailRow(
+            'Weight (Kg)',
+            student.weightKg != null
+                ? '${student.weightKg!.toStringAsFixed(1)} Kg'
+                : '-',
+          ),
+          _DetailRow('Emergency Hospital', student.goToHospital ?? '-'),
           _DetailRow('Phone', student.phoneNumber ?? 'N/A'),
           _DetailRow('Email', student.email ?? 'N/A'),
           SizedBox(height: 20),

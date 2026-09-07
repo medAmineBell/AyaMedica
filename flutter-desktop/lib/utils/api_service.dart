@@ -893,11 +893,17 @@ class ApiService extends GetxService {
         };
       }
 
-      final streamed = await request.send().timeout(timeout);
+      final streamed = await request
+          .send()
+          .timeout(const Duration(minutes: 10));
       final response = await http.Response.fromStream(streamed);
+
+      print('📥 OneRoster Import response · status=${response.statusCode} · bytes=${response.bodyBytes.length}');
+      print('📥 OneRoster Import body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        print('✅ OneRoster Import decoded: $decoded');
         return {
           'success': true,
           'data': decoded,
@@ -925,6 +931,82 @@ class ApiService extends GetxService {
         'success': false,
         'error': 'Network error: ${e.toString()}',
       };
+    }
+  }
+
+  Future<Map<String, dynamic>> listOneRosterImports() async {
+    try {
+      final url = Uri.parse('${AppConfig.newBackendUrl}/api/owner/oneroster/imports');
+      final token = await getToken();
+      final headers = token != null ? _headersWithAuth(token) : _headers;
+
+      final response = await http.get(url, headers: headers).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final data = decoded is Map && decoded['data'] is List
+            ? decoded['data'] as List
+            : (decoded is List ? decoded : const []);
+        return {'success': true, 'data': data};
+      }
+
+      String errorMessage = 'Failed to load imports (HTTP ${response.statusCode})';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['error'] is String) {
+          errorMessage = decoded['error'] as String;
+        } else if (decoded is Map && decoded['message'] is String) {
+          errorMessage = decoded['message'] as String;
+        }
+      } catch (_) {}
+      return {
+        'success': false,
+        'error': errorMessage,
+        'statusCode': response.statusCode,
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteOneRosterImportByOrg(String organizationId) async {
+    try {
+      final url = Uri.parse(
+        '${AppConfig.newBackendUrl}/api/owner/oneroster/imports/by-org/$organizationId',
+      );
+      final token = await getToken();
+      final headers = token != null ? _headersWithAuth(token) : _headers;
+
+      final response =
+          await http.delete(url, headers: headers).timeout(timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        Map<String, dynamic>? data;
+        if (response.body.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(response.body);
+            if (decoded is Map<String, dynamic>) data = decoded;
+          } catch (_) {}
+        }
+        return {'success': true, 'data': data};
+      }
+
+      String errorMessage = 'Delete failed (HTTP ${response.statusCode})';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['error'] is String) {
+          errorMessage = decoded['error'] as String;
+        } else if (decoded is Map && decoded['message'] is String) {
+          errorMessage = decoded['message'] as String;
+        }
+      } catch (_) {}
+      return {
+        'success': false,
+        'error': errorMessage,
+        'statusCode': response.statusCode,
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: ${e.toString()}'};
     }
   }
 

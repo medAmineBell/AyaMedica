@@ -27,19 +27,34 @@ class ProfileMainContent extends StatelessWidget {
 
     return Obx(() {
       final activeStudent = controller.currentStudent.value ?? student;
+      final selected = controller.selectedProfileMenuItem.value;
 
-      if (controller.selectedProfileMenuItem.value == 'Medical history') {
+      if (selected == 'Medical history') {
         return MedicalHistoryView(student: activeStudent);
-      } else if (controller.selectedProfileMenuItem.value ==
-          'Medical records') {
+      } else if (selected == 'Medical records') {
         return MedicalRecordsView(student: activeStudent);
-      } else if (controller.selectedProfileMenuItem.value == 'Assessment') {
+      } else if (selected == 'Assessment') {
         return AssessmentView(appointment: appointment);
-      // } else if (controller.selectedProfileMenuItem.value ==
-      //     'Monitoring signs') {
+      // } else if (selected == 'Monitoring signs') {
       //   return MonitoringSignsView(student: activeStudent);
-      } else if (controller.selectedProfileMenuItem.value == 'Plans') {
+      } else if (selected == 'Plans') {
         return const PlansView();
+      }
+
+      // Profile tab: show a spinner while the full student record is still
+      // being resolved/fetched so users don't see a half-empty profile.
+      if (controller.isLoadingStudent.value) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(48),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        );
       }
 
       return controller.isSummaryMode.value

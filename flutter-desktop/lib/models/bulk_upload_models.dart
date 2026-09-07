@@ -227,6 +227,7 @@ class BulkUploadParser {
   static List<BulkUploadStudentPayload> parseExcel(
     Uint8List bytes, {
     required String branchCountry,
+    String? Function(String raw)? countryKeyResolver,
   }) {
     final bc = branchCountry.trim().toUpperCase();
     if (bc != 'EG' && bc != 'SA') {
@@ -293,7 +294,7 @@ class BulkUploadParser {
         grade: _readString(row, idx, 'grade'),
         studentClass: _readString(row, idx, 'class'),
         nationality: nationality,
-        documentType: _resolveDocumentType(bc, nationality),
+        documentType: _resolveDocumentType(bc, nationality, countryKeyResolver),
         documentNumber: _readString(row, idx, 'documentnumber'),
         fgFullName: _readString(row, idx, 'fgfullname'),
         fgRelation: _readString(row, idx, 'fgrelation').toUpperCase(),
@@ -308,10 +309,42 @@ class BulkUploadParser {
     return out;
   }
 
+  /// Known spellings/synonyms of the two supported branch countries, mapped to
+  /// their ISO code. Used as the reliable fallback when normalizing a row's
+  /// nationality for documentType derivation (e.g. "Egypt" -> "EG").
+  static const Map<String, String> _builtinNationalityAliases = {
+    'EG': 'EG',
+    'EGY': 'EG',
+    'EGYPT': 'EG',
+    'EGYPTIAN': 'EG',
+    'SA': 'SA',
+    'SAU': 'SA',
+    'KSA': 'SA',
+    'SAUDI': 'SA',
+    'SAUDI ARABIA': 'SA',
+    'SAUDI ARABIAN': 'SA',
+  };
+
+  /// Normalizes a raw nationality cell to an ISO country code. Tries the
+  /// injected resolver (backed by the app's country list) first, then the
+  /// built-in EG/SA aliases, then falls back to the uppercased raw value. Used
+  /// only to derive documentType — the raw nationality is still what we send.
+  static String _canonicalNationalityCode(
+      String raw, String? Function(String)? resolver) {
+    final s = raw.trim();
+    if (s.isEmpty) return '';
+    final resolved = resolver?.call(s);
+    if (resolved != null && resolved.isNotEmpty) return resolved.toUpperCase();
+    final alias = _builtinNationalityAliases[s.toUpperCase()];
+    if (alias != null) return alias;
+    return s.toUpperCase();
+  }
+
   /// Derives documentType from branch country + student nationality.
   /// Caller has already validated branchCountry is EG or SA.
-  static String _resolveDocumentType(String branchCountry, String nationality) {
-    final nat = nationality.trim().toUpperCase();
+  static String _resolveDocumentType(String branchCountry, String nationality,
+      String? Function(String)? resolver) {
+    final nat = _canonicalNationalityCode(nationality, resolver);
     if (branchCountry == 'EG') {
       return nat == 'EG' ? 'national_id' : 'passport';
     }

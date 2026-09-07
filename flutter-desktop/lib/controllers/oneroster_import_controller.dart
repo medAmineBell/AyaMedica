@@ -20,6 +20,10 @@ class OneRosterImportController extends GetxController {
   final Rxn<Map<String, dynamic>> lastResult = Rxn<Map<String, dynamic>>();
   final RxnString lastErrorMessage = RxnString();
 
+  final RxBool isCheckingExistingImport = false.obs;
+  final Rxn<Map<String, dynamic>> existingImport = Rxn<Map<String, dynamic>>();
+  final RxBool isDeletingImport = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -50,6 +54,69 @@ class OneRosterImportController extends GetxController {
       orgLoadError.value = result['error']?.toString() ?? 'Failed to load organizations.';
     }
     isLoadingOrg.value = false;
+
+    if (parentOrgId.value != null) {
+      fetchExistingImport();
+    }
+  }
+
+  Future<void> fetchExistingImport() async {
+    final orgId = parentOrgId.value;
+    if (orgId == null || orgId.isEmpty) return;
+
+    isCheckingExistingImport.value = true;
+    final result = await _api.listOneRosterImports();
+    isCheckingExistingImport.value = false;
+
+    if (result['success'] == true) {
+      final list = (result['data'] as List?) ?? const [];
+      final match = list.firstWhere(
+        (e) => e is Map && e['organizationId']?.toString() == orgId,
+        orElse: () => null,
+      );
+      existingImport.value =
+          match is Map<String, dynamic> ? match : (match is Map ? Map<String, dynamic>.from(match) : null);
+    } else {
+      existingImport.value = null;
+    }
+  }
+
+  Future<void> deleteImport() async {
+    final orgId = parentOrgId.value;
+    if (orgId == null || orgId.isEmpty) {
+      appSnackbar(
+        'Missing organization',
+        'Owner organization is not loaded yet.',
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+      return;
+    }
+
+    isDeletingImport.value = true;
+    final response = await _api.deleteOneRosterImportByOrg(orgId);
+    isDeletingImport.value = false;
+
+    if (response['success'] == true) {
+      existingImport.value = null;
+      lastResult.value = null;
+      lastErrorMessage.value = null;
+      appSnackbar(
+        'Import deleted',
+        'Branches, classes, students and guardians for this organization have been removed.',
+        backgroundColor: Colors.green[50],
+        colorText: Colors.green[900],
+      );
+      fetchExistingImport();
+    } else {
+      final error = response['error']?.toString() ?? 'Delete failed.';
+      appSnackbar(
+        'Delete failed',
+        error,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+    }
   }
 
   Future<void> pickFile() async {
@@ -115,6 +182,9 @@ class OneRosterImportController extends GetxController {
         backgroundColor: Colors.green[50],
         colorText: Colors.green[900],
       );
+      if (!dryRun.value) {
+        fetchExistingImport();
+      }
     } else {
       final error = response['error']?.toString() ?? 'Import failed.';
       lastErrorMessage.value = error;

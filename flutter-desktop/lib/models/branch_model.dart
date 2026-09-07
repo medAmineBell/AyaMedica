@@ -23,6 +23,7 @@ class BranchModel {
   final bool? isHeadquarters;
   final String? website;
   final String? accountType;
+  final String? logoUrl;
 
   BranchModel({
     required this.name,
@@ -47,6 +48,7 @@ class BranchModel {
     this.isHeadquarters,
     this.website,
     this.accountType,
+    this.logoUrl,
   });
 
   factory BranchModel.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,7 @@ class BranchModel {
       isHeadquarters: json['isHeadquarters'],
       website: json['website'],
       accountType: json['accountType'],
+      logoUrl: json['logo'] ?? json['logoUrl'],
     );
   }
 
@@ -180,6 +183,7 @@ class BranchModel {
       'street': street,
       'isHeadquarters': isHeadquarters,
       'website': website,
+      'logoUrl': logoUrl,
     };
   }
 
@@ -205,6 +209,7 @@ class BranchModel {
     String? street,
     bool? isHeadquarters,
     String? website,
+    String? logoUrl,
   }) {
     return BranchModel(
       id: id ?? this.id,
@@ -228,6 +233,7 @@ class BranchModel {
       street: street ?? this.street,
       isHeadquarters: isHeadquarters ?? this.isHeadquarters,
       website: website ?? this.website,
+      logoUrl: logoUrl ?? this.logoUrl,
     );
   }
 }
@@ -249,6 +255,7 @@ class BranchApiResponse {
   final String medplumProject;
   final int totalStudents;
   final int totalUsers;
+  final String? logo;
 
   BranchApiResponse({
     required this.id,
@@ -266,6 +273,7 @@ class BranchApiResponse {
     required this.medplumProject,
     required this.totalStudents,
     required this.totalUsers,
+    this.logo,
   });
 
   factory BranchApiResponse.fromJson(Map<String, dynamic> json) {
@@ -285,6 +293,7 @@ class BranchApiResponse {
       medplumProject: json['medplumProject'] ?? '',
       totalStudents: json['totalStudents'] ?? 0,
       totalUsers: json['totalUsers'] ?? 0,
+      logo: json['logo'],
     );
   }
 }

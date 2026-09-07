@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_config.dart';
 import '../../controllers/communication_controller.dart';
 import '../../models/message_model.dart';
+import '../../shared/widgets/primary_button.dart';
 import '../appointmentScheduling/widgets/create_appointment_dialog.dart';
 
 class MessageDetailPage extends StatelessWidget {
@@ -32,21 +34,36 @@ class MessageDetailPage extends StatelessWidget {
               const SizedBox(height: 16),
               _buildMetaRow(msg, isSent: isSent),
               const SizedBox(height: 24),
-              Text(
-                msg.subject.isEmpty ? 'Message' : msg.subject,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ),
-              const SizedBox(height: 16),
-              SelectableText(
-                msg.messageBody,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.6,
-                  color: Color(0xFF374151),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      msg.subject.isEmpty ? 'Message' : msg.subject,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SelectableText(
+                      msg.messageBody,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (msg.messageAttachments.isNotEmpty) ...[
@@ -101,24 +118,12 @@ class MessageDetailPage extends StatelessWidget {
         ),
         const Spacer(),
         if (!isSent)
-          ElevatedButton.icon(
+          PrimaryButton(
+            text: 'Create appointment',
+            icon: Icons.add,
+            variant: ButtonVariant.outline,
+            height: 44,
             onPressed: () => _openCreateAppointment(controller),
-            icon: const Icon(
-              Icons.add,
-              size: 18,
-              color: Colors.white,
-            ),
-            label: const Text('Create appointment'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1339FF),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
           ),
       ],
     );
@@ -255,11 +260,10 @@ class MessageDetailPage extends StatelessWidget {
             : 'File ${index + 1}';
 
     return InkWell(
-      onTap: () =>
-          _showAttachmentDialog(Get.context!, fullUrl, isImage, title),
+      onTap: () => _openAttachment(Get.context!, fullUrl, isImage, title),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 220,
+        width: 360,
         decoration: BoxDecoration(
           border: Border.all(color: const Color(0xFFE5E7EB)),
           borderRadius: BorderRadius.circular(8),
@@ -298,31 +302,55 @@ class MessageDetailPage extends StatelessWidget {
                 ],
               ),
             ),
-            if (isImage)
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(7),
-                  bottomRight: Radius.circular(7),
-                ),
-                child: Image.network(
-                  fullUrl,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 120,
-                    color: const Color(0xFFE5E7EB),
-                    child: const Center(
-                      child: Icon(Icons.broken_image_outlined,
-                          color: Color(0xFF9CA3AF)),
-                    ),
-                  ),
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(7),
+                bottomRight: Radius.circular(7),
               ),
+              child: isImage
+                  ? Image.network(
+                      fullUrl,
+                      height: 240,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 240,
+                        color: const Color(0xFFE5E7EB),
+                        child: const Center(
+                          child: Icon(Icons.broken_image_outlined,
+                              color: Color(0xFF9CA3AF)),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      height: 240,
+                      width: double.infinity,
+                      color: const Color(0xFFFEF2F2),
+                      child: const Center(
+                        child: Icon(
+                          Icons.picture_as_pdf,
+                          size: 80,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openAttachment(
+      BuildContext context, String url, bool isImage, String title) async {
+    if (isImage) {
+      _showAttachmentDialog(context, url, true, title);
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showAttachmentDialog(
@@ -332,7 +360,7 @@ class MessageDetailPage extends StatelessWidget {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+          constraints: const BoxConstraints(maxWidth: 1200, maxHeight: 900),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

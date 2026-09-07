@@ -47,7 +47,7 @@ class ProfileSection extends StatelessWidget {
             const SizedBox(width: 24),
             Expanded(
               child: ProfileField(
-                label: 'Go-To Hospital',
+                label: 'Emergency Hospital',
                 value: student.goToHospital,
               ),
             ),

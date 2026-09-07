@@ -47,6 +47,24 @@ class ProfileSection extends StatelessWidget {
             const SizedBox(width: 24),
             Expanded(
               child: ProfileField(
+                label: 'Emergency Hospital',
+                value: student.goToHospital,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ProfileField(
+                label: 'Blood Type',
+                value: student.bloodType,
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: ProfileField(
                 label: 'Weight (Kg)',
                 value: student.weightKg != null
                     ? '${student.weightKg!.toStringAsFixed(1)} Kg'

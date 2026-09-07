@@ -452,6 +452,7 @@ class _DefectedBanner extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => showDialog(
                 context: Get.context!,
+                barrierDismissible: false,
                 builder: (_) => const UploadStudentsDialog(),
               ),
               icon: const Icon(Icons.upload_outlined, size: 16),
